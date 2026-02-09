@@ -75,9 +75,6 @@ export default function OutputNode({ id, data }: NodeProps<OutputNodeData>) {
     <div className="node io output">
       <div className="node-header">
         <span className="node-title">Output</span>
-        <button className="icon-btn" onClick={addItem} title="Add Item">
-          +
-        </button>
       </div>
       <div className="node-body io-body">
         {nodeItems.map((item) => (
@@ -109,7 +106,9 @@ export default function OutputNode({ id, data }: NodeProps<OutputNodeData>) {
             {/* Display amount? Currently just config. Solver result would be overlayed or looked up via ID? */}
           </div>
         ))}
-         {nodeItems.length === 0 && <div className="empty-state">No outputs</div>}
+        <button className="node-add-btn" onClick={addItem}>
+          + Add Output
+        </button>
       </div>
     </div>
   );

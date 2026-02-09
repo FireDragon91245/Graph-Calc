@@ -248,8 +248,34 @@ body {
 .node-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 6px;
+  align-items: center; /* Fix alignment */
+  margin-bottom: 8px; /* More spacing */
+  padding: 4px 0; /* Make it thicker */
+  min-height: 28px;
 }
+
+.node-add-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  color: var(--muted);
+  width: 100%;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-top: 8px;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.node-add-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text);
+}
+
 
 .ports {
   display: grid;

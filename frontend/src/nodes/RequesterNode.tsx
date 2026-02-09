@@ -77,9 +77,6 @@ export default function RequesterNode({ id, data }: NodeProps<RequesterNodeData>
     <div className="node requester">
       <div className="node-header">
         <span className="node-title">Requester</span>
-        <button className="icon-btn" onClick={addItem} title="Add Goal">
-          +
-        </button>
       </div>
       <div className="node-body">
         {requests.map((req) => (
@@ -119,7 +116,9 @@ export default function RequesterNode({ id, data }: NodeProps<RequesterNodeData>
             </div>
           </div>
         ))}
-         {requests.length === 0 && <div className="empty-state">No goals</div>}
+         <button className="node-add-btn" onClick={addItem}>
+          + Add Goal
+        </button>
       </div>
     </div>
   );

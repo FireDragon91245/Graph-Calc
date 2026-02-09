@@ -79,9 +79,6 @@ export default function InputNode({ id, data }: NodeProps<InputNodeData>) {
     <div className="node io input">
       <div className="node-header">
         <span className="node-title">Input</span>
-        <button className="icon-btn" onClick={addItem} title="Add Item">
-          +
-        </button>
       </div>
       <div className="node-body io-body">
         {nodeItems.map((item) => (
@@ -129,7 +126,9 @@ export default function InputNode({ id, data }: NodeProps<InputNodeData>) {
             />
           </div>
         ))}
-        {nodeItems.length === 0 && <div className="empty-state">No items</div>}
+        <button className="node-add-btn" onClick={addItem}>
+          + Add Item
+        </button>
       </div>
     </div>
   );
