@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, DragEvent } from "react";
+import { useCallback, useMemo, useState, DragEvent, useEffect, useRef } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -15,6 +15,7 @@ import ReactFlow, {
   useReactFlow
 } from "reactflow";
 import { solveGraph, SolveResponse } from "./api/solve";
+import { loadGraph, saveGraph, loadStore, saveStore } from "./api/persistence";
 import ContextMenu from "./editor/ContextMenu";
 import { useGraphStore } from "./store/graphStore";
 import RecipeNode from "./nodes/RecipeNode";
@@ -120,11 +121,93 @@ function AppContent() {
   const [configSubMode, setConfigSubMode] = useState<ConfigSubMode>("items");
   const [pendingNodeType, setPendingNodeType] = useState<NodeType | null>(null);
   const [pendingNodePosition, setPendingNodePosition] = useState<{ x: number; y: number } | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
   const tags = useGraphStore((state) => state.tags);
+  const loadStoreData = useGraphStore((state) => state.loadStoreData);
   const reactFlowInstance = useReactFlow();
+
+  // Load data on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Load store data (categories, items, tags, recipes, etc.)
+        const storeData = await loadStore();
+        
+        // If store has data, load it; otherwise keep the default state and save it
+        if (storeData.categories.length > 0 || storeData.items.length > 0 || 
+            storeData.tags.length > 0 || storeData.recipeTags.length > 0 || 
+            storeData.recipes.length > 0) {
+          loadStoreData(storeData);
+        } else {
+          // Save the default store data from the initial state
+          const currentState = useGraphStore.getState();
+          const defaultData = {
+            categories: currentState.categories,
+            items: currentState.items,
+            tags: currentState.tags,
+            recipeTags: currentState.recipeTags,
+            recipes: currentState.recipes
+          };
+          saveStore(defaultData).catch(console.error);
+        }
+
+        // Load graph data (nodes and edges)
+        const graphData = await loadGraph();
+        if (graphData.nodes.length > 0 || graphData.edges.length > 0) {
+          setNodes(graphData.nodes);
+          setEdges(graphData.edges);
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+
+    loadData();
+  }, [loadStoreData, setNodes, setEdges]);
+
+  // Auto-save graph (nodes and edges) with debouncing
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  useEffect(() => {
+    // Don't save until initial load is complete
+    if (!isLoaded) return;
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      const graphData = {
+        nodes: nodes.map((node) => ({
+          id: node.id,
+          type: node.type ?? "recipe",
+          position: node.position,
+          data: node.data
+        })),
+        edges: edges.map((edge) => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          sourceHandle: edge.sourceHandle ?? null,
+          targetHandle: edge.targetHandle ?? null
+        }))
+      };
+
+      saveGraph(graphData).catch((error) => {
+        console.error("Error auto-saving graph:", error);
+      });
+    }, 500); // 500ms debounce
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [nodes, edges, isLoaded]);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),

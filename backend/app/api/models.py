@@ -53,3 +53,63 @@ class SolveResponse(BaseModel):
     flowsPerSecond: Dict[str, float] = {}
     bottlenecks: List[str] = []
     warnings: List[str] = []
+
+
+# Persistence Models
+class GraphData(BaseModel):
+    nodes: List[dict]
+    edges: List[dict]
+
+
+class Category(BaseModel):
+    id: str
+    name: str
+
+
+class Item(BaseModel):
+    id: str
+    name: str
+    medium: Literal["item", "fluid", "gas"]
+    categoryId: Optional[str] = None
+
+
+class Tag(BaseModel):
+    id: str
+    name: str
+    memberItemIds: List[str]
+
+
+class RecipeTag(BaseModel):
+    id: str
+    name: str
+    memberRecipeIds: List[str]
+
+
+class RecipeInput(BaseModel):
+    id: str
+    refType: Literal["item", "tag"]
+    refId: str
+    amount: float
+
+
+class RecipeOutput(BaseModel):
+    id: str
+    itemId: str
+    amount: float
+    probability: float
+
+
+class Recipe(BaseModel):
+    id: str
+    name: str
+    timeSeconds: float
+    inputs: List[RecipeInput]
+    outputs: List[RecipeOutput]
+
+
+class StoreData(BaseModel):
+    categories: List[Category]
+    items: List[Item]
+    tags: List[Tag]
+    recipeTags: List[RecipeTag]
+    recipes: List[Recipe]

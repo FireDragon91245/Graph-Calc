@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { saveStore, StoreData } from "../api/persistence";
 
 type Medium = "item" | "fluid" | "gas";
 
@@ -61,6 +62,7 @@ type GraphStore = {
   addTag: (tag: Omit<Tag, "id"> & { id?: string }) => void;
   addRecipeTag: (recipeTag: Omit<RecipeTag, "id"> & { id?: string }) => void;
   addRecipe: (recipe: Omit<Recipe, "id"> & { id?: string }) => void;
+  loadStoreData: (data: StoreData) => void;
 };
 
 const slugify = (value: string) =>
@@ -69,7 +71,27 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 
-export const useGraphStore = create<GraphStore>((set) => ({
+// Debounced save function
+let saveTimeout: NodeJS.Timeout | null = null;
+const debouncedSave = (state: GraphStore) => {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+  saveTimeout = setTimeout(() => {
+    const dataToSave: StoreData = {
+      categories: state.categories,
+      items: state.items,
+      tags: state.tags,
+      recipeTags: state.recipeTags,
+      recipes: state.recipes
+    };
+    saveStore(dataToSave).catch((err) => {
+      console.error("Failed to auto-save store:", err);
+    });
+  }, 300); // 300ms debounce
+};
+
+export const useGraphStore = create<GraphStore>((set, get) => ({
   categories: [
     { id: "ore", name: "Ore" },
     { id: "ingot", name: "Ingot" }
@@ -109,25 +131,33 @@ export const useGraphStore = create<GraphStore>((set) => ({
     }
   ],
   addCategory: (name) =>
-    set((state) => ({
-      categories: [
-        ...state.categories,
-        { id: slugify(name || `category_${state.categories.length + 1}`), name }
-      ]
-    })),
+    set((state) => {
+      const newState = {
+        categories: [
+          ...state.categories,
+          { id: slugify(name || `category_${state.categories.length + 1}`), name }
+        ]
+      };
+      debouncedSave({ ...state, ...newState });
+      return newState;
+    }),
   deleteCategory: (categoryId) =>
-    set((state) => ({
-      categories: state.categories.filter((c) => c.id !== categoryId),
-      items: state.items.map((item) =>
-        item.categoryId === categoryId
-          ? { ...item, categoryId: undefined }
-          : item
-      )
-    })),
+    set((state) => {
+      const newState = {
+        categories: state.categories.filter((c) => c.id !== categoryId),
+        items: state.items.map((item) =>
+          item.categoryId === categoryId
+            ? { ...item, categoryId: undefined }
+            : item
+        )
+      };
+      debouncedSave({ ...state, ...newState });
+      return newState;
+    }),
   renameCategory: (categoryId, newName) =>
     set((state) => {
       const newCategoryId = slugify(newName);
-      return {
+      const newState = {
         categories: state.categories.map((c) =>
           c.id === categoryId ? { id: newCategoryId, name: newName } : c
         ),
@@ -137,6 +167,8 @@ export const useGraphStore = create<GraphStore>((set) => ({
             : item
         )
       };
+      debouncedSave({ ...state, ...newState });
+      return newState;
     }),
   addItem: (item) =>
     set((state) => {
@@ -153,6 +185,7 @@ export const useGraphStore = create<GraphStore>((set) => ({
       
       // Check if updating existing item or adding new one
       const existingIndex = state.items.findIndex((i) => i.id === itemId);
+      let newState;
       if (existingIndex >= 0) {
         // Update existing item
         const newItems = [...state.items];
@@ -162,10 +195,10 @@ export const useGraphStore = create<GraphStore>((set) => ({
           medium: item.medium,
           categoryId: item.categoryId
         };
-        return { items: newItems };
+        newState = { items: newItems };
       } else {
         // Add new item
-        return {
+        newState = {
           items: [
             ...state.items,
             {
@@ -177,6 +210,8 @@ export const useGraphStore = create<GraphStore>((set) => ({
           ]
         };
       }
+      debouncedSave({ ...state, ...newState });
+      return newState;
     }),
   addTag: (tag) =>
     set((state) => {
@@ -184,6 +219,7 @@ export const useGraphStore = create<GraphStore>((set) => ({
       
       // Check if updating existing tag or adding new one
       const existingIndex = state.tags.findIndex((t) => t.id === tagId);
+      let newState;
       if (existingIndex >= 0) {
         // Update existing tag
         const newTags = [...state.tags];
@@ -192,10 +228,10 @@ export const useGraphStore = create<GraphStore>((set) => ({
           name: tag.name,
           memberItemIds: tag.memberItemIds
         };
-        return { tags: newTags };
+        newState = { tags: newTags };
       } else {
         // Add new tag
-        return {
+        newState = {
           tags: [
             ...state.tags,
             {
@@ -206,6 +242,8 @@ export const useGraphStore = create<GraphStore>((set) => ({
           ]
         };
       }
+      debouncedSave({ ...state, ...newState });
+      return newState;
     }),
   addRecipeTag: (recipeTag) =>
     set((state) => {
@@ -213,6 +251,7 @@ export const useGraphStore = create<GraphStore>((set) => ({
       
       // Check if updating existing recipe tag or adding new one
       const existingIndex = state.recipeTags.findIndex((rt) => rt.id === recipeTagId);
+      let newState;
       if (existingIndex >= 0) {
         // Update existing recipe tag
         const newRecipeTags = [...state.recipeTags];
@@ -221,10 +260,10 @@ export const useGraphStore = create<GraphStore>((set) => ({
           name: recipeTag.name,
           memberRecipeIds: recipeTag.memberRecipeIds
         };
-        return { recipeTags: newRecipeTags };
+        newState = { recipeTags: newRecipeTags };
       } else {
         // Add new recipe tag
-        return {
+        newState = {
           recipeTags: [
             ...state.recipeTags,
             {
@@ -235,19 +274,33 @@ export const useGraphStore = create<GraphStore>((set) => ({
           ]
         };
       }
+      debouncedSave({ ...state, ...newState });
+      return newState;
     }),
   addRecipe: (recipe) =>
-    set((state) => ({
-      recipes: [
-        ...state.recipes,
-        {
-          id: recipe.id ?? slugify(recipe.name || `recipe_${state.recipes.length + 1}`),
-          name: recipe.name,
-          timeSeconds: recipe.timeSeconds,
-          inputs: recipe.inputs,
-          outputs: recipe.outputs
-        }
-      ]
+    set((state) => {
+      const newState = {
+        recipes: [
+          ...state.recipes,
+          {
+            id: recipe.id ?? slugify(recipe.name || `recipe_${state.recipes.length + 1}`),
+            name: recipe.name,
+            timeSeconds: recipe.timeSeconds,
+            inputs: recipe.inputs,
+            outputs: recipe.outputs
+          }
+        ]
+      };
+      debouncedSave({ ...state, ...newState });
+      return newState;
+    }),
+  loadStoreData: (data) =>
+    set(() => ({
+      categories: data.categories,
+      items: data.items,
+      tags: data.tags,
+      recipeTags: data.recipeTags,
+      recipes: data.recipes
     }))
 }));
 

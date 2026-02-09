@@ -1,0 +1,143 @@
+{
+  "nodes": [
+    {
+      "id": "n-input-iron",
+      "type": "input",
+      "position": {
+        "x": -400,
+        "y": -60
+      },
+      "data": {
+        "items": [
+          {
+            "id": "row1",
+            "itemId": "iron_ore",
+            "mode": "limit",
+            "limit": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "n-recipe-macerate",
+      "type": "recipe",
+      "position": {
+        "x": -60,
+        "y": -80
+      },
+      "data": {
+        "title": "Macerate Iron",
+        "timeSeconds": 2,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Iron Ore",
+            "amountPerCycle": 1,
+            "medium": "item"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "name": "Iron Dust",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 1
+          },
+          {
+            "id": "o2",
+            "name": "Gold Dust",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 0.1
+          }
+        ]
+      }
+    },
+    {
+      "id": "n-recipe-smelt",
+      "type": "recipe",
+      "position": {
+        "x": 260,
+        "y": -80
+      },
+      "data": {
+        "title": "Smelt Iron",
+        "timeSeconds": 3.2,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Iron Dust",
+            "amountPerCycle": 1,
+            "medium": "item"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "name": "Iron Ingot",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "n-output-iron",
+      "type": "output",
+      "position": {
+        "x": 560,
+        "y": -60
+      },
+      "data": {
+        "items": [
+          {
+            "id": "row1",
+            "itemId": "iron_ingot"
+          }
+        ]
+      }
+    },
+    {
+      "id": "n-requester",
+      "type": "requester",
+      "position": {
+        "x": 260,
+        "y": 160
+      },
+      "data": {
+        "requests": [
+          {
+            "id": "req1",
+            "itemId": "iron_ingot",
+            "targetPerSecond": 1.2
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "n-input-iron",
+      "target": "n-recipe-macerate",
+      "sourceHandle": "output-row1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "e2",
+      "source": "n-recipe-macerate",
+      "target": "n-recipe-smelt",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "e3",
+      "source": "n-recipe-smelt",
+      "target": "n-output-iron",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-row1"
+    }
+  ]
+}
