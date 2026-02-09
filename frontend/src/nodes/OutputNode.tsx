@@ -1,5 +1,6 @@
 import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
 import { useGraphStore } from "../store/graphStore";
+import SearchableDropdown from "../editor/SearchableDropdown";
 
 type OutputItem = {
   id: string;
@@ -95,17 +96,12 @@ export default function OutputNode({ id, data }: NodeProps<OutputNodeData>) {
               style={{ left: -16 }}
             />
              <div className="row-controls">
-                <select
-                    className="nodrag"
-                    value={item.itemId}
-                    onChange={(e) => updateItem(item.id, { itemId: e.target.value })}
-                >
-                    {items.map((i) => (
-                    <option key={i.id} value={i.id}>
-                        {i.name}
-                    </option>
-                    ))}
-                </select>
+                <SearchableDropdown
+                  value={item.itemId}
+                  options={items.map((i) => ({ value: i.id, label: i.name }))}
+                  onChange={(value) => updateItem(item.id, { itemId: value })}
+                  placeholder="Select item"
+                />
                 <button className="icon-btn danger" onClick={() => removeItem(item.id)}>
                     ×
                 </button>

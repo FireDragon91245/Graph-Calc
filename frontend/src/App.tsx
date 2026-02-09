@@ -234,6 +234,7 @@ function AppContent() {
           type: "recipe",
           position: createPosition(),
           data: {
+            recipeId: recipe.id,
             title: recipe.name,
             timeSeconds: recipe.timeSeconds,
             inputs,

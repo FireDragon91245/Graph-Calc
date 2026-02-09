@@ -1,5 +1,6 @@
 import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
 import { useGraphStore } from "../store/graphStore";
+import SearchableDropdown from "../editor/SearchableDropdown";
 
 type InputItem = {
   id: string;
@@ -91,17 +92,12 @@ export default function InputNode({ id, data }: NodeProps<InputNodeData>) {
         {nodeItems.map((item) => (
           <div key={item.id} className="node-row input-row" style={{ position: "relative" }}>
             <div className="row-controls">
-              <select
-                className="nodrag"
+              <SearchableDropdown
                 value={item.itemId}
-                onChange={(e) => updateItem(item.id, { itemId: e.target.value })}
-              >
-                {items.map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {i.name}
-                  </option>
-                ))}
-              </select>
+                options={items.map((i) => ({ value: i.id, label: i.name }))}
+                onChange={(value) => updateItem(item.id, { itemId: value })}
+                placeholder="Select item"
+              />
               <div className="row-actions">
                 <button
                    className={`mode-btn ${item.mode === "infinite" ? "active" : ""}`}

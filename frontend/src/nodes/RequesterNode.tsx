@@ -1,5 +1,6 @@
 import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
 import { useGraphStore } from "../store/graphStore";
+import SearchableDropdown from "../editor/SearchableDropdown";
 
 type RequesterItem = {
   id: string;
@@ -97,17 +98,12 @@ export default function RequesterNode({ id, data }: NodeProps<RequesterNodeData>
               style={{ left: -20 }}
             />
             <div className="row-controls">
-                <select
-                    className="nodrag"
-                    value={req.itemId}
-                    onChange={(e) => updateItem(req.id, { itemId: e.target.value })}
-                >
-                    {items.map((i) => (
-                    <option key={i.id} value={i.id}>
-                        {i.name}
-                    </option>
-                    ))}
-                </select>
+                <SearchableDropdown
+                  value={req.itemId}
+                  options={items.map((i) => ({ value: i.id, label: i.name }))}
+                  onChange={(value) => updateItem(req.id, { itemId: value })}
+                  placeholder="Select item"
+                />
                 <div className="row-actions">
                     <input
                         type="number"
