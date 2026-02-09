@@ -6,11 +6,15 @@ export default function TagMode() {
   const items = useGraphStore((state) => state.items);
   const categories = useGraphStore((state) => state.categories);
   const addTag = useGraphStore((state) => state.addTag);
+  const deleteTag = useGraphStore((state) => state.deleteTag);
+  const renameTag = useGraphStore((state) => state.renameTag);
 
   const [newTagName, setNewTagName] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<Item | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [editingTagId, setEditingTagId] = useState<string | null>(null);
+  const [editingTagName, setEditingTagName] = useState("");
 
   const handleAddTag = () => {
     if (!newTagName.trim()) return;
@@ -51,6 +55,31 @@ export default function TagMode() {
         memberItemIds: tag.memberItemIds.filter((id) => id !== itemId)
       });
     }
+  };
+
+  const handleDeleteTag = (tagId: string) => {
+    const tag = tags.find((t) => t.id === tagId);
+    if (confirm(`Delete tag "${tag?.name}"? This will remove it from all recipes.`)) {
+      deleteTag(tagId);
+    }
+  };
+
+  const handleStartRenameTag = (tag: Tag) => {
+    setEditingTagId(tag.id);
+    setEditingTagName(tag.name);
+  };
+
+  const handleFinishRenameTag = (tagId: string) => {
+    if (editingTagName.trim() && editingTagName !== tags.find(t => t.id === tagId)?.name) {
+      renameTag(tagId, editingTagName.trim());
+    }
+    setEditingTagId(null);
+    setEditingTagName("");
+  };
+
+  const handleCancelRenameTag = () => {
+    setEditingTagId(null);
+    setEditingTagName("");
   };
 
   const getTagItems = (tag: Tag) => {
@@ -147,7 +176,7 @@ export default function TagMode() {
           <div className="stats-grid">
             <div className="stat-item">
               <div className="stat-value">{tags.length}</div>
-              <div className="stat-label">Total Tags</div>
+              <div className="stat-label">Tags</div>
             </div>
             <div className="stat-item">
               <div className="stat-value">{items.length}</div>
@@ -172,8 +201,50 @@ export default function TagMode() {
               onDrop={(e) => handleDropOnTag(e, tag.id)}
             >
               <div className="tag-header">
-                <h4 className="tag-name">{tag.name}</h4>
-                <span className="item-count">{tag.memberItemIds.length} items</span>
+                {editingTagId === tag.id ? (
+                  <div className="tag-edit-mode">
+                    <input
+                      type="text"
+                      value={editingTagName}
+                      onChange={(e) => setEditingTagName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleFinishRenameTag(tag.id);
+                        if (e.key === "Escape") handleCancelRenameTag();
+                      }}
+                      onBlur={() => handleFinishRenameTag(tag.id)}
+                      autoFocus
+                      className="tag-rename-input"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <h4 className="tag-name">{tag.name}</h4>
+                    <div className="tag-actions">
+                      <span className="item-count">{tag.memberItemIds.length} items</span>
+                      <button
+                        className="btn-icon-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartRenameTag(tag);
+                        }}
+                        title="Rename tag"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        className="btn-icon-sm btn-icon-danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTag(tag.id);
+                        }}
+                        title="Delete tag"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
               
               <div className="tag-members">

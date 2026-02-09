@@ -7,6 +7,8 @@ export default function RecipeMode() {
   const tags = useGraphStore((state) => state.tags);
   const categories = useGraphStore((state) => state.categories);
   const addRecipe = useGraphStore((state) => state.addRecipe);
+  const deleteRecipe = useGraphStore((state) => state.deleteRecipe);
+  const renameRecipe = useGraphStore((state) => state.renameRecipe);
 
   const [recipeName, setRecipeName] = useState("");
   const [timeSeconds, setTimeSeconds] = useState(2);
@@ -15,6 +17,8 @@ export default function RecipeMode() {
   const [draggedItem, setDraggedItem] = useState<Item | Tag | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRecipe, setSelectedRecipe] = useState<string | null>(null);
+  const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
+  const [editingRecipeName, setEditingRecipeName] = useState("");
 
   const handleAddRecipe = () => {
     if (!recipeName.trim()) return;
@@ -35,6 +39,31 @@ export default function RecipeMode() {
     setTimeSeconds(2);
     setInputs([]);
     setOutputs([]);
+  };
+
+  const handleDeleteRecipe = (recipeId: string) => {
+    const recipe = recipes.find((r) => r.id === recipeId);
+    if (confirm(`Delete recipe "${recipe?.name}"? This will remove it from all recipe tags.`)) {
+      deleteRecipe(recipeId);
+    }
+  };
+
+  const handleStartRenameRecipe = (recipe: Recipe) => {
+    setEditingRecipeId(recipe.id);
+    setEditingRecipeName(recipe.name);
+  };
+
+  const handleFinishRenameRecipe = (recipeId: string) => {
+    if (editingRecipeName.trim() && editingRecipeName !== recipes.find(r => r.id === recipeId)?.name) {
+      renameRecipe(recipeId, editingRecipeName.trim());
+    }
+    setEditingRecipeId(null);
+    setEditingRecipeName("");
+  };
+
+  const handleCancelRenameRecipe = () => {
+    setEditingRecipeId(null);
+    setEditingRecipeName("");
   };
 
   const handleDragStart = (e: DragEvent, itemOrTag: Item | Tag) => {
@@ -321,7 +350,7 @@ export default function RecipeMode() {
                     </div>
                   ))}
                   {outputs.length === 0 && (
-                    <div className="io-empty">Drop items here (tags not allowed)</div>
+                    <div className="io-empty">Drop items or tags here</div>
                   )}
                 </div>
               </div>
@@ -345,8 +374,50 @@ export default function RecipeMode() {
                   onClick={() => setSelectedRecipe(recipe.id)}
                 >
                   <div className="recipe-card-header">
-                    <h4>{recipe.name}</h4>
-                    <span className="recipe-time">{recipe.timeSeconds}s</span>
+                    {editingRecipeId === recipe.id ? (
+                      <div className="recipe-edit-mode">
+                        <input
+                          type="text"
+                          value={editingRecipeName}
+                          onChange={(e) => setEditingRecipeName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleFinishRenameRecipe(recipe.id);
+                            if (e.key === "Escape") handleCancelRenameRecipe();
+                          }}
+                          onBlur={() => handleFinishRenameRecipe(recipe.id)}
+                          autoFocus
+                          className="recipe-rename-input"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <h4>{recipe.name}</h4>
+                        <div className="recipe-actions">
+                          <span className="recipe-time">{recipe.timeSeconds}s</span>
+                          <button
+                            className="btn-icon-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStartRenameRecipe(recipe);
+                            }}
+                            title="Rename recipe"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            className="btn-icon-sm btn-icon-danger"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteRecipe(recipe.id);
+                            }}
+                            title="Delete recipe"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div className="recipe-card-io">
                     <div className="recipe-io-line">

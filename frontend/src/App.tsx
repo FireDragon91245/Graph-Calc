@@ -171,7 +171,7 @@ function AppContent() {
   }, [loadStoreData, setNodes, setEdges]);
 
   // Auto-save graph (nodes and edges) with debouncing
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<number | null>(null);
   useEffect(() => {
     // Don't save until initial load is complete
     if (!isLoaded) return;

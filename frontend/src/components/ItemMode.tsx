@@ -8,12 +8,16 @@ export default function ItemMode() {
   const deleteCategory = useGraphStore((state) => state.deleteCategory);
   const renameCategory = useGraphStore((state) => state.renameCategory);
   const addItem = useGraphStore((state) => state.addItem);
+  const deleteItem = useGraphStore((state) => state.deleteItem);
+  const renameItem = useGraphStore((state) => state.renameItem);
 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newItemName, setNewItemName] = useState("");
   const [draggedItem, setDraggedItem] = useState<Item | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingItemName, setEditingItemName] = useState("");
 
   const handleAddCategory = () => {
     if (!newCategoryName.trim()) return;
@@ -53,6 +57,31 @@ export default function ItemMode() {
   const handleCancelRename = () => {
     setEditingCategoryId(null);
     setEditingCategoryName("");
+  };
+
+  const handleDeleteItem = (itemId: string) => {
+    const item = items.find((i) => i.id === itemId);
+    if (confirm(`Delete "${item?.name}"? This will remove it from all tags and recipes.`)) {
+      deleteItem(itemId);
+    }
+  };
+
+  const handleStartRenameItem = (item: Item) => {
+    setEditingItemId(item.id);
+    setEditingItemName(item.name);
+  };
+
+  const handleFinishRenameItem = (itemId: string) => {
+    if (editingItemName.trim() && editingItemName !== items.find(i => i.id === itemId)?.name) {
+      renameItem(itemId, editingItemName.trim());
+    }
+    setEditingItemId(null);
+    setEditingItemName("");
+  };
+
+  const handleCancelRenameItem = () => {
+    setEditingItemId(null);
+    setEditingItemName("");
   };
 
   const handleDragStart = (e: DragEvent, item: Item) => {
@@ -160,10 +189,45 @@ export default function ItemMode() {
                 <div
                   key={item.id}
                   className="item-card"
-                  draggable
+                  draggable={editingItemId !== item.id}
                   onDragStart={(e) => handleDragStart(e, item)}
                 >
-                  <span className="item-name">{item.name}</span>
+                  {editingItemId === item.id ? (
+                    <div className="item-edit-mode">
+                      <input
+                        type="text"
+                        value={editingItemName}
+                        onChange={(e) => setEditingItemName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleFinishRenameItem(item.id);
+                          if (e.key === "Escape") handleCancelRenameItem();
+                        }}
+                        onBlur={() => handleFinishRenameItem(item.id)}
+                        autoFocus
+                        className="item-rename-input"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <span className="item-name">{item.name}</span>
+                      <div className="item-actions">
+                        <button
+                          className="btn-icon-sm"
+                          onClick={() => handleStartRenameItem(item)}
+                          title="Rename item"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          className="btn-icon-sm btn-icon-danger"
+                          onClick={() => handleDeleteItem(item.id)}
+                          title="Delete item"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>

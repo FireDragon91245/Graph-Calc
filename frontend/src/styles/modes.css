@@ -569,6 +569,65 @@
   background: rgba(239, 68, 68, 0.15);
 }
 
+.btn-icon-sm {
+  background: transparent;
+  border: none;
+  padding: 0.15rem 0.35rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  opacity: 0.5;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+}
+
+.btn-icon-sm:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.btn-icon-sm.btn-icon-danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.item-actions,
+.tag-actions,
+.recipe-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.item-card:hover .item-actions,
+.tag-panel:hover .tag-actions,
+.recipe-card:hover .recipe-actions {
+  opacity: 1;
+}
+
+.item-edit-mode,
+.tag-edit-mode,
+.recipe-edit-mode {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.item-rename-input,
+.tag-rename-input,
+.recipe-rename-input {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(110, 168, 254, 0.15);
+}
+
 .category-edit-mode {
   flex: 1;
   display: flex;

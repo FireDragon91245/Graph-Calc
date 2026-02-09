@@ -59,9 +59,17 @@ type GraphStore = {
   deleteCategory: (categoryId: string) => void;
   renameCategory: (categoryId: string, newName: string) => void;
   addItem: (item: Omit<Item, "id"> & { id?: string }) => void;
+  deleteItem: (itemId: string) => void;
+  renameItem: (itemId: string, newName: string) => void;
   addTag: (tag: Omit<Tag, "id"> & { id?: string }) => void;
+  deleteTag: (tagId: string) => void;
+  renameTag: (tagId: string, newName: string) => void;
   addRecipeTag: (recipeTag: Omit<RecipeTag, "id"> & { id?: string }) => void;
+  deleteRecipeTag: (recipeTagId: string) => void;
+  renameRecipeTag: (recipeTagId: string, newName: string) => void;
   addRecipe: (recipe: Omit<Recipe, "id"> & { id?: string }) => void;
+  deleteRecipe: (recipeId: string) => void;
+  renameRecipe: (recipeId: string, newName: string) => void;
   loadStoreData: (data: StoreData) => void;
 };
 
@@ -72,7 +80,7 @@ const slugify = (value: string) =>
     .replace(/^_+|_+$/g, "");
 
 // Debounced save function
-let saveTimeout: NodeJS.Timeout | null = null;
+let saveTimeout: number | null = null;
 const debouncedSave = (state: GraphStore) => {
   if (saveTimeout) {
     clearTimeout(saveTimeout);
@@ -213,6 +221,57 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       debouncedSave({ ...state, ...newState });
       return newState;
     }),
+  deleteItem: (itemId) =>
+    set((state) => {
+      const newState = {
+        items: state.items.filter((i) => i.id !== itemId),
+        // Remove item from all tags
+        tags: state.tags.map((tag) => ({
+          ...tag,
+          memberItemIds: tag.memberItemIds.filter((id) => id !== itemId)
+        }))
+      };
+      debouncedSave({ ...state, ...newState });
+      return newState;
+    }),
+  renameItem: (itemId, newName) =>
+    set((state) => {
+      const newItemId = slugify(newName);
+      // Check if new name conflicts with another item
+      const existingByName = state.items.find(
+        (i) => i.name === newName && i.id !== itemId
+      );
+      if (existingByName) {
+        alert(`Item "${newName}" already exists!`);
+        return state;
+      }
+      
+      const newState = {
+        items: state.items.map((item) =>
+          item.id === itemId ? { ...item, id: newItemId, name: newName } : item
+        ),
+        // Update references in tags
+        tags: state.tags.map((tag) => ({
+          ...tag,
+          memberItemIds: tag.memberItemIds.map((id) => (id === itemId ? newItemId : id))
+        })),
+        // Update references in recipe outputs
+        recipes: state.recipes.map((recipe) => ({
+          ...recipe,
+          outputs: recipe.outputs.map((output) =>
+            output.itemId === itemId ? { ...output, itemId: newItemId } : output
+          ),
+          // Update item inputs
+          inputs: recipe.inputs.map((input) =>
+            input.refType === "item" && input.refId === itemId
+              ? { ...input, refId: newItemId }
+              : input
+          )
+        }))
+      };
+      debouncedSave({ ...state, ...newState });
+      return newState;
+    }),
   addTag: (tag) =>
     set((state) => {
       const tagId = tag.id ?? tag.name;
@@ -242,6 +301,50 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
           ]
         };
       }
+      debouncedSave({ ...state, ...newState });
+      return newState;
+    }),
+  deleteTag: (tagId) =>
+    set((state) => {
+      const newState = {
+        tags: state.tags.filter((t) => t.id !== tagId),
+        // Update recipes that reference this tag in inputs
+        recipes: state.recipes.map((recipe) => ({
+          ...recipe,
+          inputs: recipe.inputs.filter(
+            (input) => !(input.refType === "tag" && input.refId === tagId)
+          )
+        }))
+      };
+      debouncedSave({ ...state, ...newState });
+      return newState;
+    }),
+  renameTag: (tagId, newName) =>
+    set((state) => {
+      const newTagId = newName.startsWith("@") ? newName : `@${newName}`;
+      // Check if new name conflicts
+      const existingByName = state.tags.find(
+        (t) => t.id === newTagId && t.id !== tagId
+      );
+      if (existingByName) {
+        alert(`Tag "${newTagId}" already exists!`);
+        return state;
+      }
+      
+      const newState = {
+        tags: state.tags.map((tag) =>
+          tag.id === tagId ? { ...tag, id: newTagId, name: newTagId } : tag
+        ),
+        // Update recipe inputs that reference this tag
+        recipes: state.recipes.map((recipe) => ({
+          ...recipe,
+          inputs: recipe.inputs.map((input) =>
+            input.refType === "tag" && input.refId === tagId
+              ? { ...input, refId: newTagId }
+              : input
+          )
+        }))
+      };
       debouncedSave({ ...state, ...newState });
       return newState;
     }),
@@ -277,19 +380,104 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       debouncedSave({ ...state, ...newState });
       return newState;
     }),
-  addRecipe: (recipe) =>
+  deleteRecipeTag: (recipeTagId) =>
     set((state) => {
       const newState = {
-        recipes: [
-          ...state.recipes,
-          {
-            id: recipe.id ?? slugify(recipe.name || `recipe_${state.recipes.length + 1}`),
-            name: recipe.name,
-            timeSeconds: recipe.timeSeconds,
-            inputs: recipe.inputs,
-            outputs: recipe.outputs
-          }
-        ]
+        recipeTags: state.recipeTags.filter((rt) => rt.id !== recipeTagId)
+      };
+      debouncedSave({ ...state, ...newState });
+      return newState;
+    }),
+  renameRecipeTag: (recipeTagId, newName) =>
+    set((state) => {
+      const newRecipeTagId = newName.startsWith("@") ? newName : `@${newName}`;
+      // Check if new name conflicts
+      const existingByName = state.recipeTags.find(
+        (rt) => rt.id === newRecipeTagId && rt.id !== recipeTagId
+      );
+      if (existingByName) {
+        alert(`Recipe Tag "${newRecipeTagId}" already exists!`);
+        return state;
+      }
+      
+      const newState = {
+        recipeTags: state.recipeTags.map((rt) =>
+          rt.id === recipeTagId ? { ...rt, id: newRecipeTagId, name: newRecipeTagId } : rt
+        )
+      };
+      debouncedSave({ ...state, ...newState });
+      return newState;
+    }),
+  addRecipe: (recipe) =>
+    set((state) => {
+      const recipeId = recipe.id ?? slugify(recipe.name || `recipe_${state.recipes.length + 1}`);
+      
+      // Check if updating existing recipe or adding new one
+      const existingIndex = state.recipes.findIndex((r) => r.id === recipeId);
+      let newState;
+      if (existingIndex >= 0) {
+        // Update existing recipe
+        const newRecipes = [...state.recipes];
+        newRecipes[existingIndex] = {
+          id: recipeId,
+          name: recipe.name,
+          timeSeconds: recipe.timeSeconds,
+          inputs: recipe.inputs,
+          outputs: recipe.outputs
+        };
+        newState = { recipes: newRecipes };
+      } else {
+        // Add new recipe
+        newState = {
+          recipes: [
+            ...state.recipes,
+            {
+              id: recipeId,
+              name: recipe.name,
+              timeSeconds: recipe.timeSeconds,
+              inputs: recipe.inputs,
+              outputs: recipe.outputs
+            }
+          ]
+        };
+      }
+      debouncedSave({ ...state, ...newState });
+      return newState;
+    }),
+  deleteRecipe: (recipeId) =>
+    set((state) => {
+      const newState = {
+        recipes: state.recipes.filter((r) => r.id !== recipeId),
+        // Remove recipe from all recipe tags
+        recipeTags: state.recipeTags.map((rt) => ({
+          ...rt,
+          memberRecipeIds: rt.memberRecipeIds.filter((id) => id !== recipeId)
+        }))
+      };
+      debouncedSave({ ...state, ...newState });
+      return newState;
+    }),
+  renameRecipe: (recipeId, newName) =>
+    set((state) => {
+      const newRecipeId = slugify(newName);
+      // Check if new name conflicts
+      const existingByName = state.recipes.find(
+        (r) => r.name === newName && r.id !== recipeId
+      );
+      if (existingByName) {
+        alert(`Recipe "${newName}" already exists!`);
+        return state;
+      }
+      
+      const newState = {
+        recipes: state.recipes.map((recipe) =>
+          recipe.id === recipeId ? { ...recipe, id: newRecipeId, name: newName } : recipe
+        ),
+        // Update references in recipe tags
+        recipeTags: state.recipeTags.map((rt) => ({
+          ...rt,
+          memberRecipeIds: rt.memberRecipeIds.map((id) => (id === recipeId ? newRecipeId : id))
+        }))
       };
       debouncedSave({ ...state, ...newState });
       return newState;

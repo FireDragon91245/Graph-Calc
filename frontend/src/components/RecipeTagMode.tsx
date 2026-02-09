@@ -5,11 +5,15 @@ export default function RecipeTagMode() {
   const recipeTags = useGraphStore((state) => state.recipeTags);
   const recipes = useGraphStore((state) => state.recipes);
   const addRecipeTag = useGraphStore((state) => state.addRecipeTag);
+  const deleteRecipeTag = useGraphStore((state) => state.deleteRecipeTag);
+  const renameRecipeTag = useGraphStore((state) => state.renameRecipeTag);
 
   const [newRecipeTagName, setNewRecipeTagName] = useState("");
   const [selectedRecipeTag, setSelectedRecipeTag] = useState<string | null>(null);
   const [draggedRecipe, setDraggedRecipe] = useState<Recipe | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [editingRecipeTagId, setEditingRecipeTagId] = useState<string | null>(null);
+  const [editingRecipeTagName, setEditingRecipeTagName] = useState("");
 
   const handleAddRecipeTag = () => {
     if (!newRecipeTagName.trim()) return;
@@ -50,6 +54,31 @@ export default function RecipeTagMode() {
         memberRecipeIds: recipeTag.memberRecipeIds.filter((id) => id !== recipeId)
       });
     }
+  };
+
+  const handleDeleteRecipeTag = (recipeTagId: string) => {
+    const recipeTag = recipeTags.find((rt) => rt.id === recipeTagId);
+    if (confirm(`Delete recipe tag "${recipeTag?.name}"?`)) {
+      deleteRecipeTag(recipeTagId);
+    }
+  };
+
+  const handleStartRenameRecipeTag = (recipeTag: RecipeTag) => {
+    setEditingRecipeTagId(recipeTag.id);
+    setEditingRecipeTagName(recipeTag.name);
+  };
+
+  const handleFinishRenameRecipeTag = (recipeTagId: string) => {
+    if (editingRecipeTagName.trim() && editingRecipeTagName !== recipeTags.find(rt => rt.id === recipeTagId)?.name) {
+      renameRecipeTag(recipeTagId, editingRecipeTagName.trim());
+    }
+    setEditingRecipeTagId(null);
+    setEditingRecipeTagName("");
+  };
+
+  const handleCancelRenameRecipeTag = () => {
+    setEditingRecipeTagId(null);
+    setEditingRecipeTagName("");
   };
 
   const getRecipeTagRecipes = (recipeTag: RecipeTag) => {
@@ -150,8 +179,50 @@ export default function RecipeTagMode() {
               onDrop={(e) => handleDropOnRecipeTag(e, recipeTag.id)}
             >
               <div className="tag-header">
-                <h4 className="tag-name">{recipeTag.name}</h4>
-                <span className="item-count">{recipeTag.memberRecipeIds.length} recipes</span>
+                {editingRecipeTagId === recipeTag.id ? (
+                  <div className="tag-edit-mode">
+                    <input
+                      type="text"
+                      value={editingRecipeTagName}
+                      onChange={(e) => setEditingRecipeTagName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleFinishRenameRecipeTag(recipeTag.id);
+                        if (e.key === "Escape") handleCancelRenameRecipeTag();
+                      }}
+                      onBlur={() => handleFinishRenameRecipeTag(recipeTag.id)}
+                      autoFocus
+                      className="tag-rename-input"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <h4 className="tag-name">{recipeTag.name}</h4>
+                    <div className="tag-actions">
+                      <span className="item-count">{recipeTag.memberRecipeIds.length} recipes</span>
+                      <button
+                        className="btn-icon-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartRenameRecipeTag(recipeTag);
+                        }}
+                        title="Rename recipe tag"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        className="btn-icon-sm btn-icon-danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteRecipeTag(recipeTag.id);
+                        }}
+                        title="Delete recipe tag"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
               
               <div className="tag-members">
