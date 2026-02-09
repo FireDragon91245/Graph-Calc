@@ -27,6 +27,7 @@ import NodeConfigDialog from "./components/NodeConfigDialog";
 import ItemMode from "./components/ItemMode";
 import TagMode from "./components/TagMode";
 import RecipeMode from "./components/RecipeMode";
+import RecipeTagMode from "./components/RecipeTagMode";
 import { NodeType } from "./components/NodeTypeSelector";
 
 const nodeTypes = {
@@ -513,6 +514,7 @@ function AppContent() {
           {configSubMode === "items" && <ItemMode />}
           {configSubMode === "tags" && <TagMode />}
           {configSubMode === "recipes" && <RecipeMode />}
+          {configSubMode === "recipeTags" && <RecipeTagMode />}
         </div>
       )}
     </div>

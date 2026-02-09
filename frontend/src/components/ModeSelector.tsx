@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 export type AppMode = "edit" | "config";
-export type ConfigSubMode = "items" | "tags" | "recipes";
+export type ConfigSubMode = "items" | "tags" | "recipes" | "recipeTags";
 
 type ModeSelectorProps = {
   currentMode: AppMode;
@@ -47,13 +47,19 @@ export default function ModeSelector({
             className={`submode-tab ${configSubMode === "tags" ? "active" : ""}`}
             onClick={() => onConfigSubModeChange("tags")}
           >
-            Tags
+            Item Tags
           </button>
           <button
             className={`submode-tab ${configSubMode === "recipes" ? "active" : ""}`}
             onClick={() => onConfigSubModeChange("recipes")}
           >
             Recipes
+          </button>
+          <button
+            className={`submode-tab ${configSubMode === "recipeTags" ? "active" : ""}`}
+            onClick={() => onConfigSubModeChange("recipeTags")}
+          >
+            Recipe Tags
           </button>
         </div>
       )}
