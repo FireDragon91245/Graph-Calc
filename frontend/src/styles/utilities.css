@@ -1,0 +1,19 @@
+/* Utility Classes */
+
+.muted {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.unit {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.empty-state {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 12px;
+  text-align: center;
+  padding: 8px;
+}

@@ -1,0 +1,22 @@
+/* React Flow Overrides */
+
+.react-flow__minimap {
+  background: rgba(16, 20, 28, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Fix for default input/output node styles creating white boxes */
+.react-flow__node-input,
+.react-flow__node-output {
+  background: transparent !important;
+  border: none !important;
+  width: auto !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Selected state styling */
+.react-flow__node.selected .node {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 18px 40px rgba(0, 0, 0, 0.35);
+}

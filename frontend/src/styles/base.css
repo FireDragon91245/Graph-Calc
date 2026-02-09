@@ -1,0 +1,35 @@
+/* CSS Variables and Base Styles */
+
+:root {
+  color-scheme: dark;
+  --bg: #0b0f14;
+  --panel: rgba(20, 24, 32, 0.72);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --text: #e8eef7;
+  --muted: #92a3b8;
+  --accent: #6ea8fe;
+  --glow: rgba(110, 168, 254, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, sans-serif;
+  background: radial-gradient(circle at top, #111a24 0%, #0b0f14 55%);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+}
+
+.app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}

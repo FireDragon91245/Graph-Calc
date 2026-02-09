@@ -1,0 +1,205 @@
+/* Node Styles */
+
+.node {
+  min-width: 220px;
+  background: rgba(16, 20, 28, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  position: relative;
+}
+
+.node-header {
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.node-title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.node-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.node-body {
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* IO Nodes (Input, Output, Requester) */
+.node.io {
+  min-width: 200px;
+}
+
+.node.io .node-body.io-body {
+  margin: 8px;
+  padding: 8px;
+  background: rgba(18, 24, 33, 0.85);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  position: relative;
+}
+
+.node-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 4px 0;
+  min-height: 28px;
+}
+
+.node-add-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  color: var(--muted);
+  width: 100%;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-top: 8px;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  z-index: 10;
+}
+
+.node-add-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text);
+}
+
+.row-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Recipe Node Ports */
+.ports {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.port-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.port-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.port-row.right {
+  justify-content: flex-end;
+}
+
+.port-name {
+  color: var(--text);
+}
+
+.port-amount {
+  font-size: 12px;
+}
+
+.prob {
+  background: rgba(110, 168, 254, 0.14);
+  color: var(--accent);
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+/* Handles */
+.handle {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: #1b2330;
+  z-index: 10;
+}
+
+.react-flow__handle.center {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.handle.item {
+  border-color: #6ea8fe;
+}
+
+.port-row .handle.react-flow__handle-left {
+  left: -20px;
+}
+
+.port-row .handle.react-flow__handle-right {
+  right: -20px;
+}
+
+/* Panel (used in solver results, etc.) */
+.panel {
+  background: rgba(16, 20, 28, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  min-width: 150px;
+}
+
+.panel-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.panel-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+
+.panel-subtitle {
+  margin: 10px 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.panel-muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.panel-error {
+  color: #ff8f8f;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
