@@ -219,6 +219,7 @@ body {
 
 .node.io .node-body.io-body {
   margin: 8px;
+  padding: 8px;
   background: rgba(18, 24, 33, 0.85);
   color: var(--text);
   border: 1px solid rgba(255, 255, 255, 0.06);

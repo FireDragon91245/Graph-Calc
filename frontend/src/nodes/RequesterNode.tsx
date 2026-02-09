@@ -87,7 +87,7 @@ export default function RequesterNode({ id, data }: NodeProps<RequesterNodeData>
       </div>
       <div className="node-body io-body">
         {requests.map((req) => (
-          <div key={req.id} className="node-row" style={{ position: "relative" }}>
+          <div key={req.id} className="node-row input-row" style={{ position: "relative" }}>
              <Handle
               type="target"
               position={Position.Left}
