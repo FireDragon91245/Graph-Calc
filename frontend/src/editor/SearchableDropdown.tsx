@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useGraphStore } from "../store/graphStore";
 
 type Option = {
   value: string;
@@ -20,6 +21,9 @@ export default function SearchableDropdown({
   placeholder = "Select...",
   className = ""
 }: SearchableDropdownProps) {
+  const items = useGraphStore((state) => state.items);
+  const categories = useGraphStore((state) => state.categories);
+  const tags = useGraphStore((state) => state.tags);
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -32,6 +36,16 @@ export default function SearchableDropdown({
   );
 
   const selectedOption = options.find((opt) => opt.value === value);
+
+  const getItemMetadata = (itemId: string) => {
+    const item = items.find(i => i.id === itemId);
+    if (!item) return null;
+    
+    const category = item.categoryId ? categories.find(c => c.id === item.categoryId) : null;
+    const itemTags = tags.filter(tag => tag.memberItemIds.includes(itemId));
+    
+    return { category, tags: itemTags };
+  };
 
   useEffect(() => {
     if (isOpen && searchRef.current) {
@@ -139,19 +153,34 @@ export default function SearchableDropdown({
             {filteredOptions.length === 0 ? (
               <div className="dropdown-empty">No results</div>
             ) : (
-              filteredOptions.map((option, index) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`dropdown-item ${
-                    index === highlightedIndex ? "highlighted" : ""
-                  } ${option.value === value ? "selected" : ""}`}
-                  onClick={() => handleSelect(option.value)}
-                  onMouseEnter={() => setHighlightedIndex(index)}
-                >
-                  {option.label}
-                </button>
-              ))
+              filteredOptions.map((option, index) => {
+                const metadata = getItemMetadata(option.value);
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`dropdown-item ${
+                      index === highlightedIndex ? "highlighted" : ""
+                    } ${option.value === value ? "selected" : ""}`}
+                    onClick={() => handleSelect(option.value)}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                  >
+                    <div className="dropdown-item-content">
+                      <div className="dropdown-item-label">{option.label}</div>
+                      {metadata && (metadata.category || metadata.tags.length > 0) && (
+                        <div className="dropdown-item-badges">
+                          {metadata.category && (
+                            <span className="category-badge-mini">{metadata.category.name}</span>
+                          )}
+                          {metadata.tags.map((tag: any) => (
+                            <span key={tag.id} className="tag-badge-mini">{tag.name}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })
             )}
           </div>
         </div>

@@ -17,6 +17,9 @@ export default function NodeConfigDialog({
 }: NodeConfigDialogProps) {
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
+  const categories = useGraphStore((state) => state.categories);
+  const tags = useGraphStore((state) => state.tags);
+  const recipeTags = useGraphStore((state) => state.recipeTags);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedId, setSelectedId] = useState<string>("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -39,14 +42,38 @@ export default function NodeConfigDialog({
   const filteredItems = useMemo(() => {
     if (!searchTerm) return items;
     const term = searchTerm.toLowerCase();
-    return items.filter((item) => item.name.toLowerCase().includes(term));
-  }, [items, searchTerm]);
+    return items.filter((item) => {
+      // Search by name
+      if (item.name.toLowerCase().includes(term)) return true;
+      
+      // Search by category
+      if (item.categoryId) {
+        const category = categories.find(c => c.id === item.categoryId);
+        if (category && category.name.toLowerCase().includes(term)) return true;
+      }
+      
+      // Search by tags
+      const itemTags = tags.filter(tag => tag.memberItemIds.includes(item.id));
+      if (itemTags.some(tag => tag.name.toLowerCase().includes(term))) return true;
+      
+      return false;
+    });
+  }, [items, searchTerm, categories, tags]);
 
   const filteredRecipes = useMemo(() => {
     if (!searchTerm) return recipes;
     const term = searchTerm.toLowerCase();
-    return recipes.filter((recipe) => recipe.name.toLowerCase().includes(term));
-  }, [recipes, searchTerm]);
+    return recipes.filter((recipe) => {
+      // Search by name
+      if (recipe.name.toLowerCase().includes(term)) return true;
+      
+      // Search by recipe tags
+      const recTags = recipeTags.filter(rt => rt.memberRecipeIds.includes(recipe.id));
+      if (recTags.some(rt => rt.name.toLowerCase().includes(term))) return true;
+      
+      return false;
+    });
+  }, [recipes, searchTerm, recipeTags]);
 
   const handleConfirm = () => {
     if (nodeType === "recipe") {
@@ -106,6 +133,19 @@ export default function NodeConfigDialog({
     }
   };
 
+  const getItemTags = (itemId: string) => {
+    return tags.filter(tag => tag.memberItemIds.includes(itemId));
+  };
+
+  const getRecipeTags = (recipeId: string) => {
+    return recipeTags.filter(rt => rt.memberRecipeIds.includes(recipeId));
+  };
+
+  const getItemCategory = (item: Item) => {
+    if (!item.categoryId) return null;
+    return categories.find(c => c.id === item.categoryId);
+  };
+
   return (
     <div className="dialog-overlay" onClick={onCancel}>
       <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
@@ -130,45 +170,66 @@ export default function NodeConfigDialog({
           <div className="dialog-list">
             {nodeType === "recipe" ? (
               filteredRecipes.length > 0 ? (
-                filteredRecipes.map((recipe) => (
-                  <div
-                    key={recipe.id}
-                    className={`dialog-list-item ${selectedId === recipe.id ? "selected" : ""}`}
-                    onClick={() => setSelectedId(recipe.id)}
-                    onDoubleClick={() => {
-                      setSelectedId(recipe.id);
-                      setTimeout(handleConfirm, 0);
-                    }}
-                  >
-                    <div className="list-item-name">{recipe.name}</div>
-                    <div className="list-item-meta">
-                      {recipe.inputs.length} in → {recipe.outputs.length} out • {recipe.timeSeconds}s
+                filteredRecipes.map((recipe) => {
+                  const recTags = getRecipeTags(recipe.id);
+                  return (
+                    <div
+                      key={recipe.id}
+                      className={`dialog-list-item ${selectedId === recipe.id ? "selected" : ""}`}
+                      onClick={() => setSelectedId(recipe.id)}
+                      onDoubleClick={() => {
+                        setSelectedId(recipe.id);
+                        setTimeout(handleConfirm, 0);
+                      }}
+                    >
+                      <div className="list-item-name">{recipe.name}</div>
+                      <div className="list-item-meta">
+                        {recipe.inputs.length} in → {recipe.outputs.length} out • {recipe.timeSeconds}s
+                      </div>
+                      {recTags.length > 0 && (
+                        <div className="list-item-tags">
+                          {recTags.map(tag => (
+                            <span key={tag.id} className="tag-badge-mini">{tag.name}</span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="dialog-empty">No recipes found</div>
               )
             ) : (
               filteredItems.length > 0 ? (
-                filteredItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`dialog-list-item ${selectedId === item.id ? "selected" : ""}`}
-                    onClick={() => setSelectedId(item.id)}
-                    onDoubleClick={() => {
-                      setSelectedId(item.id);
-                      setTimeout(handleConfirm, 0);
-                    }}
-                  >
-                    <div className="list-item-name">{item.name}</div>
-                    <div className="list-item-meta">
-                      <span className={`medium-badge medium-${item.medium}`}>
-                        {item.medium}
-                      </span>
+                filteredItems.map((item) => {
+                  const itemTags = getItemTags(item.id);
+                  const category = getItemCategory(item);
+                  return (
+                    <div
+                      key={item.id}
+                      className={`dialog-list-item ${selectedId === item.id ? "selected" : ""}`}
+                      onClick={() => setSelectedId(item.id)}
+                      onDoubleClick={() => {
+                        setSelectedId(item.id);
+                        setTimeout(handleConfirm, 0);
+                      }}
+                    >
+                      <div className="list-item-name">{item.name}</div>
+                      <div className="list-item-meta-row">
+                        {category && (
+                          <span className="category-badge-mini">{category.name}</span>
+                        )}
+                        {itemTags.length > 0 && (
+                          <div className="list-item-tags">
+                            {itemTags.map(tag => (
+                              <span key={tag.id} className="tag-badge-mini">{tag.name}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="dialog-empty">No items found</div>
               )

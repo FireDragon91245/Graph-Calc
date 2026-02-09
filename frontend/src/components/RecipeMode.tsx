@@ -5,6 +5,7 @@ export default function RecipeMode() {
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
   const tags = useGraphStore((state) => state.tags);
+  const categories = useGraphStore((state) => state.categories);
   const addRecipe = useGraphStore((state) => state.addRecipe);
 
   const [recipeName, setRecipeName] = useState("");
@@ -113,8 +114,23 @@ export default function RecipeMode() {
   const filteredItems = useMemo(() => {
     if (!searchTerm) return items;
     const term = searchTerm.toLowerCase();
-    return items.filter((item) => item.name.toLowerCase().includes(term));
-  }, [items, searchTerm]);
+    return items.filter((item) => {
+      // Search by name
+      if (item.name.toLowerCase().includes(term)) return true;
+      
+      // Search by category
+      if (item.categoryId) {
+        const category = categories.find(c => c.id === item.categoryId);
+        if (category && category.name.toLowerCase().includes(term)) return true;
+      }
+      
+      // Search by tags
+      const itemTags = tags.filter(tag => tag.memberItemIds.includes(item.id));
+      if (itemTags.some(tag => tag.name.toLowerCase().includes(term))) return true;
+      
+      return false;
+    });
+  }, [items, searchTerm, categories, tags]);
 
   const filteredTags = useMemo(() => {
     if (!searchTerm) return tags;
@@ -127,6 +143,15 @@ export default function RecipeMode() {
       inputsDisplay: recipe.inputs.map((inp) => getInputDisplay(inp)).join(", "),
       outputsDisplay: recipe.outputs.map((out) => getOutputDisplay(out)).join(", ")
     };
+  };
+
+  const getItemTags = (itemId: string) => {
+    return tags.filter(tag => tag.memberItemIds.includes(itemId));
+  };
+
+  const getItemCategory = (item: any) => {
+    if (!item.categoryId) return null;
+    return categories.find(c => c.id === item.categoryId);
   };
 
   return (
@@ -163,16 +188,30 @@ export default function RecipeMode() {
             <div className="browser-section">
               <h4>Items</h4>
               <div className="browser-list">
-                {filteredItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="draggable-item"
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, item)}
-                  >
-                    {item.name}
-                  </div>
-                ))}
+                {filteredItems.map((item) => {
+                  const itemTags = getItemTags(item.id);
+                  const category = getItemCategory(item);
+                  return (
+                    <div
+                      key={item.id}
+                      className="draggable-item"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, item)}
+                    >
+                      <div className="draggable-item-content">
+                        <div className="item-name">{item.name}</div>
+                        <div className="item-badges">
+                          {category && (
+                            <span className="category-badge-mini">{category.name}</span>
+                          )}
+                          {itemTags.map(tag => (
+                            <span key={tag.id} className="tag-badge-mini">{tag.name}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

@@ -96,6 +96,24 @@
   display: block;
 }
 
+.dropdown-item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+}
+
+.dropdown-item-label {
+  font-size: 12px;
+}
+
+.dropdown-item-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
 .dropdown-item:hover,
 .dropdown-item.highlighted {
   background: rgba(110, 168, 254, 0.15);

@@ -4,6 +4,7 @@ import { useGraphStore, Tag, Item } from "../store/graphStore";
 export default function TagMode() {
   const tags = useGraphStore((state) => state.tags);
   const items = useGraphStore((state) => state.items);
+  const categories = useGraphStore((state) => state.categories);
   const addTag = useGraphStore((state) => state.addTag);
 
   const [newTagName, setNewTagName] = useState("");
@@ -59,11 +60,31 @@ export default function TagMode() {
   const filteredItems = useMemo(() => {
     if (!searchTerm) return items;
     const term = searchTerm.toLowerCase();
-    return items.filter((item) => item.name.toLowerCase().includes(term));
-  }, [items, searchTerm]);
+    return items.filter((item) => {
+      // Search by name
+      if (item.name.toLowerCase().includes(term)) return true;
+      
+      // Search by category
+      if (item.categoryId) {
+        const category = categories.find(c => c.id === item.categoryId);
+        if (category && category.name.toLowerCase().includes(term)) return true;
+      }
+      
+      // Search by tags
+      const itemTags = getItemTags(item.id);
+      if (itemTags.some(tag => tag.name.toLowerCase().includes(term))) return true;
+      
+      return false;
+    });
+  }, [items, searchTerm, categories, tags]);
 
   const getItemTags = (itemId: string) => {
     return tags.filter((tag) => tag.memberItemIds.includes(itemId));
+  };
+
+  const getItemCategory = (item: Item) => {
+    if (!item.categoryId) return null;
+    return categories.find(c => c.id === item.categoryId);
   };
 
   return (
@@ -94,23 +115,30 @@ export default function TagMode() {
             className="config-input"
           />
           <div className="items-browser">
-            {filteredItems.map((item) => (
-              <div
-                key={item.id}
-                className="item-card draggable"
-                draggable
-                onDragStart={(e) => handleDragStart(e, item)}
-              >
-                <span className="item-name">{item.name}</span>
-                <div className="item-tags">
-                  {getItemTags(item.id).map((tag) => (
-                    <span key={tag.id} className="tag-badge-mini">
-                      {tag.name}
-                    </span>
-                  ))}
+            {filteredItems.map((item) => {
+              const itemTags = getItemTags(item.id);
+              const category = getItemCategory(item);
+              return (
+                <div
+                  key={item.id}
+                  className="item-card draggable"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, item)}
+                >
+                  <span className="item-name">{item.name}</span>
+                  <div className="item-badges">
+                    {category && (
+                      <span className="category-badge-mini">{category.name}</span>
+                    )}
+                    {itemTags.map((tag) => (
+                      <span key={tag.id} className="tag-badge-mini">
+                        {tag.name}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
