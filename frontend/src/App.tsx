@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, MouseEvent as ReactMouseEvent } from "react";
+import { useCallback, useMemo, useState, DragEvent } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -11,16 +11,23 @@ import ReactFlow, {
   Connection,
   Panel,
   NodeMouseHandler,
-  ReactFlowProvider
+  ReactFlowProvider,
+  useReactFlow
 } from "reactflow";
 import { solveGraph, SolveResponse } from "./api/solve";
-import LibraryPanel from "./editor/LibraryPanel";
 import ContextMenu from "./editor/ContextMenu";
 import { useGraphStore } from "./store/graphStore";
 import RecipeNode from "./nodes/RecipeNode";
 import InputNode from "./nodes/InputNode";
 import OutputNode from "./nodes/OutputNode";
 import RequesterNode from "./nodes/RequesterNode";
+import ModeSelector, { AppMode, ConfigSubMode } from "./components/ModeSelector";
+import NodeTypeSelector from "./components/NodeTypeSelector";
+import NodeConfigDialog from "./components/NodeConfigDialog";
+import ItemMode from "./components/ItemMode";
+import TagMode from "./components/TagMode";
+import RecipeMode from "./components/RecipeMode";
+import { NodeType } from "./components/NodeTypeSelector";
 
 const nodeTypes = {
   recipe: RecipeNode,
@@ -108,9 +115,15 @@ function AppContent() {
   const [solveError, setSolveError] = useState<string | null>(null);
   const [isSolving, setIsSolving] = useState(false);
   const [menu, setMenu] = useState<{ id: string; top: number; left: number } | null>(null);
+  const [appMode, setAppMode] = useState<AppMode>("edit");
+  const [configSubMode, setConfigSubMode] = useState<ConfigSubMode>("items");
+  const [pendingNodeType, setPendingNodeType] = useState<NodeType | null>(null);
+  const [pendingNodePosition, setPendingNodePosition] = useState<{ x: number; y: number } | null>(null);
+  
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
   const tags = useGraphStore((state) => state.tags);
+  const reactFlowInstance = useReactFlow();
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -152,7 +165,13 @@ function AppContent() {
       data: JSON.parse(JSON.stringify(node.data)),
     };
     
-    setNodes((nds) => nds.map(n => ({ ...n, selected: false })).concat(newNode));
+    const updatedNodes = nds => {
+      const deselected = nds.map(n => ({ ...n, selected: false }));
+      deselected.push(newNode);
+      return deselected;
+    };
+    
+    setNodes(updatedNodes);
     setMenu(null);
   }, [menu, nodes, setNodes]);
 
@@ -160,6 +179,126 @@ function AppContent() {
     x: 120 + nodes.length * 40,
     y: 120 + nodes.length * 24
   });
+
+  const handleNodeTypeSelected = useCallback((nodeType: NodeType) => {
+    // Open dialog immediately when clicked from sidebar
+    setPendingNodeType(nodeType);
+    setPendingNodePosition(createPosition());
+  }, [nodes.length]);
+
+  const handleDrop = useCallback(
+    (event: DragEvent) => {
+      event.preventDefault();
+
+      const nodeType = event.dataTransfer.getData("application/reactflow") as NodeType;
+      if (!nodeType) return;
+
+      // Get position relative to ReactFlow viewport
+      const reactFlowBounds = event.currentTarget.getBoundingClientRect();
+      const position = reactFlowInstance.project({
+        x: event.clientX - reactFlowBounds.left,
+        y: event.clientY - reactFlowBounds.top
+      });
+
+      // Open dialog with the dropped node type
+      setPendingNodeType(nodeType);
+      setPendingNodePosition(position);
+    },
+    [reactFlowInstance]
+  );
+
+  const handleDragOver = useCallback((event: DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const handleNodeConfigConfirm = useCallback(
+    (config: any) => {
+      if (!pendingNodeType || !pendingNodePosition) return;
+
+      const id = `${pendingNodeType}-${Date.now()}`;
+
+      if (pendingNodeType === "input") {
+        setNodes((current) => [
+          ...current,
+          {
+            id,
+            type: "input",
+            position: pendingNodePosition,
+            data: { items: [{ id: "1", itemId: config.itemId, mode: "infinite" }] }
+          }
+        ]);
+      } else if (pendingNodeType === "output") {
+        setNodes((current) => [
+          ...current,
+          {
+            id,
+            type: "output",
+            position: pendingNodePosition,
+            data: { items: [{ id: "1", itemId: config.itemId }] }
+          }
+        ]);
+      } else if (pendingNodeType === "recipe") {
+        const recipe = config.recipe;
+        const inputs = recipe.inputs.map((input: any) => {
+          const name =
+            input.refType === "item"
+              ? items.find((item) => item.id === input.refId)?.name ?? input.refId
+              : tags.find((tag) => tag.id === input.refId)?.name ?? input.refId;
+
+          return {
+            id: input.id,
+            name,
+            amountPerCycle: input.amount,
+            medium: "item" as const
+          };
+        });
+
+        const outputs = recipe.outputs.map((output: any) => ({
+          id: output.id,
+          name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
+          amountPerCycle: output.amount,
+          medium: "item" as const,
+          probability: output.probability
+        }));
+
+        setNodes((current) => [
+          ...current,
+          {
+            id,
+            type: "recipe",
+            position: pendingNodePosition,
+            data: {
+              recipeId: recipe.id,
+              title: recipe.name,
+              timeSeconds: recipe.timeSeconds,
+              inputs,
+              outputs
+            }
+          }
+        ]);
+      } else if (pendingNodeType === "requester") {
+        setNodes((current) => [
+          ...current,
+          {
+            id,
+            type: "requester",
+            position: pendingNodePosition,
+            data: { requests: [{ id: "req1", itemId: config.itemId, targetPerSecond: 1.0 }] }
+          }
+        ]);
+      }
+
+      setPendingNodeType(null);
+      setPendingNodePosition(null);
+    },
+    [pendingNodeType, pendingNodePosition, items, tags, setNodes]
+  );
+
+  const handleNodeConfigCancel = useCallback(() => {
+    setPendingNodeType(null);
+    setPendingNodePosition(null);
+  }, []);
 
   const handleCreateInputNode = useCallback(
     (itemId: string) => {
@@ -284,79 +423,103 @@ function AppContent() {
     <div className="app-root">
       <div className="top-bar">
         <div className="brand">GraphCalc</div>
-        <input className="search" placeholder="Search recipes, items, nodes (Ctrl+K)" />
-        <button className="primary" onClick={handleSolve} disabled={isSolving}>
-          {isSolving ? "Solving..." : "Solve"}
-        </button>
-      </div>
-      <div className="layout">
-        <LibraryPanel
-          onCreateInputNode={handleCreateInputNode}
-          onCreateOutputNode={handleCreateOutputNode}
-          onCreateRecipeNode={handleCreateRecipeNode}
+        <ModeSelector
+          currentMode={appMode}
+          onModeChange={setAppMode}
+          configSubMode={configSubMode}
+          onConfigSubModeChange={setConfigSubMode}
         />
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeContextMenu={onNodeContextMenu}
-          onPaneClick={onPaneClick}
-          selectionOnDrag
-          panOnDrag={[1, 2]}
-          selectionMode={undefined}
-          panOnScroll
-          multiSelectionKeyCode="Control"
-          deleteKeyCode={["Backspace", "Delete"]}
-          elementsSelectable
-          nodesDraggable
-          fitView
-          nodeTypes={nodeTypes}
-        >
-          <Background gap={20} size={1} color="#1f2a3a" />
-          <MiniMap pannable zoomable />
-          <Controls showInteractive={false} />
-          <Panel position="top-right" className="panel">
-            <div className="panel-title">Live Stats</div>
-            <div className="panel-row">Nodes: {nodes.length}</div>
-            <div className="panel-row">Edges: {edges.length}</div>
-          </Panel>
-          <Panel position="bottom-right" className="panel results">
-            <div className="panel-title">Solver Output</div>
-            {solveError ? <div className="panel-error">{solveError}</div> : null}
-            {!solveResult ? (
-              <div className="panel-muted">Run solver to see results.</div>
-            ) : (
-              <div className="panel-section">
-                <div className="panel-subtitle">Machines</div>
-                {Object.entries(solveResult.machineCounts).map(([key, value]) => (
-                  <div key={key} className="panel-row">
-                    <span>{key}</span>
-                    <span>{value.toFixed(2)}</span>
-                  </div>
-                ))}
-                <div className="panel-subtitle">Flows / s</div>
-                {Object.entries(solveResult.flowsPerSecond).map(([key, value]) => (
-                  <div key={key} className="panel-row">
-                    <span>{key}</span>
-                    <span>{value.toFixed(3)}</span>
-                  </div>
-                ))}
-              </div>
+        {appMode === "edit" && (
+          <>
+            <input className="search" placeholder="Search (Ctrl+K)" />
+            <button className="primary" onClick={handleSolve} disabled={isSolving}>
+              {isSolving ? "Solving..." : "Solve"}
+            </button>
+          </>
+        )}
+      </div>
+      
+      {appMode === "edit" ? (
+        <div className="layout">
+          <NodeTypeSelector onNodeTypeSelected={handleNodeTypeSelected} />
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeContextMenu={onNodeContextMenu}
+            onPaneClick={onPaneClick}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            selectionOnDrag
+            panOnDrag={[1, 2]}
+            selectionMode={undefined}
+            panOnScroll
+            multiSelectionKeyCode="Control"
+            deleteKeyCode={["Backspace", "Delete"]}
+            elementsSelectable
+            nodesDraggable
+            fitView
+            nodeTypes={nodeTypes}
+          >
+            <Background gap={20} size={1} color="#1f2a3a" />
+            <MiniMap pannable zoomable />
+            <Controls showInteractive={false} />
+            <Panel position="top-right" className="panel">
+              <div className="panel-title">Live Stats</div>
+              <div className="panel-row">Nodes: {nodes.length}</div>
+              <div className="panel-row">Edges: {edges.length}</div>
+            </Panel>
+            <Panel position="bottom-right" className="panel results">
+              <div className="panel-title">Solver Output</div>
+              {solveError ? <div className="panel-error">{solveError}</div> : null}
+              {!solveResult ? (
+                <div className="panel-muted">Run solver to see results.</div>
+              ) : (
+                <div className="panel-section">
+                  <div className="panel-subtitle">Machines</div>
+                  {Object.entries(solveResult.machineCounts).map(([key, value]) => (
+                    <div key={key} className="panel-row">
+                      <span>{key}</span>
+                      <span>{value.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="panel-subtitle">Flows / s</div>
+                  {Object.entries(solveResult.flowsPerSecond).map(([key, value]) => (
+                    <div key={key} className="panel-row">
+                      <span>{key}</span>
+                      <span>{value.toFixed(3)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Panel>
+            {menu && (
+              <ContextMenu
+                top={menu.top}
+                left={menu.left}
+                onClose={() => setMenu(null)}
+                onDuplicate={handleDuplicateNode}
+                onDelete={handleDeleteNode}
+              />
             )}
-          </Panel>
-          {menu && (
-            <ContextMenu
-              top={menu.top}
-              left={menu.left}
-              onClose={() => setMenu(null)}
-              onDuplicate={handleDuplicateNode}
-              onDelete={handleDeleteNode}
+          </ReactFlow>
+          {pendingNodeType && (
+            <NodeConfigDialog
+              nodeType={pendingNodeType}
+              onConfirm={handleNodeConfigConfirm}
+              onCancel={handleNodeConfigCancel}
             />
           )}
-        </ReactFlow>
-      </div>
+        </div>
+      ) : (
+        <div className="config-container">
+          {configSubMode === "items" && <ItemMode />}
+          {configSubMode === "tags" && <TagMode />}
+          {configSubMode === "recipes" && <RecipeMode />}
+        </div>
+      )}
     </div>
   );
 }
