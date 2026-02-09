@@ -13,14 +13,16 @@
 
 /* Top Bar */
 .top-bar {
-  height: 56px;
+  min-height: 56px;
+  height: auto;
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 0 20px;
+  padding: 12px 20px;
   background: var(--panel);
   border-bottom: 1px solid var(--panel-border);
   backdrop-filter: blur(10px);
+  flex-wrap: wrap;
 }
 
 .brand {

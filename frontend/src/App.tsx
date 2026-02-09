@@ -156,22 +156,17 @@ function AppContent() {
     const node = nodes.find((n) => n.id === menu.id);
     if (!node) return;
     
-    // Simple deep clone
-    const newNode: Node = {
-      ...node,
-      id: `${node.type}-${Date.now()}`,
-      position: { x: node.position.x + 50, y: node.position.y + 50 },
-      selected: true,
-      data: JSON.parse(JSON.stringify(node.data)),
-    };
-    
-    const updatedNodes = nds => {
-      const deselected = nds.map(n => ({ ...n, selected: false }));
-      deselected.push(newNode);
-      return deselected;
-    };
-    
-    setNodes(updatedNodes);
+    setNodes((nds) => {
+      const deselected = nds.map((n) => ({ ...n, selected: false }));
+      const newNode: Node = {
+        ...node,
+        id: `${node.type}-${Date.now()}`,
+        position: { x: node.position.x + 50, y: node.position.y + 50 },
+        selected: true,
+        data: JSON.parse(JSON.stringify(node.data)),
+      };
+      return [...deselected, newNode];
+    });
     setMenu(null);
   }, [menu, nodes, setNodes]);
 
