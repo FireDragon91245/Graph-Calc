@@ -1,0 +1,53 @@
+{
+  "items": [
+    {"id":"iron_ore","name":"Iron Ore","medium":"item"},
+    {"id":"iron_dust","name":"Iron Dust","medium":"item"},
+    {"id":"iron_ingot","name":"Iron Ingot","medium":"item"},
+    {"id":"copper_ore","name":"Copper Ore","medium":"item"},
+    {"id":"copper_dust","name":"Copper Dust","medium":"item"},
+    {"id":"copper_ingot","name":"Copper Ingot","medium":"item"},
+    {"id":"gold_dust","name":"Gold Dust","medium":"item"},
+    {"id":"zinc_dust","name":"Zinc Dust","medium":"item"}
+  ],
+  "tags": {
+    "@ore": ["iron_ore", "copper_ore"],
+    "@ingot": ["iron_ingot", "copper_ingot"],
+    "@macerate_ingot": ["macerate_iron", "macerate_copper"]
+  },
+  "recipes": [
+    {
+      "id": "macerate_iron",
+      "name": "Macerate Iron",
+      "timeSeconds": 2,
+      "inputs": [{"item":"iron_ore","amount":1}],
+      "outputs": [
+        {"item":"iron_dust","amount":1,"probability":1.0},
+        {"item":"gold_dust","amount":1,"probability":0.1}
+      ]
+    },
+    {
+      "id": "macerate_copper",
+      "name": "Macerate Copper",
+      "timeSeconds": 2,
+      "inputs": [{"item":"copper_ore","amount":1}],
+      "outputs": [
+        {"item":"copper_dust","amount":1,"probability":1.0},
+        {"item":"zinc_dust","amount":1,"probability":0.1}
+      ]
+    },
+    {
+      "id": "smelt_iron",
+      "name": "Smelt Iron",
+      "timeSeconds": 3.2,
+      "inputs": [{"item":"iron_dust","amount":1}],
+      "outputs": [{"item":"iron_ingot","amount":1,"probability":1.0}]
+    },
+    {
+      "id": "smelt_copper",
+      "name": "Smelt Copper",
+      "timeSeconds": 3.2,
+      "inputs": [{"item":"copper_dust","amount":1}],
+      "outputs": [{"item":"copper_ingot","amount":1,"probability":1.0}]
+    }
+  ]
+}
