@@ -1,30 +1,115 @@
-import { Handle, NodeProps, Position } from "reactflow";
+import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
+import { useGraphStore } from "../store/graphStore";
 
-type OutputNodeData = {
-  title: string;
-  targetPerSecond?: number;
+type OutputItem = {
+  id: string;
+  itemId: string;
 };
 
-export default function OutputNode({ data }: NodeProps<OutputNodeData>) {
+type OutputNodeData = {
+  items: OutputItem[];
+};
+
+export default function OutputNode({ id, data }: NodeProps<OutputNodeData>) {
+  const { setNodes } = useReactFlow();
+  const items = useGraphStore((state) => state.items);
+
+  const addItem = () => {
+    const newItem: OutputItem = {
+      id: Date.now().toString(),
+      itemId: items[0]?.id || "",
+    };
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === id) {
+          const currentItems = node.data.items || [];
+          return {
+            ...node,
+            data: { ...node.data, items: [...currentItems, newItem] },
+          };
+        }
+        return node;
+      })
+    );
+  };
+
+  const updateItem = (itemId: string, updates: Partial<OutputItem>) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === id) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              items: node.data.items.map((item: OutputItem) =>
+                item.id === itemId ? { ...item, ...updates } : item
+              ),
+            },
+          };
+        }
+        return node;
+      })
+    );
+  };
+
+  const removeItem = (itemId: string) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === id) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              items: node.data.items.filter((item: OutputItem) => item.id !== itemId),
+            },
+          };
+        }
+        return node;
+      })
+    );
+  };
+
+  const nodeItems = data.items || [];
+
   return (
     <div className="node io output">
       <div className="node-header">
-        <span className="node-title">{data.title}</span>
-        <span className="node-sub">Output</span>
+        <span className="node-title">Output</span>
+        <button className="icon-btn" onClick={addItem} title="Add Item">
+          +
+        </button>
       </div>
       <div className="node-body io-body">
-        <div className="node-row">
-          <span>Target</span>
-          <span>{data.targetPerSecond ?? "—"} /s</span>
-        </div>
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="input"
-          className="handle item center"
-          isConnectableStart={true}
-          style={{ left: -16 }} /* Pull out to center on edge (body margin 8px + half handle) */
-        />
+        {nodeItems.map((item) => (
+          <div key={item.id} className="node-row" style={{ position: "relative" }}>
+            <Handle
+              type="target"
+              position={Position.Left}
+              id={`input-${item.id}`} 
+              className="handle item center"
+              isConnectableStart={true}
+              style={{ left: -16 }}
+            />
+             <div className="row-controls">
+                <select
+                    className="nodrag"
+                    value={item.itemId}
+                    onChange={(e) => updateItem(item.id, { itemId: e.target.value })}
+                >
+                    {items.map((i) => (
+                    <option key={i.id} value={i.id}>
+                        {i.name}
+                    </option>
+                    ))}
+                </select>
+                <button className="icon-btn danger" onClick={() => removeItem(item.id)}>
+                    ×
+                </button>
+            </div>
+            {/* Display amount? Currently just config. Solver result would be overlayed or looked up via ID? */}
+          </div>
+        ))}
+         {nodeItems.length === 0 && <div className="empty-state">No outputs</div>}
       </div>
     </div>
   );

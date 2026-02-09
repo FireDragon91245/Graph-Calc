@@ -10,7 +10,8 @@ import ReactFlow, {
   useNodesState,
   Connection,
   Panel,
-  NodeMouseHandler
+  NodeMouseHandler,
+  ReactFlowProvider
 } from "reactflow";
 import { solveGraph, SolveResponse } from "./api/solve";
 import LibraryPanel from "./editor/LibraryPanel";
@@ -33,7 +34,9 @@ const initialNodes: Node[] = [
     id: "n-input-iron",
     type: "input",
     position: { x: -400, y: -60 },
-    data: { title: "Iron Ore", limitPerSecond: 2 }
+    data: { 
+      items: [{ id: "row1", itemId: "iron_ore", mode: "limit", limit: 2 }]
+    }
   },
   {
     id: "n-recipe-macerate",
@@ -64,13 +67,13 @@ const initialNodes: Node[] = [
     id: "n-output-iron",
     type: "output",
     position: { x: 560, y: -60 },
-    data: { title: "Iron Ingot", targetPerSecond: 1 }
+    data: { items: [{ id: "row1", itemId: "iron_ingot" }] }
   },
   {
     id: "n-requester",
     type: "requester",
     position: { x: 260, y: 160 },
-    data: { requests: [{ itemId: "iron_ingot", targetPerSecond: 1.2 }] }
+    data: { requests: [{ id: "req1", itemId: "iron_ingot", targetPerSecond: 1.2 }] }
   }
 ];
 
@@ -98,7 +101,7 @@ const initialEdges: Edge[] = [
   }
 ];
 
-export default function App() {
+function AppContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [solveResult, setSolveResult] = useState<SolveResponse | null>(null);
@@ -117,8 +120,6 @@ export default function App() {
   const onNodeContextMenu: NodeMouseHandler = useCallback(
     (event, node) => {
       event.preventDefault();
-      // Calculate offset - for simplicity using client coordinates or relative to container
-      // Using event.clientX/Y works for fixed position context menu
       setMenu({
         id: node.id,
         top: event.clientY,
@@ -148,7 +149,7 @@ export default function App() {
       id: `${node.type}-${Date.now()}`,
       position: { x: node.position.x + 50, y: node.position.y + 50 },
       selected: true,
-      data: { ...node.data },
+      data: JSON.parse(JSON.stringify(node.data)),
     };
     
     setNodes((nds) => nds.map(n => ({ ...n, selected: false })).concat(newNode));
@@ -171,7 +172,9 @@ export default function App() {
           id,
           type: "input",
           position: createPosition(),
-          data: { title: item.name, limitPerSecond: undefined }
+          data: { 
+             items: [{ id: "1", itemId: item.id, mode: "infinite" }]
+          }
         }
       ]);
     },
@@ -189,7 +192,7 @@ export default function App() {
           id,
           type: "output",
           position: createPosition(),
-          data: { title: item.name, targetPerSecond: undefined }
+          data: { items: [{ id: "1", itemId: item.id }] }
         }
       ]);
     },
@@ -301,7 +304,7 @@ export default function App() {
           onPaneClick={onPaneClick}
           selectionOnDrag
           panOnDrag={[1, 2]}
-          selectionMode={undefined} /* selectionOnDrag is enough if panOnDrag is false-ish or modified */
+          selectionMode={undefined}
           panOnScroll
           multiSelectionKeyCode="Control"
           deleteKeyCode={["Backspace", "Delete"]}
@@ -354,5 +357,13 @@ export default function App() {
         </ReactFlow>
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ReactFlowProvider>
+      <AppContent />
+    </ReactFlowProvider>
   );
 }
