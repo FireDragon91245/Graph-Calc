@@ -12,7 +12,7 @@ type RequesterNodeData = {
 };
 
 export default function RequesterNode({ id, data }: NodeProps<RequesterNodeData>) {
-  const { setNodes } = useReactFlow();
+  const { setNodes, getEdges, setEdges } = useReactFlow();
   const items = useGraphStore((state) => state.items);
 
   const addItem = () => {
@@ -55,6 +55,13 @@ export default function RequesterNode({ id, data }: NodeProps<RequesterNodeData>
   };
 
   const removeItem = (itemId: string) => {
+    // Remove edges connected to this item's handle
+    const edges = getEdges();
+    const handleId = `input-${itemId}`;
+    setEdges(edges.filter((edge) => 
+      !(edge.target === id && edge.targetHandle === handleId)
+    ));
+
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === id) {
@@ -74,11 +81,11 @@ export default function RequesterNode({ id, data }: NodeProps<RequesterNodeData>
   const requests = data.requests || [];
 
   return (
-    <div className="node requester">
+    <div className="node io requester">
       <div className="node-header">
         <span className="node-title">Requester</span>
       </div>
-      <div className="node-body">
+      <div className="node-body io-body">
         {requests.map((req) => (
           <div key={req.id} className="node-row" style={{ position: "relative" }}>
              <Handle

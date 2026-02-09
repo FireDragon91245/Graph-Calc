@@ -82,7 +82,7 @@ const initialEdges: Edge[] = [
     id: "e1",
     source: "n-input-iron",
     target: "n-recipe-macerate",
-    sourceHandle: "output",
+    sourceHandle: "output-row1",
     targetHandle: "input-i1"
   },
   {
@@ -97,7 +97,7 @@ const initialEdges: Edge[] = [
     source: "n-recipe-smelt",
     target: "n-output-iron",
     sourceHandle: "output-o1",
-    targetHandle: "input"
+    targetHandle: "input-row1"
   }
 ];
 

@@ -11,7 +11,7 @@ type OutputNodeData = {
 };
 
 export default function OutputNode({ id, data }: NodeProps<OutputNodeData>) {
-  const { setNodes } = useReactFlow();
+  const { setNodes, getEdges, setEdges } = useReactFlow();
   const items = useGraphStore((state) => state.items);
 
   const addItem = () => {
@@ -53,6 +53,13 @@ export default function OutputNode({ id, data }: NodeProps<OutputNodeData>) {
   };
 
   const removeItem = (itemId: string) => {
+    // Remove edges connected to this item's handle
+    const edges = getEdges();
+    const handleId = `input-${itemId}`;
+    setEdges(edges.filter((edge) => 
+      !(edge.target === id && edge.targetHandle === handleId)
+    ));
+
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === id) {
