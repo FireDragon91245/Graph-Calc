@@ -302,29 +302,6 @@
   align-items: center;
 }
 
-.medium-badge {
-  padding: 0.125rem 0.5rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.medium-badge.medium-item {
-  background: rgba(16, 185, 129, 0.2);
-  color: #6ee7b7;
-}
-
-.medium-badge.medium-fluid {
-  background: rgba(110, 168, 254, 0.2);
-  color: var(--accent);
-}
-
-.medium-badge.medium-gas {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
-}
-
 .category-badge {
   padding: 0.25rem 0.625rem;
   background: rgba(139, 92, 246, 0.15);

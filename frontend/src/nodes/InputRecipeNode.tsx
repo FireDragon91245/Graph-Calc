@@ -5,7 +5,6 @@ import SearchableDropdown from "../editor/SearchableDropdown";
 type Port = {
   id: string;
   name: string;
-  medium: "item" | "fluid" | "gas";
   amountPerCycle: number;
   probability?: number;
 };
@@ -35,7 +34,6 @@ export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeD
       id: output.id,
       name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
       amountPerCycle: output.amount,
-      medium: "item" as const,
       probability: output.probability
     }));
 
@@ -84,7 +82,7 @@ export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeD
                   type="source"
                   position={Position.Right}
                   id={`output-${output.id}`}
-                  className={`handle ${output.medium}`}
+                  className="handle"
                 />
               </div>
             ))}

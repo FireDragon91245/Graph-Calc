@@ -17,187 +17,156 @@
     {
       "id": "diamond_geode",
       "name": "Diamond Geode",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "emerald_geode",
       "name": "Emerald Geode",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "ruby_geode",
       "name": "Ruby Geode",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "sapphire_geode",
       "name": "Sapphire Geode",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "green_sapphire_geode",
       "name": "Green Sapphire Geode",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "quartzite_geode",
       "name": "Quartzite Geode",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "topaz_geode",
       "name": "Topaz Geode",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "blue_topaz_geode",
       "name": "Blue Topaz Geode",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "spessartine_geode",
       "name": "Spessartine Geode",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "certus_quartz_geode",
       "name": "Certus Quartz Geode",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "apatite_geode",
       "name": "Apatite Geode",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "monazite_geode",
       "name": "Monazite Geode",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "realgar_geode",
       "name": "Realgar Geode",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "raw_diamond",
       "name": "Raw Diamond",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "raw_emerald",
       "name": "Raw Emerald",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "raw_ruby",
       "name": "Raw Ruby",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "raw_sapphire",
       "name": "Raw Sapphire",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "raw_green_sapphire",
       "name": "Raw Green Sapphire",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "stone_dust",
       "name": "Stone Dust",
-      "medium": "item",
       "categoryId": "dust"
     },
     {
       "id": "lubricant",
       "name": "Lubricant",
-      "medium": "item",
       "categoryId": "liquid"
     },
     {
       "id": "raw_quartzite",
       "name": "Raw Quartzite",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "raw_topaz",
       "name": "Raw Topaz",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "raw_blue_topaz",
       "name": "Raw Blue Topaz",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "raw_spessartine",
       "name": "Raw Spessartine",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "raw_certus_quartz",
       "name": "Raw Certus Quartz",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "raw_apatite",
       "name": "Raw Apatite",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "raw_monazite",
       "name": "Raw Monazite",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "raw_realgar",
       "name": "Raw Realgar",
-      "medium": "item",
       "categoryId": "raw"
     },
     {
       "id": "sand",
       "name": "Sand",
-      "medium": "item",
       "categoryId": null
     },
     {
       "id": "gravel",
       "name": "Gravel",
-      "medium": "item",
       "categoryId": null
     },
     {
       "id": "distilled_water",
       "name": "Distilled Water",
-      "medium": "item",
       "categoryId": "liquid"
     }
   ],

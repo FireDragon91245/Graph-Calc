@@ -5,7 +5,6 @@ import {
   Item,
   Tag,
   Recipe,
-  Medium,
   RecipeInput,
   RecipeOutput
 } from "../store/graphStore";
@@ -53,7 +52,6 @@ export default function LibraryPanel({
 
   const [categoryName, setCategoryName] = useState("");
   const [itemName, setItemName] = useState("");
-  const [itemMedium, setItemMedium] = useState<Medium>("item");
   const [itemCategoryId, setItemCategoryId] = useState<string>("");
   const [tagName, setTagName] = useState("");
   const [tagMembers, setTagMembers] = useState<string[]>([]);
@@ -83,7 +81,7 @@ export default function LibraryPanel({
 
   const handleAddItem = () => {
     if (!itemName.trim()) return;
-    addItem({ name: itemName.trim(), medium: itemMedium, categoryId: itemCategoryId || undefined });
+    addItem({ name: itemName.trim(), categoryId: itemCategoryId || undefined });
     setItemName("");
   };
 
@@ -159,11 +157,6 @@ export default function LibraryPanel({
             onChange={(event) => setItemName(event.target.value)}
             placeholder="Item name"
           />
-          <select value={itemMedium} onChange={(event) => setItemMedium(event.target.value as Medium)}>
-            <option value="item">Item</option>
-            <option value="fluid">Fluid</option>
-            <option value="gas">Gas</option>
-          </select>
           <select value={itemCategoryId} onChange={(event) => setItemCategoryId(event.target.value)}>
             <option value="">No category</option>
             {categories.map((category) => (

@@ -1,13 +1,13 @@
 {
   "items": [
-    {"id":"iron_ore","name":"Iron Ore","medium":"item"},
-    {"id":"iron_dust","name":"Iron Dust","medium":"item"},
-    {"id":"iron_ingot","name":"Iron Ingot","medium":"item"},
-    {"id":"copper_ore","name":"Copper Ore","medium":"item"},
-    {"id":"copper_dust","name":"Copper Dust","medium":"item"},
-    {"id":"copper_ingot","name":"Copper Ingot","medium":"item"},
-    {"id":"gold_dust","name":"Gold Dust","medium":"item"},
-    {"id":"zinc_dust","name":"Zinc Dust","medium":"item"}
+    {"id":"iron_ore","name":"Iron Ore"},
+    {"id":"iron_dust","name":"Iron Dust"},
+    {"id":"iron_ingot","name":"Iron Ingot"},
+    {"id":"copper_ore","name":"Copper Ore"},
+    {"id":"copper_dust","name":"Copper Dust"},
+    {"id":"copper_ingot","name":"Copper Ingot"},
+    {"id":"gold_dust","name":"Gold Dust"},
+    {"id":"zinc_dust","name":"Zinc Dust"}
   ],
   "tags": {
     "@ore": ["iron_ore", "copper_ore"],

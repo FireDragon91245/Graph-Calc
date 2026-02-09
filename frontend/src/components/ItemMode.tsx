@@ -1,5 +1,5 @@
 import { useState, DragEvent } from "react";
-import { useGraphStore, Category, Item, Medium } from "../store/graphStore";
+import { useGraphStore, Category, Item } from "../store/graphStore";
 
 export default function ItemMode() {
   const categories = useGraphStore((state) => state.categories);
@@ -29,8 +29,7 @@ export default function ItemMode() {
     if (!newItemName.trim()) return;
     // Always add to uncategorized by default
     addItem({
-      name: newItemName.trim(),
-      medium: "item"
+      name: newItemName.trim()
     });
     setNewItemName("");
   };

@@ -5,7 +5,6 @@ import SearchableDropdown from "../editor/SearchableDropdown";
 type PortPattern = {
   id: string;
   name: string;
-  medium: "item" | "fluid" | "gas";
   amountPerCycle: number;
   probability?: number;
   isMixed: boolean;
@@ -27,7 +26,7 @@ function analyzeRecipeOutputPattern(
   items: any[]
 ): PortPattern[] {
   if (recipeIds.length === 0) {
-    return [{ id: "o1", name: "Mixed Output", medium: "item", amountPerCycle: 1, isMixed: true }];
+    return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }];
   }
 
   const recipeData = recipeIds
@@ -35,7 +34,7 @@ function analyzeRecipeOutputPattern(
     .filter((r): r is NonNullable<typeof r> => r !== undefined);
   
   if (recipeData.length === 0) {
-    return [{ id: "o1", name: "Mixed Output", medium: "item", amountPerCycle: 1, isMixed: true }];
+    return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }];
   }
 
   // Check if all recipes have the same number of outputs
@@ -44,7 +43,7 @@ function analyzeRecipeOutputPattern(
 
   // If structure doesn't match, fallback to 1 mixed output
   if (!sameOutputCount) {
-    return [{ id: "o1", name: "Mixed Output", medium: "item", amountPerCycle: 1, isMixed: true }];
+    return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }];
   }
 
   const numOutputs = outputCounts[0];
@@ -74,7 +73,6 @@ function analyzeRecipeOutputPattern(
     outputs.push({
       id: `o${i + 1}`,
       name,
-      medium: "item",
       amountPerCycle: allSameAmount ? amounts[0] : 1,
       probability: allSameProbability ? probabilities[0] : undefined,
       isMixed,
@@ -147,7 +145,7 @@ export default function RecipeTagInputNode({ id, data }: NodeProps<RecipeTagInpu
                   type="source"
                   position={Position.Right}
                   id={`output-${output.id}`}
-                  className={`handle ${output.medium} ${output.isMixed ? "mixed" : ""}`}
+                  className={`handle ${output.isMixed ? "mixed" : ""}`}
                 />
               </div>
             ))}

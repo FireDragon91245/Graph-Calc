@@ -4,8 +4,8 @@
       "id": "recipetag-1770673269873",
       "type": "recipetag",
       "position": {
-        "x": 5.3627526541839075,
-        "y": -2813.866224047691
+        "x": -30.685391837349073,
+        "y": -2811.4630144149223
       },
       "data": {
         "recipeTagId": "@cut_geode",
@@ -168,6 +168,39 @@
           }
         ]
       }
+    },
+    {
+      "id": "input-1770675525078",
+      "type": "input",
+      "position": {
+        "x": -396.0967849425055,
+        "y": -2396.5794021997945
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "lubricant",
+            "mode": "infinite"
+          }
+        ]
+      }
+    },
+    {
+      "id": "output-1770675554208",
+      "type": "output",
+      "position": {
+        "x": 540.415325968327,
+        "y": -2578.2598633416505
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "stone_dust"
+          }
+        ]
+      }
     }
   ],
   "edges": [
@@ -261,6 +294,20 @@
       "target": "recipetag-1770673269873",
       "sourceHandle": "output-o7",
       "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-input-1770675525078output-1-recipetag-1770673269873input-i2",
+      "source": "input-1770675525078",
+      "target": "recipetag-1770673269873",
+      "sourceHandle": "output-1",
+      "targetHandle": "input-i2"
+    },
+    {
+      "id": "reactflow__edge-recipetag-1770673269873output-o2-output-1770675554208input-1",
+      "source": "recipetag-1770673269873",
+      "target": "output-1770675554208",
+      "sourceHandle": "output-o2",
+      "targetHandle": "input-1"
     }
   ]
 }

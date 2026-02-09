@@ -1,8 +1,6 @@
 import { create } from "zustand";
 import { saveStore, StoreData } from "../api/persistence";
 
-type Medium = "item" | "fluid" | "gas";
-
 type Category = {
   id: string;
   name: string;
@@ -11,7 +9,6 @@ type Category = {
 type Item = {
   id: string;
   name: string;
-  medium: Medium;
   categoryId?: string;
 };
 
@@ -105,14 +102,14 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
     { id: "ingot", name: "Ingot" }
   ],
   items: [
-    { id: "iron_ore", name: "Iron Ore", medium: "item", categoryId: "ore" },
-    { id: "iron_dust", name: "Iron Dust", medium: "item" },
-    { id: "iron_ingot", name: "Iron Ingot", medium: "item", categoryId: "ingot" },
-    { id: "copper_ore", name: "Copper Ore", medium: "item", categoryId: "ore" },
-    { id: "copper_dust", name: "Copper Dust", medium: "item" },
-    { id: "copper_ingot", name: "Copper Ingot", medium: "item", categoryId: "ingot" },
-    { id: "gold_dust", name: "Gold Dust", medium: "item" },
-    { id: "zinc_dust", name: "Zinc Dust", medium: "item" }
+    { id: "iron_ore", name: "Iron Ore", categoryId: "ore" },
+    { id: "iron_dust", name: "Iron Dust" },
+    { id: "iron_ingot", name: "Iron Ingot", categoryId: "ingot" },
+    { id: "copper_ore", name: "Copper Ore", categoryId: "ore" },
+    { id: "copper_dust", name: "Copper Dust" },
+    { id: "copper_ingot", name: "Copper Ingot", categoryId: "ingot" },
+    { id: "gold_dust", name: "Gold Dust" },
+    { id: "zinc_dust", name: "Zinc Dust" }
   ],
   tags: [
     { id: "@ore", name: "@ore", memberItemIds: ["iron_ore", "copper_ore"] },
@@ -200,7 +197,6 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
         newItems[existingIndex] = {
           id: itemId,
           name: item.name,
-          medium: item.medium,
           categoryId: item.categoryId
         };
         newState = { items: newItems };
@@ -212,7 +208,6 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
             {
               id: itemId,
               name: item.name,
-              medium: item.medium,
               categoryId: item.categoryId
             }
           ]
@@ -492,4 +487,4 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
     }))
 }));
 
-export type { Category, Item, Tag, RecipeTag, Recipe, RecipeInput, RecipeOutput, Medium };
+export type { Category, Item, Tag, RecipeTag, Recipe, RecipeInput, RecipeOutput };

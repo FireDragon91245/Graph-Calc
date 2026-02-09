@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field
 class Port(BaseModel):
     id: str
     name: str
-    medium: Literal["item", "fluid", "gas"] = "item"
     amountPerCycle: float = Field(gt=0)
     probability: Optional[float] = Field(default=1.0, ge=0, le=1)
 
@@ -69,7 +68,6 @@ class Category(BaseModel):
 class Item(BaseModel):
     id: str
     name: str
-    medium: Literal["item", "fluid", "gas"]
     categoryId: Optional[str] = None
 
 

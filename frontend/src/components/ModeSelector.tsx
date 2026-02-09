@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 export type AppMode = "edit" | "config";
-export type ConfigSubMode = "items" | "tags" | "recipes" | "recipeTags" | "recipeGenerator";
+export type ConfigSubMode = "items" | "tags" | "recipes" | "recipeTags" | "recipeGenerator" | "itemGenerator";
 
 type ModeSelectorProps = {
   currentMode: AppMode;
@@ -66,6 +66,12 @@ export default function ModeSelector({
             onClick={() => onConfigSubModeChange("recipeGenerator")}
           >
             🤖 Recipe Generator
+          </button>
+          <button
+            className={`submode-tab ${configSubMode === "itemGenerator" ? "active" : ""}`}
+            onClick={() => onConfigSubModeChange("itemGenerator")}
+          >
+            🔮 Item Generator
           </button>
         </div>
       )}

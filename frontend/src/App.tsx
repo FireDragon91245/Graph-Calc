@@ -34,6 +34,7 @@ import TagMode from "./components/TagMode";
 import RecipeMode from "./components/RecipeMode";
 import RecipeTagMode from "./components/RecipeTagMode";
 import RecipeGenerator from "./components/RecipeGenerator";
+import ItemGenerator from "./components/ItemGenerator";
 import { NodeType } from "./components/NodeTypeSelector";
 
 const nodeTypes = {
@@ -62,10 +63,10 @@ const initialNodes: Node[] = [
     data: {
       title: "Macerate Iron",
       timeSeconds: 2,
-      inputs: [{ id: "i1", name: "Iron Ore", amountPerCycle: 1, medium: "item" }],
+      inputs: [{ id: "i1", name: "Iron Ore", amountPerCycle: 1 }],
       outputs: [
-        { id: "o1", name: "Iron Dust", amountPerCycle: 1, medium: "item", probability: 1 },
-        { id: "o2", name: "Gold Dust", amountPerCycle: 1, medium: "item", probability: 0.1 }
+        { id: "o1", name: "Iron Dust", amountPerCycle: 1, probability: 1 },
+        { id: "o2", name: "Gold Dust", amountPerCycle: 1, probability: 0.1 }
       ]
     }
   },
@@ -76,8 +77,8 @@ const initialNodes: Node[] = [
     data: {
       title: "Smelt Iron",
       timeSeconds: 3.2,
-      inputs: [{ id: "i1", name: "Iron Dust", amountPerCycle: 1, medium: "item" }],
-      outputs: [{ id: "o1", name: "Iron Ingot", amountPerCycle: 1, medium: "item", probability: 1 }]
+      inputs: [{ id: "i1", name: "Iron Dust", amountPerCycle: 1 }],
+      outputs: [{ id: "o1", name: "Iron Ingot", amountPerCycle: 1, probability: 1 }]
     }
   },
   {
@@ -367,8 +368,7 @@ function AppContent() {
           return {
             id: input.id,
             name,
-            amountPerCycle: input.amount,
-            medium: "item" as const
+            amountPerCycle: input.amount
           };
         });
 
@@ -376,7 +376,6 @@ function AppContent() {
           id: output.id,
           name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
           amountPerCycle: output.amount,
-          medium: "item" as const,
           probability: output.probability
         }));
 
@@ -412,8 +411,8 @@ function AppContent() {
         const analyzeRecipePattern = (recipeIds: string[]) => {
           if (recipeIds.length === 0) {
             return {
-              inputs: [{ id: "i1", name: "Mixed Input", medium: "item" as const, amountPerCycle: 1, isMixed: true }],
-              outputs: [{ id: "o1", name: "Mixed Output", medium: "item" as const, amountPerCycle: 1, isMixed: true }]
+              inputs: [{ id: "i1", name: "Mixed Input", amountPerCycle: 1, isMixed: true }],
+              outputs: [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }]
             };
           }
 
@@ -423,8 +422,8 @@ function AppContent() {
           
           if (recipeData.length === 0) {
             return {
-              inputs: [{ id: "i1", name: "Mixed Input", medium: "item" as const, amountPerCycle: 1, isMixed: true }],
-              outputs: [{ id: "o1", name: "Mixed Output", medium: "item" as const, amountPerCycle: 1, isMixed: true }]
+              inputs: [{ id: "i1", name: "Mixed Input", amountPerCycle: 1, isMixed: true }],
+              outputs: [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }]
             };
           }
 
@@ -435,8 +434,8 @@ function AppContent() {
 
           if (!sameInputCount || !sameOutputCount) {
             return {
-              inputs: [{ id: "i1", name: "Mixed Input", medium: "item" as const, amountPerCycle: 1, isMixed: true }],
-              outputs: [{ id: "o1", name: "Mixed Output", medium: "item" as const, amountPerCycle: 1, isMixed: true }]
+              inputs: [{ id: "i1", name: "Mixed Input", amountPerCycle: 1, isMixed: true }],
+              outputs: [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }]
             };
           }
 
@@ -471,7 +470,6 @@ function AppContent() {
             inputs.push({
               id: `i${i + 1}`,
               name,
-              medium: "item" as const,
               amountPerCycle: allSameAmount ? amounts[0] : 1,
               isMixed,
               fixedRefId: allSameRefId ? refIds[0] : undefined
@@ -501,7 +499,6 @@ function AppContent() {
             outputs.push({
               id: `o${i + 1}`,
               name,
-              medium: "item" as const,
               amountPerCycle: allSameAmount ? amounts[0] : 1,
               probability: allSameProbability ? probabilities[0] : undefined,
               isMixed,
@@ -534,7 +531,6 @@ function AppContent() {
           id: output.id,
           name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
           amountPerCycle: output.amount,
-          medium: "item" as const,
           probability: output.probability
         }));
 
@@ -558,7 +554,7 @@ function AppContent() {
         // Analyze output pattern from recipes in this tag
         const analyzeRecipeOutputPattern = (recipeIds: string[]) => {
           if (recipeIds.length === 0) {
-            return [{ id: "o1", name: "Mixed Output", medium: "item" as const, amountPerCycle: 1, isMixed: true }];
+            return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }];
           }
 
           const recipeData = recipeIds
@@ -566,14 +562,14 @@ function AppContent() {
             .filter((r): r is NonNullable<typeof r> => r !== undefined);
           
           if (recipeData.length === 0) {
-            return [{ id: "o1", name: "Mixed Output", medium: "item" as const, amountPerCycle: 1, isMixed: true }];
+            return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }];
           }
 
           const outputCounts = recipeData.map((r) => r.outputs.length);
           const sameOutputCount = outputCounts.every((c) => c === outputCounts[0]);
 
           if (!sameOutputCount) {
-            return [{ id: "o1", name: "Mixed Output", medium: "item" as const, amountPerCycle: 1, isMixed: true }];
+            return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }];
           }
 
           const numOutputs = outputCounts[0];
@@ -601,7 +597,6 @@ function AppContent() {
             outputs.push({
               id: `o${i + 1}`,
               name,
-              medium: "item" as const,
               amountPerCycle: allSameAmount ? amounts[0] : 1,
               probability: allSameProbability ? probabilities[0] : undefined,
               isMixed,
@@ -693,8 +688,7 @@ function AppContent() {
           return {
             id: input.id,
             name,
-            amountPerCycle: input.amount,
-            medium: "item" as const
+            amountPerCycle: input.amount
           };
         });
 
@@ -702,7 +696,6 @@ function AppContent() {
           id: output.id,
           name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
           amountPerCycle: output.amount,
-          medium: "item" as const,
           probability: output.probability
         }));
 
@@ -729,7 +722,6 @@ function AppContent() {
           id: output.id,
           name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
           amountPerCycle: output.amount,
-          medium: "item" as const,
           probability: output.probability
         }));
 
@@ -804,8 +796,7 @@ function AppContent() {
         return {
           id: input.id,
           name,
-          amountPerCycle: input.amount,
-          medium: "item" as const
+          amountPerCycle: input.amount
         };
       });
 
@@ -813,7 +804,6 @@ function AppContent() {
         id: output.id,
         name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
         amountPerCycle: output.amount,
-        medium: "item" as const,
         probability: output.probability
       }));
 
@@ -983,6 +973,7 @@ function AppContent() {
           {configSubMode === "recipes" && <RecipeMode />}
           {configSubMode === "recipeTags" && <RecipeTagMode />}
           {configSubMode === "recipeGenerator" && <RecipeGenerator />}
+          {configSubMode === "itemGenerator" && <ItemGenerator />}
         </div>
       )}
     </div>

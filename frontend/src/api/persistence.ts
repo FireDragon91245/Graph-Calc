@@ -13,7 +13,6 @@ export interface Category {
 export interface Item {
   id: string;
   name: string;
-  medium: "item" | "fluid" | "gas";
   categoryId?: string;
 }
 

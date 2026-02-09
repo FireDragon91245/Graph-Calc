@@ -5,7 +5,6 @@ import SearchableDropdown from "../editor/SearchableDropdown";
 type PortPattern = {
   id: string;
   name: string;
-  medium: "item" | "fluid" | "gas";
   amountPerCycle: number;
   probability?: number;
   isMixed: boolean; // True if this port varies across recipes
@@ -31,8 +30,8 @@ function analyzeRecipePattern(
 ): { inputs: PortPattern[]; outputs: PortPattern[] } {
   if (recipeIds.length === 0) {
     return {
-      inputs: [{ id: "i1", name: "Mixed Input", medium: "item", amountPerCycle: 1, isMixed: true }],
-      outputs: [{ id: "o1", name: "Mixed Output", medium: "item", amountPerCycle: 1, isMixed: true }]
+      inputs: [{ id: "i1", name: "Mixed Input", amountPerCycle: 1, isMixed: true }],
+      outputs: [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }]
     };
   }
 
@@ -40,8 +39,8 @@ function analyzeRecipePattern(
   
   if (recipeData.length === 0) {
     return {
-      inputs: [{ id: "i1", name: "Mixed Input", medium: "item", amountPerCycle: 1, isMixed: true }],
-      outputs: [{ id: "o1", name: "Mixed Output", medium: "item", amountPerCycle: 1, isMixed: true }]
+      inputs: [{ id: "i1", name: "Mixed Input", amountPerCycle: 1, isMixed: true }],
+      outputs: [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }]
     };
   }
 
@@ -54,8 +53,8 @@ function analyzeRecipePattern(
   // If structure doesn't match, fallback to 1 mixed in, 1 mixed out
   if (!sameInputCount || !sameOutputCount) {
     return {
-      inputs: [{ id: "i1", name: "Mixed Input", medium: "item", amountPerCycle: 1, isMixed: true }],
-      outputs: [{ id: "o1", name: "Mixed Output", medium: "item", amountPerCycle: 1, isMixed: true }]
+      inputs: [{ id: "i1", name: "Mixed Input", amountPerCycle: 1, isMixed: true }],
+      outputs: [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }]
     };
   }
 
@@ -94,7 +93,6 @@ function analyzeRecipePattern(
     inputs.push({
       id: `i${i + 1}`,
       name,
-      medium: "item",
       amountPerCycle: allSameAmount ? amounts[0] : 1,
       isMixed,
       fixedRefId: allSameRefId ? refIds[0] : undefined
@@ -126,7 +124,6 @@ function analyzeRecipePattern(
     outputs.push({
       id: `o${i + 1}`,
       name,
-      medium: "item",
       amountPerCycle: allSameAmount ? amounts[0] : 1,
       probability: allSameProbability ? probabilities[0] : undefined,
       isMixed,
@@ -194,7 +191,7 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
                   type="target"
                   position={Position.Left}
                   id={`input-${input.id}`}
-                  className={`handle ${input.medium} ${input.isMixed ? "mixed" : ""}`}
+                  className={`handle ${input.isMixed ? "mixed" : ""}`}
                   isConnectableStart={true}
                 />
                 <span className={`port-name ${input.isMixed ? "mixed-label" : ""}`}>
@@ -218,7 +215,7 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
                   type="source"
                   position={Position.Right}
                   id={`output-${output.id}`}
-                  className={`handle ${output.medium} ${output.isMixed ? "mixed" : ""}`}
+                  className={`handle ${output.isMixed ? "mixed" : ""}`}
                 />
               </div>
             ))}
