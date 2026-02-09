@@ -168,6 +168,76 @@
       "id": "distilled_water",
       "name": "Distilled Water",
       "categoryId": "liquid"
+    },
+    {
+      "id": "crushed_diamond_ore",
+      "name": "Crushed Diamond Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_emerald_ore",
+      "name": "Crushed Emerald Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_ruby_ore",
+      "name": "Crushed Ruby Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_sapphire_ore",
+      "name": "Crushed Sapphire Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_green_sapphire_ore",
+      "name": "Crushed Green Sapphire Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_quartzite_ore",
+      "name": "Crushed Quartzite Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_topaz_ore",
+      "name": "Crushed Topaz Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_blue_topaz_ore",
+      "name": "Crushed Blue Topaz Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_spessartine_ore",
+      "name": "Crushed Spessartine Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_certus_quartz_ore",
+      "name": "Crushed Certus Quartz Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_apatite_ore",
+      "name": "Crushed Apatite Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_monazite_ore",
+      "name": "Crushed Monazite Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_realgar_ore",
+      "name": "Crushed Realgar Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "water",
+      "name": "Water",
+      "categoryId": "liquid"
     }
   ],
   "tags": [
@@ -189,6 +259,25 @@
         "monazite_geode",
         "realgar_geode"
       ]
+    },
+    {
+      "id": "@raw_gem",
+      "name": "@raw_gem",
+      "memberItemIds": [
+        "raw_realgar",
+        "raw_monazite",
+        "raw_apatite",
+        "raw_certus_quartz",
+        "raw_spessartine",
+        "raw_blue_topaz",
+        "raw_topaz",
+        "raw_quartzite",
+        "raw_green_sapphire",
+        "raw_sapphire",
+        "raw_ruby",
+        "raw_emerald",
+        "raw_diamond"
+      ]
     }
   ],
   "recipeTags": [
@@ -209,6 +298,25 @@
         "cut_apatite_geode",
         "cut_monazite_geode",
         "cut_realgar_geode"
+      ]
+    },
+    {
+      "id": "@grind_raw_gem",
+      "name": "@grind_raw_gem",
+      "memberRecipeIds": [
+        "grind_raw_diamond",
+        "grind_raw_emerald",
+        "grind_raw_ruby",
+        "grind_raw_sapphire",
+        "grind_raw_green_sapphire",
+        "grind_raw_quartzite",
+        "grind_raw_topaz",
+        "grind_raw_blue_topaz",
+        "grind_raw_spessartine",
+        "grind_raw_certus_quarz",
+        "grind_raw_apatite",
+        "grind_raw_monazite",
+        "grind_raw_realgar"
       ]
     }
   ],
@@ -759,6 +867,300 @@
           "itemId": "quartzite_geode",
           "amount": 1.0,
           "probability": 0.4
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_diamond",
+      "name": "Grind Raw Diamond",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_diamond",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_diamond_ore",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_emerald",
+      "name": "Grind Raw Emerald",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_emerald",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_emerald_ore",
+          "amount": 4.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_ruby",
+      "name": "Grind Raw Ruby",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_ruby",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_ruby_ore",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_sapphire",
+      "name": "Grind Raw Sapphire",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_sapphire",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_sapphire_ore",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_green_sapphire",
+      "name": "Grind Raw Green Sapphire",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_green_sapphire",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_green_sapphire_ore",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_quartzite",
+      "name": "Grind Raw Quartzite",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_quartzite",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_quartzite_ore",
+          "amount": 4.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_topaz",
+      "name": "Grind Raw Topaz",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_topaz",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_topaz_ore",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_blue_topaz",
+      "name": "Grind Raw Blue Topaz",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_blue_topaz",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_blue_topaz_ore",
+          "amount": 4.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_spessartine",
+      "name": "Grind Raw Spessartine",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_spessartine",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_spessartine_ore",
+          "amount": 6.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_certus_quarz",
+      "name": "Grind Raw Certus Quarz",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_certus_quartz",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_certus_quartz_ore",
+          "amount": 4.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_apatite",
+      "name": "Grind Raw Apatite",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_apatite",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_apatite_ore",
+          "amount": 8.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_monazite",
+      "name": "Grind Raw Monazite",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_monazite",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_monazite_ore",
+          "amount": 8.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_realgar",
+      "name": "Grind Raw Realgar",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_realgar",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_realgar_ore",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "distill_water",
+      "name": "Distill Water",
+      "timeSeconds": 4.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "water",
+          "amount": 288.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "distilled_water",
+          "amount": 260.0,
+          "probability": 1.0
         }
       ]
     }

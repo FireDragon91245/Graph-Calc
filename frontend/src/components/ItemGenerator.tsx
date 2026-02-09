@@ -10,7 +10,23 @@ interface ItemSuggestion {
   sourceItem: Item;
 }
 
-type TransformType = "prefix" | "suffix" | "replace" | "removePrefix" | "removeSuffix";
+type TransformType =
+  | "addPrefix"
+  | "addSuffix"
+  | "replace"
+  | "removePrefix"
+  | "removeSuffix"
+  | "uppercase"
+  | "lowercase"
+  | "titlecase";
+
+interface TransformStep {
+  id: string;
+  type: TransformType;
+  value?: string;
+  replaceFrom?: string;
+  replaceTo?: string;
+}
 
 export default function ItemGenerator() {
   const items = useGraphStore((state) => state.items);
@@ -21,10 +37,7 @@ export default function ItemGenerator() {
   const [suggestions, setSuggestions] = useState<ItemSuggestion[]>([]);
   const [selectedTagId, setSelectedTagId] = useState<string>("");
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
-  const [transformType, setTransformType] = useState<TransformType>("prefix");
-  const [transformValue, setTransformValue] = useState("");
-  const [replaceFrom, setReplaceFrom] = useState("");
-  const [replaceTo, setReplaceTo] = useState("");
+  const [steps, setSteps] = useState<TransformStep[]>([]);
   const [targetCategoryId, setTargetCategoryId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -57,46 +70,126 @@ export default function ItemGenerator() {
     return items.filter((item) => selectedItemIds.includes(item.id));
   };
 
-  const applyTransform = (itemName: string, itemId: string): { name: string; id: string } => {
+  const slugify = (text: string) => text.toLowerCase().trim().replace(/\s+/g, "_");
+
+  const toTitleCase = (text: string) =>
+    text
+      .toLowerCase()
+      .split(/\s+/)
+      .map((word) => (word ? word[0].toUpperCase() + word.slice(1) : ""))
+      .join(" ");
+
+  const applyTransformSteps = (itemName: string, itemId: string): { name: string; id: string } => {
     let newName = itemName;
     let newId = itemId;
 
-    switch (transformType) {
-      case "prefix":
-        newName = `${transformValue} ${itemName}`;
-        newId = `${transformValue.toLowerCase().replace(/\s+/g, "_")}_${itemId}`;
-        break;
-      case "suffix":
-        newName = `${itemName} ${transformValue}`;
-        newId = `${itemId}_${transformValue.toLowerCase().replace(/\s+/g, "_")}`;
-        break;
-      case "replace":
-        if (replaceFrom) {
-          newName = itemName.replace(new RegExp(replaceFrom, "gi"), replaceTo);
-          newId = itemId.replace(new RegExp(replaceFrom.replace(/\s+/g, "_"), "gi"), replaceTo.replace(/\s+/g, "_"));
-        }
-        break;
-      case "removePrefix":
-        if (transformValue && itemName.toLowerCase().startsWith(transformValue.toLowerCase())) {
-          newName = itemName.substring(transformValue.length).trim();
-          const prefixId = transformValue.toLowerCase().replace(/\s+/g, "_");
-          if (itemId.startsWith(prefixId + "_")) {
-            newId = itemId.substring(prefixId.length + 1);
+    steps.forEach((step) => {
+      switch (step.type) {
+        case "addPrefix": {
+          const val = step.value?.trim();
+          if (val) {
+            newName = `${val} ${newName}`;
+            newId = `${slugify(val)}_${newId}`;
           }
+          break;
         }
-        break;
-      case "removeSuffix":
-        if (transformValue && itemName.toLowerCase().endsWith(transformValue.toLowerCase())) {
-          newName = itemName.substring(0, itemName.length - transformValue.length).trim();
-          const suffixId = transformValue.toLowerCase().replace(/\s+/g, "_");
-          if (itemId.endsWith("_" + suffixId)) {
-            newId = itemId.substring(0, itemId.length - suffixId.length - 1);
+        case "addSuffix": {
+          const val = step.value?.trim();
+          if (val) {
+            newName = `${newName} ${val}`;
+            newId = `${newId}_${slugify(val)}`;
           }
+          break;
         }
-        break;
-    }
+        case "removePrefix": {
+          const val = step.value?.trim();
+          if (val && newName.toLowerCase().startsWith(val.toLowerCase())) {
+            newName = newName.substring(val.length).trim();
+            const slug = slugify(val);
+            if (newId.startsWith(`${slug}_`)) {
+              newId = newId.substring(slug.length + 1);
+            }
+          }
+          break;
+        }
+        case "removeSuffix": {
+          const val = step.value?.trim();
+          if (val && newName.toLowerCase().endsWith(val.toLowerCase())) {
+            newName = newName.substring(0, newName.length - val.length).trim();
+            const slug = slugify(val);
+            if (newId.endsWith(`_${slug}`)) {
+              newId = newId.substring(0, newId.length - slug.length - 1);
+            }
+          }
+          break;
+        }
+        case "replace": {
+          const from = step.replaceFrom?.trim();
+          const to = step.replaceTo ?? "";
+          if (from) {
+            newName = newName.replace(new RegExp(from, "gi"), to);
+            newId = newId.replace(new RegExp(slugify(from), "gi"), slugify(to));
+          }
+          break;
+        }
+        case "uppercase": {
+          newName = newName.toUpperCase();
+          break;
+        }
+        case "lowercase": {
+          newName = newName.toLowerCase();
+          break;
+        }
+        case "titlecase": {
+          newName = toTitleCase(newName);
+          break;
+        }
+      }
+    });
 
     return { name: newName, id: newId };
+  };
+
+  const addStep = (type: TransformType = "addPrefix") => {
+    setSteps((prev) => [
+      ...prev,
+      {
+        id: `step_${Date.now()}_${prev.length}`,
+        type,
+        value: "",
+        replaceFrom: "",
+        replaceTo: "",
+      },
+    ]);
+  };
+
+  const updateStep = (stepId: string, patch: Partial<TransformStep>) => {
+    setSteps((prev) => prev.map((step) => (step.id === stepId ? { ...step, ...patch } : step)));
+  };
+
+  const removeStep = (stepId: string) => {
+    setSteps((prev) => prev.filter((step) => step.id !== stepId));
+  };
+
+  const validateSteps = (): string | null => {
+    if (steps.length === 0) return "Add at least one transformation step.";
+
+    for (const step of steps) {
+      switch (step.type) {
+        case "addPrefix":
+        case "addSuffix":
+        case "removePrefix":
+        case "removeSuffix":
+          if (!step.value?.trim()) return "Each add/remove step needs a value.";
+          break;
+        case "replace":
+          if (!step.replaceFrom?.trim()) return "Find & replace needs a search term.";
+          break;
+        default:
+          break;
+      }
+    }
+    return null;
   };
 
   const generateSuggestions = () => {
@@ -107,27 +200,23 @@ export default function ItemGenerator() {
       return;
     }
 
-    if (transformType === "replace" && !replaceFrom) {
-      alert("Please enter text to replace!");
+    const stepError = validateSteps();
+    if (stepError) {
+      alert(stepError);
       return;
     }
 
-    if ((transformType === "prefix" || transformType === "suffix" || transformType === "removePrefix" || transformType === "removeSuffix") && !transformValue) {
-      alert(`Please enter ${transformType === "removePrefix" || transformType === "removeSuffix" ? "text to remove" : "text to add"}!`);
-      return;
-    }
-
+    const timestamp = Date.now();
     const newSuggestions: ItemSuggestion[] = [];
 
-    sourceItems.forEach((sourceItem) => {
-      const transformed = applyTransform(sourceItem.name, sourceItem.id);
+    sourceItems.forEach((sourceItem, index) => {
+      const transformed = applyTransformSteps(sourceItem.name, sourceItem.id);
       
-      // Check if item already exists
       const exists = items.some((item) => item.id === transformed.id);
       
       if (!exists && transformed.name !== sourceItem.name) {
         newSuggestions.push({
-          id: `gen_${transformed.id}_${Date.now()}`,
+          id: `gen_${transformed.id}_${timestamp + index}`,
           name: transformed.name,
           itemId: transformed.id,
           categoryId: targetCategoryId || sourceItem.categoryId,
@@ -186,9 +275,7 @@ export default function ItemGenerator() {
   const clearForm = () => {
     setSelectedTagId("");
     setSelectedItemIds([]);
-    setTransformValue("");
-    setReplaceFrom("");
-    setReplaceTo("");
+    setSteps([]);
     setSuggestions([]);
   };
 
@@ -281,66 +368,106 @@ export default function ItemGenerator() {
         <div className="generator-panel">
           <h3>Transformation Settings</h3>
           
-          <div className="form-row">
-            <label>Transform Type</label>
-            <select
-              value={transformType}
-              onChange={(e) => setTransformType(e.target.value as TransformType)}
-              className="config-input"
-            >
-              <option value="prefix">Add Prefix</option>
-              <option value="suffix">Add Suffix</option>
-              <option value="replace">Find & Replace</option>
-              <option value="removePrefix">Remove Prefix</option>
-              <option value="removeSuffix">Remove Suffix</option>
-            </select>
+          <div className="form-row" style={{ alignItems: "flex-start" }}>
+            <div>
+              <label>Steps (run top to bottom)</label>
+              <p className="help-text">Chain multiple actions like remove prefix → add prefix → replace text.</p>
+            </div>
+            <button onClick={() => addStep()} className="btn-secondary" style={{ marginLeft: "auto" }}>
+              + Add Step
+            </button>
           </div>
 
-          {transformType === "replace" ? (
-            <>
-              <div className="form-row">
-                <label>Find Text</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Raw"
-                  value={replaceFrom}
-                  onChange={(e) => setReplaceFrom(e.target.value)}
-                  className="config-input"
-                />
-              </div>
-              <div className="form-row">
-                <label>Replace With</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Crushed"
-                  value={replaceTo}
-                  onChange={(e) => setReplaceTo(e.target.value)}
-                  className="config-input"
-                />
-              </div>
-            </>
-          ) : (
-            <div className="form-row">
-              <label>
-                {transformType === "prefix" && "Prefix to Add"}
-                {transformType === "suffix" && "Suffix to Add"}
-                {transformType === "removePrefix" && "Prefix to Remove"}
-                {transformType === "removeSuffix" && "Suffix to Remove"}
-              </label>
-              <input
-                type="text"
-                placeholder={
-                  transformType === "prefix" ? "e.g., Crushed" :
-                  transformType === "suffix" ? "e.g., Ore" :
-                  transformType === "removePrefix" ? "e.g., Raw" :
-                  "e.g., Ore"
-                }
-                value={transformValue}
-                onChange={(e) => setTransformValue(e.target.value)}
-                className="config-input"
-              />
+          {steps.length === 0 && (
+            <div className="help-text" style={{ marginBottom: "1rem" }}>
+              No steps yet. Add one to start building a transformation pipeline.
             </div>
           )}
+
+          <div className="steps-list">
+            {steps.map((step, index) => (
+              <div key={step.id} className="suggestion-card" style={{ marginBottom: "0.75rem" }}>
+                <div className="suggestion-header">
+                  <div className="suggestion-title">
+                    <h4>Step {index + 1}</h4>
+                    <div className="suggestion-badges">
+                      <span className="category-badge-mini">{step.type}</span>
+                    </div>
+                  </div>
+                  <button onClick={() => removeStep(step.id)} className="btn-secondary">
+                    Remove
+                  </button>
+                </div>
+
+                <div className="form-row">
+                  <label>Type</label>
+                  <select
+                    value={step.type}
+                    onChange={(e) => updateStep(step.id, { type: e.target.value as TransformType })}
+                    className="config-input"
+                  >
+                    <option value="addPrefix">Add Prefix</option>
+                    <option value="addSuffix">Add Suffix</option>
+                    <option value="replace">Find & Replace</option>
+                    <option value="removePrefix">Remove Prefix</option>
+                    <option value="removeSuffix">Remove Suffix</option>
+                    <option value="uppercase">Uppercase (name only)</option>
+                    <option value="lowercase">Lowercase (name only)</option>
+                    <option value="titlecase">Title Case (name only)</option>
+                  </select>
+                </div>
+
+                {(step.type === "addPrefix" || step.type === "addSuffix" || step.type === "removePrefix" || step.type === "removeSuffix") && (
+                  <div className="form-row">
+                    <label>
+                      {step.type === "addPrefix" && "Value"}
+                      {step.type === "addSuffix" && "Value"}
+                      {step.type === "removePrefix" && "Value"}
+                      {step.type === "removeSuffix" && "Value"}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Raw"
+                      value={step.value ?? ""}
+                      onChange={(e) => updateStep(step.id, { value: e.target.value })}
+                      className="config-input"
+                    />
+                  </div>
+                )}
+
+                {step.type === "replace" && (
+                  <>
+                    <div className="form-row">
+                      <label>Find Text</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Raw"
+                        value={step.replaceFrom ?? ""}
+                        onChange={(e) => updateStep(step.id, { replaceFrom: e.target.value })}
+                        className="config-input"
+                      />
+                    </div>
+                    <div className="form-row">
+                      <label>Replace With</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Crushed"
+                        value={step.replaceTo ?? ""}
+                        onChange={(e) => updateStep(step.id, { replaceTo: e.target.value })}
+                        className="config-input"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {(step.type === "uppercase" || step.type === "lowercase" || step.type === "titlecase") && (
+                  <div className="help-text" style={{ marginTop: "0.5rem" }}>
+                    This step only changes the display name; IDs stay slugged from other steps.
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
 
           <div className="form-row">
             <label>Target Category (Optional)</label>

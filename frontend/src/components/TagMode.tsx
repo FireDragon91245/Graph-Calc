@@ -82,31 +82,6 @@ export default function TagMode() {
     setEditingTagName("");
   };
 
-  const getTagItems = (tag: Tag) => {
-    return items.filter((item) => tag.memberItemIds.includes(item.id));
-  };
-
-  const filteredItems = useMemo(() => {
-    if (!searchTerm) return items;
-    const term = searchTerm.toLowerCase();
-    return items.filter((item) => {
-      // Search by name
-      if (item.name.toLowerCase().includes(term)) return true;
-      
-      // Search by category
-      if (item.categoryId) {
-        const category = categories.find(c => c.id === item.categoryId);
-        if (category && category.name.toLowerCase().includes(term)) return true;
-      }
-      
-      // Search by tags
-      const itemTags = getItemTags(item.id);
-      if (itemTags.some(tag => tag.name.toLowerCase().includes(term))) return true;
-      
-      return false;
-    });
-  }, [items, searchTerm, categories, tags]);
-
   const getItemTags = (itemId: string) => {
     return tags.filter((tag) => tag.memberItemIds.includes(itemId));
   };
@@ -115,6 +90,25 @@ export default function TagMode() {
     if (!item.categoryId) return null;
     return categories.find(c => c.id === item.categoryId);
   };
+
+  const getTagItems = (tag: Tag) => {
+    return items.filter((item) => tag.memberItemIds.includes(item.id));
+  };
+
+  const filteredItems = useMemo(() => {
+    if (!searchTerm) return items;
+    const term = searchTerm.toLowerCase();
+    return items.filter((item) => {
+      if (item.name.toLowerCase().includes(term)) return true;
+      if (item.categoryId) {
+        const category = categories.find(c => c.id === item.categoryId);
+        if (category && category.name.toLowerCase().includes(term)) return true;
+      }
+      const itemTags = getItemTags(item.id);
+      if (itemTags.some(tag => tag.name.toLowerCase().includes(term))) return true;
+      return false;
+    });
+  }, [items, searchTerm, categories, tags]);
 
   return (
     <div className="config-mode-content">

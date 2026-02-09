@@ -173,14 +173,19 @@
       "id": "input-1770675525078",
       "type": "input",
       "position": {
-        "x": -396.0967849425055,
-        "y": -2396.5794021997945
+        "x": -413.2274534353888,
+        "y": -2398.4828098101148
       },
       "data": {
         "items": [
           {
             "id": "1",
             "itemId": "lubricant",
+            "mode": "infinite"
+          },
+          {
+            "id": "1770678812531",
+            "itemId": "water",
             "mode": "infinite"
           }
         ]
@@ -198,6 +203,63 @@
           {
             "id": "1",
             "itemId": "stone_dust"
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipetag-1770678519567",
+      "type": "recipetag",
+      "position": {
+        "x": 306.7372765230217,
+        "y": -2837.844056971371
+      },
+      "data": {
+        "recipeTagId": "@grind_raw_gem",
+        "title": "@grind_raw_gem",
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Mixed Input 1",
+            "amountPerCycle": 1,
+            "isMixed": true
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "name": "Mixed Output 1",
+            "amountPerCycle": 1,
+            "probability": 1,
+            "isMixed": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1770678829064",
+      "type": "recipe",
+      "position": {
+        "x": -76.79935695653074,
+        "y": -2324.8757059900345
+      },
+      "data": {
+        "recipeId": "distill_water",
+        "title": "Distill Water",
+        "timeSeconds": 4,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Water",
+            "amountPerCycle": 288
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "name": "Distilled Water",
+            "amountPerCycle": 260,
+            "probability": 1
           }
         ]
       }
@@ -308,6 +370,20 @@
       "target": "output-1770675554208",
       "sourceHandle": "output-o2",
       "targetHandle": "input-1"
+    },
+    {
+      "id": "reactflow__edge-recipetag-1770673269873output-o1-recipetag-1770678519567input-i1",
+      "source": "recipetag-1770673269873",
+      "target": "recipetag-1770678519567",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-input-1770675525078output-1770678812531-recipe-1770678829064input-i1",
+      "source": "input-1770675525078",
+      "target": "recipe-1770678829064",
+      "sourceHandle": "output-1770678812531",
+      "targetHandle": "input-i1"
     }
   ]
 }
