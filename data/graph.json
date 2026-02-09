@@ -4,8 +4,8 @@
       "id": "recipetag-1770673269873",
       "type": "recipetag",
       "position": {
-        "x": -83.02766187500009,
-        "y": -207.51512101562506
+        "x": 5.3627526541839075,
+        "y": -2813.866224047691
       },
       "data": {
         "recipeTagId": "@cut_geode",
@@ -47,7 +47,220 @@
           }
         ]
       }
+    },
+    {
+      "id": "inputrecipe-1770675386086",
+      "type": "inputrecipe",
+      "position": {
+        "x": -441.0030286251428,
+        "y": -2999.5039260569897
+      },
+      "data": {
+        "recipeId": "rock_filtrator_sand",
+        "title": "Rock Filtrator Sand",
+        "timeSeconds": 48,
+        "outputs": [
+          {
+            "id": "o1",
+            "name": "Blue Topaz Geode",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 0.35
+          },
+          {
+            "id": "o2",
+            "name": "Topaz Geode",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 0.35
+          },
+          {
+            "id": "o3",
+            "name": "Apatite Geode",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 0.45
+          },
+          {
+            "id": "o4",
+            "name": "Spessartine Geode",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 0.35
+          },
+          {
+            "id": "o5",
+            "name": "Monazite Geode",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 0.375
+          },
+          {
+            "id": "o6",
+            "name": "Certus Quartz Geode",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 0.45
+          }
+        ]
+      }
+    },
+    {
+      "id": "inputrecipe-1770675392965",
+      "type": "inputrecipe",
+      "position": {
+        "x": -424.5130057745389,
+        "y": -2699.5529636214615
+      },
+      "data": {
+        "recipeId": "rock_filtrator_gravel",
+        "title": "Rock Filtrator Gravel",
+        "timeSeconds": 30,
+        "outputs": [
+          {
+            "id": "o1",
+            "name": "Diamond Geode",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 0.425
+          },
+          {
+            "id": "o2",
+            "name": "Emerald Geode",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 0.425
+          },
+          {
+            "id": "o3",
+            "name": "Ruby Geode",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 0.525
+          },
+          {
+            "id": "o4",
+            "name": "Realgar Geode",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 0.475
+          },
+          {
+            "id": "o5",
+            "name": "Green Sapphire Geode",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 0.55
+          },
+          {
+            "id": "o6",
+            "name": "Sapphire Geode",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 0.55
+          },
+          {
+            "id": "o7",
+            "name": "Quartzite Geode",
+            "amountPerCycle": 1,
+            "medium": "item",
+            "probability": 0.4
+          }
+        ]
+      }
     }
   ],
-  "edges": []
+  "edges": [
+    {
+      "id": "reactflow__edge-inputrecipe-1770675386086output-o1-recipetag-1770673269873input-i1",
+      "source": "inputrecipe-1770675386086",
+      "target": "recipetag-1770673269873",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-inputrecipe-1770675386086output-o2-recipetag-1770673269873input-i1",
+      "source": "inputrecipe-1770675386086",
+      "target": "recipetag-1770673269873",
+      "sourceHandle": "output-o2",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-inputrecipe-1770675386086output-o3-recipetag-1770673269873input-i1",
+      "source": "inputrecipe-1770675386086",
+      "target": "recipetag-1770673269873",
+      "sourceHandle": "output-o3",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-inputrecipe-1770675386086output-o4-recipetag-1770673269873input-i1",
+      "source": "inputrecipe-1770675386086",
+      "target": "recipetag-1770673269873",
+      "sourceHandle": "output-o4",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-inputrecipe-1770675386086output-o5-recipetag-1770673269873input-i1",
+      "source": "inputrecipe-1770675386086",
+      "target": "recipetag-1770673269873",
+      "sourceHandle": "output-o5",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-inputrecipe-1770675386086output-o6-recipetag-1770673269873input-i1",
+      "source": "inputrecipe-1770675386086",
+      "target": "recipetag-1770673269873",
+      "sourceHandle": "output-o6",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-inputrecipe-1770675392965output-o1-recipetag-1770673269873input-i1",
+      "source": "inputrecipe-1770675392965",
+      "target": "recipetag-1770673269873",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-inputrecipe-1770675392965output-o2-recipetag-1770673269873input-i1",
+      "source": "inputrecipe-1770675392965",
+      "target": "recipetag-1770673269873",
+      "sourceHandle": "output-o2",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-inputrecipe-1770675392965output-o3-recipetag-1770673269873input-i1",
+      "source": "inputrecipe-1770675392965",
+      "target": "recipetag-1770673269873",
+      "sourceHandle": "output-o3",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-inputrecipe-1770675392965output-o4-recipetag-1770673269873input-i1",
+      "source": "inputrecipe-1770675392965",
+      "target": "recipetag-1770673269873",
+      "sourceHandle": "output-o4",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-inputrecipe-1770675392965output-o5-recipetag-1770673269873input-i1",
+      "source": "inputrecipe-1770675392965",
+      "target": "recipetag-1770673269873",
+      "sourceHandle": "output-o5",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-inputrecipe-1770675392965output-o6-recipetag-1770673269873input-i1",
+      "source": "inputrecipe-1770675392965",
+      "target": "recipetag-1770673269873",
+      "sourceHandle": "output-o6",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-inputrecipe-1770675392965output-o7-recipetag-1770673269873input-i1",
+      "source": "inputrecipe-1770675392965",
+      "target": "recipetag-1770673269873",
+      "sourceHandle": "output-o7",
+      "targetHandle": "input-i1"
+    }
+  ]
 }

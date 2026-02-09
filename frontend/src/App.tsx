@@ -913,7 +913,7 @@ function AppContent() {
             selectionOnDrag
             panOnDrag={[1, 2]}
             selectionMode={undefined}
-            panOnScroll
+            zoomOnScroll
             multiSelectionKeyCode="Control"
             deleteKeyCode={["Backspace", "Delete"]}
             elementsSelectable

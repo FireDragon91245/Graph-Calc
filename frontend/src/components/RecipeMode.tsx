@@ -16,9 +16,11 @@ export default function RecipeMode() {
   const [outputs, setOutputs] = useState<RecipeOutput[]>([]);
   const [draggedItem, setDraggedItem] = useState<Item | Tag | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [recipeSearchTerm, setRecipeSearchTerm] = useState("");
   const [selectedRecipe, setSelectedRecipe] = useState<string | null>(null);
   const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
   const [editingRecipeName, setEditingRecipeName] = useState("");
+  const [editingRecipe, setEditingRecipe] = useState<string | null>(null);
 
   const handleAddRecipe = () => {
     if (!recipeName.trim()) return;
@@ -28,6 +30,7 @@ export default function RecipeMode() {
     }
 
     addRecipe({
+      id: editingRecipe ?? undefined,
       name: recipeName.trim(),
       timeSeconds,
       inputs,
@@ -35,16 +38,36 @@ export default function RecipeMode() {
     });
 
     // Reset form
+    handleClearForm();
+  };
+
+  const handleClearForm = () => {
     setRecipeName("");
     setTimeSeconds(2);
     setInputs([]);
     setOutputs([]);
+    setEditingRecipe(null);
+  };
+
+  const handleLoadRecipe = (recipe: Recipe) => {
+    setRecipeName(recipe.name);
+    setTimeSeconds(recipe.timeSeconds);
+    setInputs([...recipe.inputs]);
+    setOutputs([...recipe.outputs]);
+    setEditingRecipe(recipe.id);
+    setSelectedRecipe(recipe.id);
+    // Scroll to top to see the form
+    document.querySelector('.config-main')?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDeleteRecipe = (recipeId: string) => {
     const recipe = recipes.find((r) => r.id === recipeId);
     if (confirm(`Delete recipe "${recipe?.name}"? This will remove it from all recipe tags.`)) {
       deleteRecipe(recipeId);
+      // If the deleted recipe was being edited, clear the form
+      if (editingRecipe === recipeId) {
+        handleClearForm();
+      }
     }
   };
 
@@ -183,6 +206,25 @@ export default function RecipeMode() {
     return categories.find(c => c.id === item.categoryId);
   };
 
+  const filteredRecipes = useMemo(() => {
+    if (!recipeSearchTerm) return recipes;
+    const term = recipeSearchTerm.toLowerCase();
+    return recipes.filter((recipe) => {
+      // Search by recipe name
+      if (recipe.name.toLowerCase().includes(term)) return true;
+      
+      // Search by input names
+      const inputNames = recipe.inputs.map((inp) => getInputDisplay(inp).toLowerCase());
+      if (inputNames.some(name => name.includes(term))) return true;
+      
+      // Search by output names
+      const outputNames = recipe.outputs.map((out) => getOutputDisplay(out).toLowerCase());
+      if (outputNames.some(name => name.includes(term))) return true;
+      
+      return false;
+    });
+  }, [recipes, recipeSearchTerm, items, tags]);
+
   return (
     <div className="config-mode-content recipe-mode">
       <div className="config-sidebar">
@@ -264,6 +306,14 @@ export default function RecipeMode() {
           </div>
           
           <div className="recipe-form">
+            {editingRecipe && (
+              <div className="editing-notice">
+                <span>✏️ Editing Recipe</span>
+                <button onClick={handleClearForm} className="btn-secondary btn-sm">
+                  Clear Form
+                </button>
+              </div>
+            )}
             <div className="form-row">
               <label>Recipe Name</label>
               <input
@@ -356,22 +406,43 @@ export default function RecipeMode() {
               </div>
             </div>
 
-            <button onClick={handleAddRecipe} className="btn-primary btn-large">
-              Create Recipe
-            </button>
+            <div className="form-actions">
+              <button onClick={handleAddRecipe} className="btn-primary btn-large">
+                {editingRecipe ? "Update Recipe" : "Create Recipe"}
+              </button>
+              {editingRecipe && (
+                <button onClick={handleClearForm} className="btn-secondary btn-large">
+                  Cancel
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="recipes-list-panel">
-          <h3>Existing Recipes</h3>
+          <div className="recipes-list-header">
+            <h3>Existing Recipes</h3>
+            <input
+              type="text"
+              placeholder="Search recipes..."
+              value={recipeSearchTerm}
+              onChange={(e) => setRecipeSearchTerm(e.target.value)}
+              className="config-input recipe-search"
+            />
+          </div>
           <div className="recipes-list">
-            {recipes.map((recipe) => {
+            {filteredRecipes.length === 0 && recipeSearchTerm && (
+              <div className="no-results">No recipes found for "{recipeSearchTerm}"</div>
+            )}
+            {filteredRecipes.map((recipe) => {
               const info = getRecipeInfo(recipe);
               return (
                 <div
                   key={recipe.id}
-                  className={`recipe-card ${selectedRecipe === recipe.id ? "selected" : ""}`}
-                  onClick={() => setSelectedRecipe(recipe.id)}
+                  className={`recipe-card ${selectedRecipe === recipe.id ? "selected" : ""} ${editingRecipe === recipe.id ? "editing" : ""}`}
+                  onClick={() => handleLoadRecipe(recipe)}
+                  title="Click to edit this recipe"
+                  style={{ cursor: "pointer" }}
                 >
                   <div className="recipe-card-header">
                     {editingRecipeId === recipe.id ? (

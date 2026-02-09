@@ -181,6 +181,24 @@
       "name": "Raw Realgar",
       "medium": "item",
       "categoryId": "raw"
+    },
+    {
+      "id": "sand",
+      "name": "Sand",
+      "medium": "item",
+      "categoryId": null
+    },
+    {
+      "id": "gravel",
+      "name": "Gravel",
+      "medium": "item",
+      "categoryId": null
+    },
+    {
+      "id": "distilled_water",
+      "name": "Distilled Water",
+      "medium": "item",
+      "categoryId": "liquid"
     }
   ],
   "tags": [
@@ -652,6 +670,126 @@
           "itemId": "stone_dust",
           "amount": 1.0,
           "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "rock_filtrator_sand",
+      "name": "Rock Filtrator Sand",
+      "timeSeconds": 48.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "sand",
+          "amount": 32.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 1000.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "blue_topaz_geode",
+          "amount": 1.0,
+          "probability": 0.35
+        },
+        {
+          "id": "o2",
+          "itemId": "topaz_geode",
+          "amount": 1.0,
+          "probability": 0.35
+        },
+        {
+          "id": "o3",
+          "itemId": "apatite_geode",
+          "amount": 1.0,
+          "probability": 0.45
+        },
+        {
+          "id": "o4",
+          "itemId": "spessartine_geode",
+          "amount": 1.0,
+          "probability": 0.35
+        },
+        {
+          "id": "o5",
+          "itemId": "monazite_geode",
+          "amount": 1.0,
+          "probability": 0.375
+        },
+        {
+          "id": "o6",
+          "itemId": "certus_quartz_geode",
+          "amount": 1.0,
+          "probability": 0.45
+        }
+      ]
+    },
+    {
+      "id": "rock_filtrator_gravel",
+      "name": "Rock Filtrator Gravel",
+      "timeSeconds": 30.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "gravel",
+          "amount": 32.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 1000.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "diamond_geode",
+          "amount": 1.0,
+          "probability": 0.425
+        },
+        {
+          "id": "o2",
+          "itemId": "emerald_geode",
+          "amount": 1.0,
+          "probability": 0.425
+        },
+        {
+          "id": "o3",
+          "itemId": "ruby_geode",
+          "amount": 1.0,
+          "probability": 0.525
+        },
+        {
+          "id": "o4",
+          "itemId": "realgar_geode",
+          "amount": 1.0,
+          "probability": 0.475
+        },
+        {
+          "id": "o5",
+          "itemId": "green_sapphire_geode",
+          "amount": 1.0,
+          "probability": 0.55
+        },
+        {
+          "id": "o6",
+          "itemId": "sapphire_geode",
+          "amount": 1.0,
+          "probability": 0.55
+        },
+        {
+          "id": "o7",
+          "itemId": "quartzite_geode",
+          "amount": 1.0,
+          "probability": 0.4
         }
       ]
     }
