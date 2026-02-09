@@ -23,6 +23,8 @@ import InputNode from "./nodes/InputNode";
 import OutputNode from "./nodes/OutputNode";
 import RequesterNode from "./nodes/RequesterNode";
 import RecipeTagNode from "./nodes/RecipeTagNode";
+import InputRecipeNode from "./nodes/InputRecipeNode";
+import RecipeTagInputNode from "./nodes/RecipeTagInputNode";
 import ModeSelector, { AppMode, ConfigSubMode } from "./components/ModeSelector";
 import NodeTypeSelector from "./components/NodeTypeSelector";
 import NodeConfigDialog from "./components/NodeConfigDialog";
@@ -37,6 +39,8 @@ const nodeTypes = {
   recipe: RecipeNode,
   recipetag: RecipeTagNode,
   input: InputNode,
+  inputrecipe: InputRecipeNode,
+  inputrecipetag: RecipeTagInputNode,
   output: OutputNode,
   requester: RequesterNode
 };
@@ -492,6 +496,105 @@ function AppContent() {
             }
           }
         ]);
+      } else if (pendingNodeType === "inputrecipe") {
+        const recipe = config.recipe;
+        const outputs = recipe.outputs.map((output: any) => ({
+          id: output.id,
+          name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
+          amountPerCycle: output.amount,
+          medium: "item" as const,
+          probability: output.probability
+        }));
+
+        setNodes((current) => [
+          ...current,
+          {
+            id,
+            type: "inputrecipe",
+            position: pendingNodePosition,
+            data: {
+              recipeId: recipe.id,
+              title: recipe.name,
+              timeSeconds: recipe.timeSeconds,
+              outputs
+            }
+          }
+        ]);
+      } else if (pendingNodeType === "inputrecipetag") {
+        const recipeTag = config.recipeTag;
+        
+        // Analyze output pattern from recipes in this tag
+        const analyzeRecipeOutputPattern = (recipeIds: string[]) => {
+          if (recipeIds.length === 0) {
+            return [{ id: "o1", name: "Mixed Output", medium: "item" as const, amountPerCycle: 1, isMixed: true }];
+          }
+
+          const recipeData = recipeIds
+            .map((id) => recipes.find((r) => r.id === id))
+            .filter((r): r is NonNullable<typeof r> => r !== undefined);
+          
+          if (recipeData.length === 0) {
+            return [{ id: "o1", name: "Mixed Output", medium: "item" as const, amountPerCycle: 1, isMixed: true }];
+          }
+
+          const outputCounts = recipeData.map((r) => r.outputs.length);
+          const sameOutputCount = outputCounts.every((c) => c === outputCounts[0]);
+
+          if (!sameOutputCount) {
+            return [{ id: "o1", name: "Mixed Output", medium: "item" as const, amountPerCycle: 1, isMixed: true }];
+          }
+
+          const numOutputs = outputCounts[0];
+
+          const outputs = [];
+          for (let i = 0; i < numOutputs; i++) {
+            const outputsAtPosition = recipeData.map((r) => r.outputs[i]);
+            const itemIds = outputsAtPosition.map((out) => out.itemId);
+            const amounts = outputsAtPosition.map((out) => out.amount);
+            const probabilities = outputsAtPosition.map((out) => out.probability);
+
+            const allSameItemId = itemIds.every((id) => id === itemIds[0]);
+            const allSameAmount = amounts.every((amt) => amt === amounts[0]);
+            const allSameProbability = probabilities.every((prob) => prob === probabilities[0]);
+
+            const isMixed = !allSameItemId;
+            let name: string;
+
+            if (isMixed) {
+              name = `Mixed Output ${i + 1}`;
+            } else {
+              name = items.find((item) => item.id === itemIds[0])?.name ?? itemIds[0];
+            }
+
+            outputs.push({
+              id: `o${i + 1}`,
+              name,
+              medium: "item" as const,
+              amountPerCycle: allSameAmount ? amounts[0] : 1,
+              probability: allSameProbability ? probabilities[0] : undefined,
+              isMixed,
+              fixedRefId: allSameItemId ? itemIds[0] : undefined
+            });
+          }
+
+          return outputs;
+        };
+
+        const outputs = analyzeRecipeOutputPattern(recipeTag.memberRecipeIds);
+
+        setNodes((current) => [
+          ...current,
+          {
+            id,
+            type: "inputrecipetag",
+            position: pendingNodePosition,
+            data: {
+              recipeTagId: recipeTag.id,
+              title: recipeTag.name,
+              outputs
+            }
+          }
+        ]);
       }
 
       setPendingNodeType(null);
@@ -595,7 +698,7 @@ function AppContent() {
       graph: {
         nodes: nodes.map((node) => ({
           id: node.id,
-          type: (node.type ?? "recipe") as "recipe" | "input" | "output" | "requester",
+          type: (node.type ?? "recipe") as "recipe" | "recipetag" | "input" | "inputrecipe" | "inputrecipetag" | "output" | "requester",
           data: node.data as Record<string, unknown>
         })),
         edges: edges.map((edge) => ({

@@ -1,6 +1,6 @@
 import { DragEvent } from "react";
 
-export type NodeType = "recipe" | "recipetag" | "input" | "output" | "requester";
+export type NodeType = "recipe" | "recipetag" | "input" | "inputrecipe" | "inputrecipetag" | "output" | "requester";
 
 type NodeTypeInfo = {
   type: NodeType;
@@ -17,6 +17,20 @@ const nodeTypes: NodeTypeInfo[] = [
     icon: "📥",
     description: "Source of items/fluids",
     color: "#10b981"
+  },
+  {
+    type: "inputrecipe",
+    label: "Input Recipe",
+    icon: "⚡",
+    description: "Recipe as input source",
+    color: "#059669"
+  },
+  {
+    type: "inputrecipetag",
+    label: "Input Recipe Tag",
+    icon: "🔖",
+    description: "Recipe tag as input source",
+    color: "#047857"
   },
   {
     type: "output",
