@@ -17,6 +17,7 @@ import ReactFlow, {
 import { solveGraph, SolveResponse } from "./api/solve";
 import { loadGraph, saveGraph, loadStore, saveStore } from "./api/persistence";
 import ContextMenu from "./editor/ContextMenu";
+import CommandPalette, { CommandAction } from "./editor/CommandPalette";
 import { useGraphStore } from "./store/graphStore";
 import RecipeNode from "./nodes/RecipeNode";
 import InputNode from "./nodes/InputNode";
@@ -129,12 +130,30 @@ function AppContent() {
   const [pendingNodeType, setPendingNodeType] = useState<NodeType | null>(null);
   const [pendingNodePosition, setPendingNodePosition] = useState<{ x: number; y: number } | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
   const tags = useGraphStore((state) => state.tags);
   const loadStoreData = useGraphStore((state) => state.loadStoreData);
   const reactFlowInstance = useReactFlow();
+
+  // Keyboard shortcut for command palette (Ctrl+I)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+I or Cmd+I on Mac
+      if ((e.ctrlKey || e.metaKey) && e.key === "i") {
+        // Only open in edit mode
+        if (appMode === "edit") {
+          e.preventDefault();
+          setIsCommandPaletteOpen(true);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [appMode]);
 
   // Load data on mount
   useEffect(() => {
@@ -224,11 +243,24 @@ function AppContent() {
   const onNodeContextMenu: NodeMouseHandler = useCallback(
     (event, node) => {
       event.preventDefault();
-      setMenu({
-        id: node.id,
-        top: event.clientY,
-        left: event.clientX,
-      });
+      
+      // Get the ReactFlow wrapper's position to calculate correct menu position
+      const reactFlowBounds = (event.target as HTMLElement).closest('.react-flow')?.getBoundingClientRect();
+      
+      if (reactFlowBounds) {
+        setMenu({
+          id: node.id,
+          top: event.clientY - reactFlowBounds.top,
+          left: event.clientX - reactFlowBounds.left,
+        });
+      } else {
+        // Fallback if we can't find the container
+        setMenu({
+          id: node.id,
+          top: event.clientY,
+          left: event.clientX,
+        });
+      }
     },
     [setMenu]
   );
@@ -608,6 +640,118 @@ function AppContent() {
     setPendingNodePosition(null);
   }, []);
 
+  // Handle command palette action selection
+  const handleCommandPaletteAction = useCallback(
+    (action: CommandAction) => {
+      const position = reactFlowInstance.project({
+        x: window.innerWidth / 2 - 150,
+        y: window.innerHeight / 2 - 100
+      });
+
+      const id = `${action.type}-${Date.now()}`;
+
+      if (action.type === "input" && action.itemId) {
+        setNodes((current) => [
+          ...current,
+          {
+            id,
+            type: "input",
+            position,
+            data: { items: [{ id: "1", itemId: action.itemId, mode: "infinite" }] }
+          }
+        ]);
+      } else if (action.type === "output" && action.itemId) {
+        setNodes((current) => [
+          ...current,
+          {
+            id,
+            type: "output",
+            position,
+            data: { items: [{ id: "1", itemId: action.itemId }] }
+          }
+        ]);
+      } else if (action.type === "requester" && action.itemId) {
+        setNodes((current) => [
+          ...current,
+          {
+            id,
+            type: "requester",
+            position,
+            data: { requests: [{ id: "req1", itemId: action.itemId, targetPerSecond: 1.0 }] }
+          }
+        ]);
+      } else if (action.type === "recipe" && action.recipeId) {
+        const recipe = recipes.find((r) => r.id === action.recipeId);
+        if (!recipe) return;
+
+        const inputs = recipe.inputs.map((input: any) => {
+          const name =
+            input.refType === "item"
+              ? items.find((item) => item.id === input.refId)?.name ?? input.refId
+              : tags.find((tag) => tag.id === input.refId)?.name ?? input.refId;
+
+          return {
+            id: input.id,
+            name,
+            amountPerCycle: input.amount,
+            medium: "item" as const
+          };
+        });
+
+        const outputs = recipe.outputs.map((output: any) => ({
+          id: output.id,
+          name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
+          amountPerCycle: output.amount,
+          medium: "item" as const,
+          probability: output.probability
+        }));
+
+        setNodes((current) => [
+          ...current,
+          {
+            id,
+            type: "recipe",
+            position,
+            data: {
+              recipeId: recipe.id,
+              title: recipe.name,
+              timeSeconds: recipe.timeSeconds,
+              inputs,
+              outputs
+            }
+          }
+        ]);
+      } else if (action.type === "inputrecipe" && action.recipeId) {
+        const recipe = recipes.find((r) => r.id === action.recipeId);
+        if (!recipe) return;
+
+        const outputs = recipe.outputs.map((output: any) => ({
+          id: output.id,
+          name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
+          amountPerCycle: output.amount,
+          medium: "item" as const,
+          probability: output.probability
+        }));
+
+        setNodes((current) => [
+          ...current,
+          {
+            id,
+            type: "inputrecipe",
+            position,
+            data: {
+              recipeId: recipe.id,
+              title: recipe.name,
+              timeSeconds: recipe.timeSeconds,
+              outputs
+            }
+          }
+        ]);
+      }
+    },
+    [reactFlowInstance, setNodes, recipes, items, tags]
+  );
+
   const handleCreateInputNode = useCallback(
     (itemId: string) => {
       const item = items.find((entry) => entry.id === itemId);
@@ -739,7 +883,13 @@ function AppContent() {
         />
         {appMode === "edit" && (
           <>
-            <input className="search" placeholder="Search (Ctrl+K)" />
+            <input 
+              className="search" 
+              placeholder="Quick Actions (Ctrl+I)" 
+              readOnly
+              onClick={() => setIsCommandPaletteOpen(true)}
+              style={{ cursor: "pointer" }}
+            />
             <button className="primary" onClick={handleSolve} disabled={isSolving}>
               {isSolving ? "Solving..." : "Solve"}
             </button>
@@ -820,6 +970,11 @@ function AppContent() {
               onCancel={handleNodeConfigCancel}
             />
           )}
+          <CommandPalette
+            isOpen={isCommandPaletteOpen}
+            onClose={() => setIsCommandPaletteOpen(false)}
+            onActionSelected={handleCommandPaletteAction}
+          />
         </div>
       ) : (
         <div className="config-container">

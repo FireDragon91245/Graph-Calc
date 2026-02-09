@@ -6,6 +6,7 @@
 @import './styles/nodes.css';
 @import './styles/dropdown.css';
 @import './styles/context-menu.css';
+@import './styles/command-palette.css';
 @import './styles/reactflow.css';
 @import './styles/utilities.css';
 @import './styles/modes.css';
