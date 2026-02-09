@@ -337,6 +337,303 @@
           "probability": 1.0
         }
       ]
+    },
+    {
+      "id": "cut_green_sapphire_geode",
+      "name": "Cut Green Sapphire Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "green_sapphire_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_green_sapphire",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_quartzite_geode",
+      "name": "Cut Quartzite Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "quartzite_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_quartzite",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_topaz_geode",
+      "name": "Cut Topaz Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "topaz_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_topaz",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_blue_topaz_geode",
+      "name": "Cut Blue Topaz Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "blue_topaz_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_blue_topaz",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_spessartine_geode",
+      "name": "Cut Spessartine Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "spessartine_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_spessartine",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_certus_quartz_geode",
+      "name": "Cut Certus Quartz Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "certus_quartz_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_certus_quartz",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_apatite_geode",
+      "name": "Cut Apatite Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "apatite_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_apatite",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_monazite_geode",
+      "name": "Cut Monazite Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "monazite_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_monazite",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_realgar_geode",
+      "name": "Cut Realgar Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "realgar_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_realgar",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
     }
   ]
 }

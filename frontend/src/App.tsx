@@ -29,6 +29,7 @@ import ItemMode from "./components/ItemMode";
 import TagMode from "./components/TagMode";
 import RecipeMode from "./components/RecipeMode";
 import RecipeTagMode from "./components/RecipeTagMode";
+import RecipeGenerator from "./components/RecipeGenerator";
 import { NodeType } from "./components/NodeTypeSelector";
 
 const nodeTypes = {
@@ -598,6 +599,7 @@ function AppContent() {
           {configSubMode === "tags" && <TagMode />}
           {configSubMode === "recipes" && <RecipeMode />}
           {configSubMode === "recipeTags" && <RecipeTagMode />}
+          {configSubMode === "recipeGenerator" && <RecipeGenerator />}
         </div>
       )}
     </div>
