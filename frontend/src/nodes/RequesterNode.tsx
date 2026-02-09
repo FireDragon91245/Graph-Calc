@@ -1,4 +1,4 @@
-import { NodeProps } from "reactflow";
+import { Handle, NodeProps, Position } from "reactflow";
 
 type RequesterNodeData = {
   requests: Array<{ itemId: string; targetPerSecond: number }>;
@@ -13,7 +13,14 @@ export default function RequesterNode({ data }: NodeProps<RequesterNodeData>) {
       </div>
       <div className="node-body">
         {data.requests.map((req) => (
-          <div key={req.itemId} className="node-row">
+          <div key={req.itemId} className="node-row" style={{ position: "relative" }}>
+             <Handle
+              type="target"
+              position={Position.Left}
+              id={`input-${req.itemId}`}
+              className="handle item center"
+              style={{ left: -20 }} /* Similar to recipe inputs */
+            />
             <span>{req.itemId}</span>
             <span>{req.targetPerSecond} /s</span>
           </div>

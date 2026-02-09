@@ -199,6 +199,7 @@ body {
 
 .node-title {
   font-weight: 600;
+  color: var(--text); /* Force title color */
 }
 
 .node-sub {
@@ -295,6 +296,7 @@ body {
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.2);
   background: #1b2330;
+  z-index: 10;
 }
 
 .react-flow__handle.center {
