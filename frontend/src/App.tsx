@@ -22,6 +22,7 @@ import RecipeNode from "./nodes/RecipeNode";
 import InputNode from "./nodes/InputNode";
 import OutputNode from "./nodes/OutputNode";
 import RequesterNode from "./nodes/RequesterNode";
+import RecipeTagNode from "./nodes/RecipeTagNode";
 import ModeSelector, { AppMode, ConfigSubMode } from "./components/ModeSelector";
 import NodeTypeSelector from "./components/NodeTypeSelector";
 import NodeConfigDialog from "./components/NodeConfigDialog";
@@ -34,6 +35,7 @@ import { NodeType } from "./components/NodeTypeSelector";
 
 const nodeTypes = {
   recipe: RecipeNode,
+  recipetag: RecipeTagNode,
   input: InputNode,
   output: OutputNode,
   requester: RequesterNode
@@ -367,12 +369,135 @@ function AppContent() {
             data: { requests: [{ id: "req1", itemId: config.itemId, targetPerSecond: 1.0 }] }
           }
         ]);
+      } else if (pendingNodeType === "recipetag") {
+        const recipeTag = config.recipeTag;
+        
+        // Analyze pattern from recipes in this tag
+        const analyzeRecipePattern = (recipeIds: string[]) => {
+          if (recipeIds.length === 0) {
+            return {
+              inputs: [{ id: "i1", name: "Mixed Input", medium: "item" as const, amountPerCycle: 1, isMixed: true }],
+              outputs: [{ id: "o1", name: "Mixed Output", medium: "item" as const, amountPerCycle: 1, isMixed: true }]
+            };
+          }
+
+          const recipeData = recipeIds
+            .map((id) => recipes.find((r) => r.id === id))
+            .filter((r): r is NonNullable<typeof r> => r !== undefined);
+          
+          if (recipeData.length === 0) {
+            return {
+              inputs: [{ id: "i1", name: "Mixed Input", medium: "item" as const, amountPerCycle: 1, isMixed: true }],
+              outputs: [{ id: "o1", name: "Mixed Output", medium: "item" as const, amountPerCycle: 1, isMixed: true }]
+            };
+          }
+
+          const inputCounts = recipeData.map((r) => r.inputs.length);
+          const outputCounts = recipeData.map((r) => r.outputs.length);
+          const sameInputCount = inputCounts.every((c) => c === inputCounts[0]);
+          const sameOutputCount = outputCounts.every((c) => c === outputCounts[0]);
+
+          if (!sameInputCount || !sameOutputCount) {
+            return {
+              inputs: [{ id: "i1", name: "Mixed Input", medium: "item" as const, amountPerCycle: 1, isMixed: true }],
+              outputs: [{ id: "o1", name: "Mixed Output", medium: "item" as const, amountPerCycle: 1, isMixed: true }]
+            };
+          }
+
+          const numInputs = inputCounts[0];
+          const numOutputs = outputCounts[0];
+
+          const inputs = [];
+          for (let i = 0; i < numInputs; i++) {
+            const inputsAtPosition = recipeData.map((r) => r.inputs[i]);
+            const refIds = inputsAtPosition.map((inp) => inp.refId);
+            const amounts = inputsAtPosition.map((inp) => inp.amount);
+            const refTypes = inputsAtPosition.map((inp) => inp.refType);
+
+            const allSameRefId = refIds.every((id) => id === refIds[0]);
+            const allSameAmount = amounts.every((amt) => amt === amounts[0]);
+
+            const isMixed = !allSameRefId;
+            let name: string;
+
+            if (isMixed) {
+              name = `Mixed Input ${i + 1}`;
+            } else {
+              const refType = refTypes[0];
+              const refId = refIds[0];
+              if (refType === "item") {
+                name = items.find((item) => item.id === refId)?.name ?? refId;
+              } else {
+                name = tags.find((tag) => tag.id === refId)?.name ?? refId;
+              }
+            }
+
+            inputs.push({
+              id: `i${i + 1}`,
+              name,
+              medium: "item" as const,
+              amountPerCycle: allSameAmount ? amounts[0] : 1,
+              isMixed,
+              fixedRefId: allSameRefId ? refIds[0] : undefined
+            });
+          }
+
+          const outputs = [];
+          for (let i = 0; i < numOutputs; i++) {
+            const outputsAtPosition = recipeData.map((r) => r.outputs[i]);
+            const itemIds = outputsAtPosition.map((out) => out.itemId);
+            const amounts = outputsAtPosition.map((out) => out.amount);
+            const probabilities = outputsAtPosition.map((out) => out.probability);
+
+            const allSameItemId = itemIds.every((id) => id === itemIds[0]);
+            const allSameAmount = amounts.every((amt) => amt === amounts[0]);
+            const allSameProbability = probabilities.every((prob) => prob === probabilities[0]);
+
+            const isMixed = !allSameItemId;
+            let name: string;
+
+            if (isMixed) {
+              name = `Mixed Output ${i + 1}`;
+            } else {
+              name = items.find((item) => item.id === itemIds[0])?.name ?? itemIds[0];
+            }
+
+            outputs.push({
+              id: `o${i + 1}`,
+              name,
+              medium: "item" as const,
+              amountPerCycle: allSameAmount ? amounts[0] : 1,
+              probability: allSameProbability ? probabilities[0] : undefined,
+              isMixed,
+              fixedRefId: allSameItemId ? itemIds[0] : undefined
+            });
+          }
+
+          return { inputs, outputs };
+        };
+
+        const pattern = analyzeRecipePattern(recipeTag.memberRecipeIds);
+
+        setNodes((current) => [
+          ...current,
+          {
+            id,
+            type: "recipetag",
+            position: pendingNodePosition,
+            data: {
+              recipeTagId: recipeTag.id,
+              title: recipeTag.name,
+              inputs: pattern.inputs,
+              outputs: pattern.outputs
+            }
+          }
+        ]);
       }
 
       setPendingNodeType(null);
       setPendingNodePosition(null);
     },
-    [pendingNodeType, pendingNodePosition, items, tags, setNodes]
+    [pendingNodeType, pendingNodePosition, items, tags, recipes, setNodes]
   );
 
   const handleNodeConfigCancel = useCallback(() => {

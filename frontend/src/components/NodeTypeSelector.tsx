@@ -1,6 +1,6 @@
 import { DragEvent } from "react";
 
-export type NodeType = "recipe" | "input" | "output" | "requester";
+export type NodeType = "recipe" | "recipetag" | "input" | "output" | "requester";
 
 type NodeTypeInfo = {
   type: NodeType;
@@ -31,6 +31,13 @@ const nodeTypes: NodeTypeInfo[] = [
     icon: "⚙️",
     description: "Processing recipe",
     color: "#8b5cf6"
+  },
+  {
+    type: "recipetag",
+    label: "Recipe Tag Node",
+    icon: "🏷️",
+    description: "Pattern-based recipe group",
+    color: "#ec4899"
   },
   {
     type: "requester",

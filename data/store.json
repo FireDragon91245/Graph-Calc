@@ -204,7 +204,27 @@
       ]
     }
   ],
-  "recipeTags": [],
+  "recipeTags": [
+    {
+      "id": "@cut_geode",
+      "name": "@cut_geode",
+      "memberRecipeIds": [
+        "cut_diamond_geode",
+        "cut_emerald_geode",
+        "cut_ruby_geode",
+        "cut_sapphire_geode",
+        "cut_green_sapphire_geode",
+        "cut_quartzite_geode",
+        "cut_topaz_geode",
+        "cut_blue_topaz_geode",
+        "cut_spessartine_geode",
+        "cut_certus_quartz_geode",
+        "cut_apatite_geode",
+        "cut_monazite_geode",
+        "cut_realgar_geode"
+      ]
+    }
+  ],
   "recipes": [
     {
       "id": "cut_diamond_geode",

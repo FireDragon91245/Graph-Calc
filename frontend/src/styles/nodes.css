@@ -40,6 +40,16 @@
   min-width: 200px;
 }
 
+/* Recipe Tag Node - distinct styling */
+.node.recipe-tag {
+  border-color: rgba(236, 72, 153, 0.3);
+}
+
+.node.recipe-tag .node-header {
+  background: rgba(236, 72, 153, 0.08);
+  border-bottom-color: rgba(236, 72, 153, 0.2);
+}
+
 .node.io .node-body.io-body {
   margin: 8px;
   padding: 8px;
@@ -153,6 +163,17 @@
 
 .handle.item {
   border-color: #6ea8fe;
+}
+
+.handle.mixed {
+  border-color: #ff8c42;
+  background-color: #ff8c42;
+  box-shadow: 0 0 8px rgba(255, 140, 66, 0.5);
+}
+
+.port-name.mixed-label {
+  color: #ff8c42;
+  font-weight: 500;
 }
 
 .port-row .handle.react-flow__handle-left {

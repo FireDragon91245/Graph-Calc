@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useGraphStore, Recipe, Item } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
 
-export type NodeType = "recipe" | "input" | "output" | "requester";
+export type NodeType = "recipe" | "recipetag" | "input" | "output" | "requester";
 
 type NodeConfigDialogProps = {
   nodeType: NodeType;
@@ -75,11 +75,22 @@ export default function NodeConfigDialog({
     });
   }, [recipes, searchTerm, recipeTags]);
 
+  const filteredRecipeTags = useMemo(() => {
+    if (!searchTerm) return recipeTags;
+    const term = searchTerm.toLowerCase();
+    return recipeTags.filter((rt) => rt.name.toLowerCase().includes(term));
+  }, [recipeTags, searchTerm]);
+
   const handleConfirm = () => {
     if (nodeType === "recipe") {
       const recipe = recipes.find((r) => r.id === selectedId);
       if (recipe) {
         onConfirm({ recipeId: recipe.id, recipe });
+      }
+    } else if (nodeType === "recipetag") {
+      const recipeTag = recipeTags.find((rt) => rt.id === selectedId);
+      if (recipeTag) {
+        onConfirm({ recipeTagId: recipeTag.id, recipeTag });
       }
     } else if (nodeType === "input" || nodeType === "output") {
       const item = items.find((i) => i.id === selectedId);
@@ -102,7 +113,7 @@ export default function NodeConfigDialog({
     } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       // Handle arrow navigation
       e.preventDefault();
-      const list = nodeType === "recipe" ? filteredRecipes : filteredItems;
+      const list = nodeType === "recipe" ? filteredRecipes : nodeType === "recipetag" ? filteredRecipeTags : filteredItems;
       if (list.length === 0) return;
       
       const currentIndex = list.findIndex((item) => item.id === selectedId);
@@ -122,6 +133,8 @@ export default function NodeConfigDialog({
     switch (nodeType) {
       case "recipe":
         return "Select Recipe";
+      case "recipetag":
+        return "Select Recipe Tag";
       case "input":
         return "Select Input Item";
       case "output":
@@ -198,6 +211,29 @@ export default function NodeConfigDialog({
                 })
               ) : (
                 <div className="dialog-empty">No recipes found</div>
+              )
+            ) : nodeType === "recipetag" ? (
+              filteredRecipeTags.length > 0 ? (
+                filteredRecipeTags.map((recipeTag) => {
+                  return (
+                    <div
+                      key={recipeTag.id}
+                      className={`dialog-list-item ${selectedId === recipeTag.id ? "selected" : ""}`}
+                      onClick={() => setSelectedId(recipeTag.id)}
+                      onDoubleClick={() => {
+                        setSelectedId(recipeTag.id);
+                        setTimeout(handleConfirm, 0);
+                      }}
+                    >
+                      <div className="list-item-name">{recipeTag.name}</div>
+                      <div className="list-item-meta">
+                        {recipeTag.memberRecipeIds.length} recipes
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="dialog-empty">No recipe tags found</div>
               )
             ) : (
               filteredItems.length > 0 ? (
