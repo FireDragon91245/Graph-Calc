@@ -32,6 +32,7 @@ export default function RecipeNode({ data }: NodeProps<RecipeNodeData>) {
                   position={Position.Left}
                   id={`input-${input.id}`}
                   className={`handle ${input.medium}`}
+                  isConnectableStart={true}
                 />
                 <span className="port-name">{input.name}</span>
                 <span className="port-amount">{input.amountPerCycle}</span>

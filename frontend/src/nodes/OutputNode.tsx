@@ -22,6 +22,7 @@ export default function OutputNode({ data }: NodeProps<OutputNodeData>) {
           position={Position.Left}
           id="input"
           className="handle item center"
+          isConnectableStart={true}
           style={{ left: -16 }} /* Pull out to center on edge (body margin 8px + half handle) */
         />
       </div>

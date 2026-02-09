@@ -19,6 +19,7 @@ export default function RequesterNode({ data }: NodeProps<RequesterNodeData>) {
               position={Position.Left}
               id={`input-${req.itemId}`}
               className="handle item center"
+              isConnectableStart={true}
               style={{ left: -20 }} /* Similar to recipe inputs */
             />
             <span>{req.itemId}</span>
