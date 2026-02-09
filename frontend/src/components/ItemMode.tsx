@@ -5,13 +5,15 @@ export default function ItemMode() {
   const categories = useGraphStore((state) => state.categories);
   const items = useGraphStore((state) => state.items);
   const addCategory = useGraphStore((state) => state.addCategory);
+  const deleteCategory = useGraphStore((state) => state.deleteCategory);
+  const renameCategory = useGraphStore((state) => state.renameCategory);
   const addItem = useGraphStore((state) => state.addItem);
 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newItemName, setNewItemName] = useState("");
-  const [newItemMedium, setNewItemMedium] = useState<Medium>("item");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<Item | null>(null);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryName, setEditingCategoryName] = useState("");
 
   const handleAddCategory = () => {
     if (!newCategoryName.trim()) return;
@@ -19,14 +21,38 @@ export default function ItemMode() {
     setNewCategoryName("");
   };
 
-  const handleAddItem = (categoryId?: string) => {
+  const handleAddItem = () => {
     if (!newItemName.trim()) return;
+    // Always add to uncategorized by default
     addItem({
       name: newItemName.trim(),
-      medium: newItemMedium,
-      categoryId: categoryId || selectedCategory || undefined
+      medium: "item"
     });
     setNewItemName("");
+  };
+
+  const handleDeleteCategory = (categoryId: string) => {
+    if (confirm("Delete this category? All items will move to Uncategorized.")) {
+      deleteCategory(categoryId);
+    }
+  };
+
+  const handleStartRename = (category: Category) => {
+    setEditingCategoryId(category.id);
+    setEditingCategoryName(category.name);
+  };
+
+  const handleFinishRename = (categoryId: string) => {
+    if (editingCategoryName.trim() && editingCategoryName !== categories.find(c => c.id === categoryId)?.name) {
+      renameCategory(categoryId, editingCategoryName.trim());
+    }
+    setEditingCategoryId(null);
+    setEditingCategoryName("");
+  };
+
+  const handleCancelRename = () => {
+    setEditingCategoryId(null);
+    setEditingCategoryName("");
   };
 
   const handleDragStart = (e: DragEvent, item: Item) => {
@@ -79,18 +105,12 @@ export default function ItemMode() {
             onKeyDown={(e) => e.key === "Enter" && handleAddItem()}
             className="config-input"
           />
-          <select
-            value={newItemMedium}
-            onChange={(e) => setNewItemMedium(e.target.value as Medium)}
-            className="config-select"
-          >
-            <option value="item">Item</option>
-            <option value="fluid">Fluid</option>
-            <option value="gas">Gas</option>
-          </select>
           <button onClick={() => handleAddItem()} className="btn-primary">
             Add Item
           </button>
+          <p className="help-text">
+            Items are added to Uncategorized. Drag them to categories to organize.
+          </p>
         </div>
 
         <div className="config-section">
@@ -144,9 +164,6 @@ export default function ItemMode() {
                   onDragStart={(e) => handleDragStart(e, item)}
                 >
                   <span className="item-name">{item.name}</span>
-                  <span className={`medium-badge medium-${item.medium}`}>
-                    {item.medium}
-                  </span>
                 </div>
               ))}
             </div>
@@ -161,8 +178,43 @@ export default function ItemMode() {
               onDrop={(e) => handleDropOnCategory(e, category.id)}
             >
               <div className="category-header">
-                <h4>{category.name}</h4>
-                <span className="item-count">{getCategoryItems(category.id).length}</span>
+                {editingCategoryId === category.id ? (
+                  <div className="category-edit-mode">
+                    <input
+                      type="text"
+                      value={editingCategoryName}
+                      onChange={(e) => setEditingCategoryName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleFinishRename(category.id);
+                        if (e.key === "Escape") handleCancelRename();
+                      }}
+                      onBlur={() => handleFinishRename(category.id)}
+                      autoFocus
+                      className="category-rename-input"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <h4>{category.name}</h4>
+                    <div className="category-actions">
+                      <span className="item-count">{getCategoryItems(category.id).length}</span>
+                      <button
+                        className="btn-icon"
+                        onClick={() => handleStartRename(category)}
+                        title="Rename category"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        className="btn-icon btn-icon-danger"
+                        onClick={() => handleDeleteCategory(category.id)}
+                        title="Delete category"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
               <div className="items-list">
                 {getCategoryItems(category.id).map((item) => (
@@ -173,18 +225,12 @@ export default function ItemMode() {
                     onDragStart={(e) => handleDragStart(e, item)}
                   >
                     <span className="item-name">{item.name}</span>
-                    <span className={`medium-badge medium-${item.medium}`}>
-                      {item.medium}
+                    <span className="category-badge">
+                      {category.name}
                     </span>
                   </div>
                 ))}
               </div>
-              <button
-                className="btn-add-to-category"
-                onClick={() => handleAddItem(category.id)}
-              >
-                + Add to {category.name}
-              </button>
             </div>
           ))}
         </div>

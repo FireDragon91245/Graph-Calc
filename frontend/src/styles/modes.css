@@ -325,6 +325,15 @@
   color: #fbbf24;
 }
 
+.category-badge {
+  padding: 0.25rem 0.625rem;
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 .dialog-empty {
   padding: 3rem;
   text-align: center;
@@ -532,6 +541,51 @@
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--text);
+}
+
+.category-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-icon {
+  background: transparent;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font-size: 1rem;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+}
+
+.btn-icon:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.btn-icon-danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.category-edit-mode {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.category-rename-input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(110, 168, 254, 0.15);
 }
 
 .item-count {

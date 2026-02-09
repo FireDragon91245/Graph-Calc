@@ -55,6 +55,8 @@ type GraphStore = {
   recipeTags: RecipeTag[];
   recipes: Recipe[];
   addCategory: (name: string) => void;
+  deleteCategory: (categoryId: string) => void;
+  renameCategory: (categoryId: string, newName: string) => void;
   addItem: (item: Omit<Item, "id"> & { id?: string }) => void;
   addTag: (tag: Omit<Tag, "id"> & { id?: string }) => void;
   addRecipeTag: (recipeTag: Omit<RecipeTag, "id"> & { id?: string }) => void;
@@ -113,6 +115,29 @@ export const useGraphStore = create<GraphStore>((set) => ({
         { id: slugify(name || `category_${state.categories.length + 1}`), name }
       ]
     })),
+  deleteCategory: (categoryId) =>
+    set((state) => ({
+      categories: state.categories.filter((c) => c.id !== categoryId),
+      items: state.items.map((item) =>
+        item.categoryId === categoryId
+          ? { ...item, categoryId: undefined }
+          : item
+      )
+    })),
+  renameCategory: (categoryId, newName) =>
+    set((state) => {
+      const newCategoryId = slugify(newName);
+      return {
+        categories: state.categories.map((c) =>
+          c.id === categoryId ? { id: newCategoryId, name: newName } : c
+        ),
+        items: state.items.map((item) =>
+          item.categoryId === categoryId
+            ? { ...item, categoryId: newCategoryId }
+            : item
+        )
+      };
+    }),
   addItem: (item) =>
     set((state) => {
       const itemId = item.id ?? slugify(item.name || `item_${state.items.length + 1}`);
