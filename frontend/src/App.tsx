@@ -23,6 +23,7 @@ import RecipeNode from "./nodes/RecipeNode";
 import InputNode from "./nodes/InputNode";
 import OutputNode from "./nodes/OutputNode";
 import RequesterNode from "./nodes/RequesterNode";
+import MixedOutputNode from "./nodes/MixedOutputNode";
 import RecipeTagNode from "./nodes/RecipeTagNode";
 import InputRecipeNode from "./nodes/InputRecipeNode";
 import RecipeTagInputNode from "./nodes/RecipeTagInputNode";
@@ -44,7 +45,8 @@ const nodeTypes = {
   inputrecipe: InputRecipeNode,
   inputrecipetag: RecipeTagInputNode,
   output: OutputNode,
-  requester: RequesterNode
+  requester: RequesterNode,
+  mixedoutput: MixedOutputNode
 };
 
 const initialNodes: Node[] = [
@@ -300,10 +302,26 @@ function AppContent() {
   });
 
   const handleNodeTypeSelected = useCallback((nodeType: NodeType) => {
+    // Mixed output doesn't need configuration dialog - create directly
+    if (nodeType === "mixedoutput") {
+      const id = `${nodeType}-${Date.now()}`;
+      const position = createPosition();
+      setNodes((current) => [
+        ...current,
+        {
+          id,
+          type: "mixedoutput",
+          position,
+          data: {}
+        }
+      ]);
+      return;
+    }
+    
     // Open dialog immediately when clicked from sidebar
     setPendingNodeType(nodeType);
     setPendingNodePosition(createPosition());
-  }, [nodes.length]);
+  }, [nodes.length, setNodes]);
 
   const handleDrop = useCallback(
     (event: DragEvent) => {
@@ -319,11 +337,26 @@ function AppContent() {
         y: event.clientY - reactFlowBounds.top
       });
 
+      // Mixed output doesn't need configuration dialog - create directly
+      if (nodeType === "mixedoutput") {
+        const id = `${nodeType}-${Date.now()}`;
+        setNodes((current) => [
+          ...current,
+          {
+            id,
+            type: "mixedoutput",
+            position,
+            data: {}
+          }
+        ]);
+        return;
+      }
+
       // Open dialog with the dropped node type
       setPendingNodeType(nodeType);
       setPendingNodePosition(position);
     },
-    [reactFlowInstance]
+    [reactFlowInstance, setNodes]
   );
 
   const handleDragOver = useCallback((event: DragEvent) => {
@@ -402,6 +435,16 @@ function AppContent() {
             type: "requester",
             position: pendingNodePosition,
             data: { requests: [{ id: "req1", itemId: config.itemId, targetPerSecond: 1.0 }] }
+          }
+        ]);
+      } else if (pendingNodeType === "mixedoutput") {
+        setNodes((current) => [
+          ...current,
+          {
+            id,
+            type: "mixedoutput",
+            position: pendingNodePosition,
+            data: {}
           }
         ]);
       } else if (pendingNodeType === "recipetag") {

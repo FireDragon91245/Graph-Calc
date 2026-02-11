@@ -344,8 +344,8 @@
       "id": "recipetag-1770851653865",
       "type": "recipetag",
       "position": {
-        "x": 1796.526859879068,
-        "y": -2842.738170832861
+        "x": 1789.6232309476145,
+        "y": -2858.5178941047548
       },
       "data": {
         "recipeTagId": "@crush_refined",
@@ -373,8 +373,8 @@
       "id": "output-1770851689718",
       "type": "output",
       "position": {
-        "x": 2198.8798310456837,
-        "y": -3079.83902884176
+        "x": 2549.0747390649854,
+        "y": -3061.4545744539223
       },
       "data": {
         "items": [
@@ -392,6 +392,77 @@
           }
         ]
       }
+    },
+    {
+      "id": "recipetag-1770853012669",
+      "type": "recipetag",
+      "position": {
+        "x": 2193.44130545851,
+        "y": -2756.2812481499486
+      },
+      "data": {
+        "recipeTagId": "@electrolyze_dust",
+        "title": "@electrolyze_dust",
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Mixed Input",
+            "amountPerCycle": 1,
+            "isMixed": true
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "name": "Mixed Output",
+            "amountPerCycle": 1,
+            "isMixed": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1770853033137",
+      "type": "recipe",
+      "position": {
+        "x": 2191.3865580021366,
+        "y": -2604.283456764968
+      },
+      "data": {
+        "recipeId": "centrifuge_realgar_dust",
+        "title": "Centrifuge Realgar Dust",
+        "timeSeconds": 3.95,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Realgar Dust",
+            "amountPerCycle": 2
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o2",
+            "name": "Arsenic Dust",
+            "amountPerCycle": 1,
+            "probability": 1
+          },
+          {
+            "id": "o1",
+            "name": "Sulfur Dust",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "mixedoutput-1770853577244",
+      "type": "mixedoutput",
+      "position": {
+        "x": 2560.5824222847314,
+        "y": -2680.623332116823
+      },
+      "data": {}
     }
   ],
   "edges": [
@@ -569,6 +640,55 @@
       "target": "output-1770851689718",
       "sourceHandle": "output-o1",
       "targetHandle": "input-1770851836411"
+    },
+    {
+      "id": "reactflow__edge-recipetag-1770851653865output-o1-recipetag-1770853012669input-i1",
+      "source": "recipetag-1770851653865",
+      "target": "recipetag-1770853012669",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipetag-1770851653865output-o1-recipe-1770853033137input-i1",
+      "source": "recipetag-1770851653865",
+      "target": "recipe-1770853033137",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1770853033137output-o2-mixedoutput-1770853577244mixed-input",
+      "source": "recipe-1770853033137",
+      "target": "mixedoutput-1770853577244",
+      "sourceHandle": "output-o2",
+      "targetHandle": "mixed-input"
+    },
+    {
+      "id": "reactflow__edge-recipe-1770853033137output-o1-mixedoutput-1770853577244mixed-input",
+      "source": "recipe-1770853033137",
+      "target": "mixedoutput-1770853577244",
+      "sourceHandle": "output-o1",
+      "targetHandle": "mixed-input"
+    },
+    {
+      "id": "reactflow__edge-recipetag-1770853012669output-o1-mixedoutput-1770853577244mixed-input",
+      "source": "recipetag-1770853012669",
+      "target": "mixedoutput-1770853577244",
+      "sourceHandle": "output-o1",
+      "targetHandle": "mixed-input"
+    },
+    {
+      "id": "reactflow__edge-recipetag-1770851024838output-o2-mixedoutput-1770853577244mixed-input",
+      "source": "recipetag-1770851024838",
+      "target": "mixedoutput-1770853577244",
+      "sourceHandle": "output-o2",
+      "targetHandle": "mixed-input"
+    },
+    {
+      "id": "reactflow__edge-recipetag-1770849410451output-o2-mixedoutput-1770853577244mixed-input",
+      "source": "recipetag-1770849410451",
+      "target": "mixedoutput-1770853577244",
+      "sourceHandle": "output-o2",
+      "targetHandle": "mixed-input"
     }
   ]
 }

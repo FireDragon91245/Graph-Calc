@@ -1,6 +1,6 @@
 import { DragEvent } from "react";
 
-export type NodeType = "recipe" | "recipetag" | "input" | "inputrecipe" | "inputrecipetag" | "output" | "requester";
+export type NodeType = "recipe" | "recipetag" | "input" | "inputrecipe" | "inputrecipetag" | "output" | "requester" | "mixedoutput";
 
 type NodeTypeInfo = {
   type: NodeType;
@@ -59,6 +59,13 @@ const nodeTypes: NodeTypeInfo[] = [
     icon: "🎯",
     description: "Defines production targets",
     color: "#f59e0b"
+  },
+  {
+    type: "mixedoutput",
+    label: "Mixed Output",
+    icon: "🎲",
+    description: "Output with mixed input",
+    color: "#06b6d4"
   }
 ];
 

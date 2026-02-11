@@ -11,6 +11,10 @@
     {
       "id": "liquid",
       "name": "Liquid"
+    },
+    {
+      "id": "gas",
+      "name": "Gas"
     }
   ],
   "items": [
@@ -503,6 +507,51 @@
       "id": "realgar_dust",
       "name": "Realgar Dust",
       "categoryId": "dust"
+    },
+    {
+      "id": "oxygen",
+      "name": "Oxygen",
+      "categoryId": "gas"
+    },
+    {
+      "id": "hydrogen",
+      "name": "Hydrogen",
+      "categoryId": "gas"
+    },
+    {
+      "id": "fluorine",
+      "name": "Fluorine",
+      "categoryId": "gas"
+    },
+    {
+      "id": "chlorine",
+      "name": "Chlorine",
+      "categoryId": "gas"
+    },
+    {
+      "id": "silicon_dust",
+      "name": "Silicon Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "calcium_dust",
+      "name": "Calcium Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "phosphorus_dust",
+      "name": "Phosphorus Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "rare_earth",
+      "name": "Rare Earth",
+      "categoryId": "dust"
+    },
+    {
+      "id": "arsenic_dust",
+      "name": "Arsenic Dust",
+      "categoryId": "dust"
     }
   ],
   "tags": [
@@ -696,6 +745,21 @@
         "crush_refined_apatite_ore",
         "crush_refined_monazite_ore",
         "crush_refined_realgar_ore"
+      ]
+    },
+    {
+      "id": "@electrolyze_dust",
+      "name": "@electrolyze_dust",
+      "memberRecipeIds": [
+        "electrolyze_emerald_dust",
+        "electrolyze_ruby_dust",
+        "electrolyze_sapphire_dust",
+        "electrolyze_green_sapphire_dust",
+        "electrolyze_topaz_dust",
+        "electrolyze_blue_topaz_dust",
+        "electrolyze_spessartine_dust",
+        "electrolyze_apatite_dust",
+        "electrolyze_monazite_dust"
       ]
     }
   ],
@@ -2669,6 +2733,342 @@
         {
           "id": "o1",
           "itemId": "realgar_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_emerald_dust",
+      "name": "Electrolyze Emerald Dust",
+      "timeSeconds": 26.1,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "emerald_dust",
+          "amount": 29.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "beryllium_dust",
+          "amount": 3.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o3",
+          "itemId": "aluminium_dust",
+          "amount": 2.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "silicon_dust",
+          "amount": 6.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o4",
+          "itemId": "oxygen",
+          "amount": 18000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_ruby_dust",
+      "name": "Electrolyze Ruby Dust",
+      "timeSeconds": 7.2,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "ruby_dust",
+          "amount": 6.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "chromium_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "aluminium_dust",
+          "amount": 2.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o3",
+          "itemId": "oxygen",
+          "amount": 3000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_sapphire_dust",
+      "name": "Electrolyze Sapphire Dust",
+      "timeSeconds": 2.5,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "sapphire_dust",
+          "amount": 5.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "aluminium_dust",
+          "amount": 2.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "oxygen",
+          "amount": 3000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_green_sapphire_dust",
+      "name": "Electrolyze Green Sapphire Dust",
+      "timeSeconds": 2.5,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "green_sapphire_dust",
+          "amount": 5.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "aluminium_dust",
+          "amount": 2.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "oxygen",
+          "amount": 3000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_topaz_dust",
+      "name": "Electrolyze Topaz Dust",
+      "timeSeconds": 4.8,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "topaz_dust",
+          "amount": 6.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "aluminium_dust",
+          "amount": 2.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "silicon_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o3",
+          "itemId": "fluorine",
+          "amount": 1000.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o4",
+          "itemId": "hydrogen",
+          "amount": 2000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_blue_topaz_dust",
+      "name": "Electrolyze Blue Topaz Dust",
+      "timeSeconds": 10.4,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "blue_topaz_dust",
+          "amount": 13.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "aluminium_dust",
+          "amount": 2.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "silicon_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o3",
+          "itemId": "fluorine",
+          "amount": 2000.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o4",
+          "itemId": "hydrogen",
+          "amount": 2000.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o5",
+          "itemId": "oxygen",
+          "amount": 6000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_spessartine_dust",
+      "name": "Electrolyze Spessartine Dust",
+      "timeSeconds": 22.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "spessartine_dust",
+          "amount": 20.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "aluminium_dust",
+          "amount": 2.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "manganese_dust",
+          "amount": 3.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o3",
+          "itemId": "silicon_dust",
+          "amount": 3.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o4",
+          "itemId": "oxygen",
+          "amount": 12000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_apatite_dust",
+      "name": "Electrolyze Apatite Dust",
+      "timeSeconds": 14.4,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "apatite_dust",
+          "amount": 9.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "calcium_dust",
+          "amount": 5.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "phosphorus_dust",
+          "amount": 3.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o3",
+          "itemId": "chlorine",
+          "amount": 1000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_monazite_dust",
+      "name": "Electrolyze Monazite Dust",
+      "timeSeconds": 2.6,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "monazite_dust",
+          "amount": 2.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "rare_earth",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "phosphate_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "centrifuge_realgar_dust",
+      "name": "Centrifuge Realgar Dust",
+      "timeSeconds": 3.95,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "realgar_dust",
+          "amount": 2.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o2",
+          "itemId": "arsenic_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o1",
+          "itemId": "sulfur_dust",
           "amount": 1.0,
           "probability": 1.0
         }

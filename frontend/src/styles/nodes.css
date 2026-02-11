@@ -89,6 +89,28 @@
   border-bottom-color: rgba(4, 120, 87, 0.2);
 }
 
+/* Mixed Output Node - distinct styling */
+.node.mixed-output {
+  min-width: 180px;
+  border-color: rgba(6, 182, 212, 0.3);
+}
+
+.node.mixed-output .node-header {
+  background: rgba(6, 182, 212, 0.08);
+  border-bottom-color: rgba(6, 182, 212, 0.2);
+}
+
+.node.mixed-output .node-body {
+  padding: 12px;
+}
+
+.node.mixed-output .port-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
 /* Recipe Tag Node - distinct styling */
 .node.recipe-tag {
   border-color: rgba(236, 72, 153, 0.3);
