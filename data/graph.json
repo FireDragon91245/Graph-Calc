@@ -184,8 +184,8 @@
       "id": "output-1770675554208",
       "type": "output",
       "position": {
-        "x": 540.415325968327,
-        "y": -2578.2598633416505
+        "x": 1335.48153409615,
+        "y": -2466.897203352963
       },
       "data": {
         "items": [
@@ -200,8 +200,8 @@
       "id": "recipetag-1770678519567",
       "type": "recipetag",
       "position": {
-        "x": 306.7372765230217,
-        "y": -2837.844056971371
+        "x": 310.97180753896714,
+        "y": -2836.4325466327227
       },
       "data": {
         "recipeTagId": "@grind_raw_gem",
@@ -249,6 +249,93 @@
             "name": "Distilled Water",
             "amountPerCycle": 260,
             "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipetag-1770849410451",
+      "type": "recipetag",
+      "position": {
+        "x": 730.5878760681744,
+        "y": -2833.3147848277163
+      },
+      "data": {
+        "recipeTagId": "@wash_crushed",
+        "title": "@wash_crushed",
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Mixed Input 1",
+            "amountPerCycle": 1,
+            "isMixed": true
+          },
+          {
+            "id": "i2",
+            "name": "Distilled Water",
+            "amountPerCycle": 100,
+            "isMixed": false,
+            "fixedRefId": "distilled_water"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "name": "Mixed Output 1",
+            "amountPerCycle": 1,
+            "probability": 1,
+            "isMixed": true
+          },
+          {
+            "id": "o2",
+            "name": "Mixed Output 2",
+            "amountPerCycle": 1,
+            "probability": 0.33,
+            "isMixed": true
+          },
+          {
+            "id": "o3",
+            "name": "Stone Dust",
+            "amountPerCycle": 1,
+            "probability": 1,
+            "isMixed": false,
+            "fixedRefId": "stone_dust"
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipetag-1770851024838",
+      "type": "recipetag",
+      "position": {
+        "x": 1268.484173130795,
+        "y": -2852.349415254397
+      },
+      "data": {
+        "recipeTagId": "@thermal_centrifuge",
+        "title": "@thermal_centrifuge",
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Mixed Input 1",
+            "amountPerCycle": 1,
+            "isMixed": true
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "name": "Mixed Output 1",
+            "amountPerCycle": 1,
+            "probability": 1,
+            "isMixed": true
+          },
+          {
+            "id": "o2",
+            "name": "Mixed Output 2",
+            "amountPerCycle": 1,
+            "probability": 0.33,
+            "isMixed": true
           }
         ]
       }
@@ -372,6 +459,34 @@
       "source": "input-1770675525078",
       "target": "recipe-1770678829064",
       "sourceHandle": "output-1770678812531",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipetag-1770678519567output-o1-recipetag-1770849410451input-i1",
+      "source": "recipetag-1770678519567",
+      "target": "recipetag-1770849410451",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1770678829064output-o1-recipetag-1770849410451input-i2",
+      "source": "recipe-1770678829064",
+      "target": "recipetag-1770849410451",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i2"
+    },
+    {
+      "id": "reactflow__edge-recipetag-1770849410451output-o3-output-1770675554208input-1",
+      "source": "recipetag-1770849410451",
+      "target": "output-1770675554208",
+      "sourceHandle": "output-o3",
+      "targetHandle": "input-1"
+    },
+    {
+      "id": "reactflow__edge-recipetag-1770849410451output-o1-recipetag-1770851024838input-i1",
+      "source": "recipetag-1770849410451",
+      "target": "recipetag-1770851024838",
+      "sourceHandle": "output-o1",
       "targetHandle": "input-i1"
     }
   ]

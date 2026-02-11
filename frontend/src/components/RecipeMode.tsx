@@ -62,7 +62,7 @@ export default function RecipeMode() {
   };
 
   const handleCopyRecipe = (recipe: Recipe) => {
-    setRecipeName(recipe.name + " (Copy)");
+    setRecipeName(recipe.name);
     setTimeSeconds(recipe.timeSeconds);
     setInputs([...recipe.inputs]);
     setOutputs([...recipe.outputs]);
@@ -193,6 +193,7 @@ export default function RecipeMode() {
     }
     // Case 2: Dragging a new item from sidebar to replace existing ingredient
     else if (draggedItem) {
+      const oldInput = inputs[targetIndex];
       const newInputs = [...inputs];
       const isTag = "memberItemIds" in draggedItem;
       newInputs[targetIndex] = {
@@ -201,6 +202,16 @@ export default function RecipeMode() {
         refId: draggedItem.id
       };
       setInputs(newInputs);
+      
+      // Auto-update recipe name if it contains the old ingredient name
+      const oldName = getInputDisplay(oldInput);
+      const newName = draggedItem.name;
+      
+      if (recipeName.includes(oldName)) {
+        const updatedRecipeName = recipeName.replace(new RegExp(oldName, 'g'), newName);
+        setRecipeName(updatedRecipeName);
+      }
+      
       setDraggedItem(null);
     }
   };
