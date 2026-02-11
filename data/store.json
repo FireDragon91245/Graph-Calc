@@ -1404,6 +1404,45 @@
           "probability": 1.0
         }
       ]
+    },
+    {
+      "id": "wash_crushed_ruby_ore",
+      "name": "Wash Crushed Ruby Ore",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crushed_ruby_ore",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 100.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "purified_ruby_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "chromium_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        },
+        {
+          "id": "o3",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
     }
   ]
 }

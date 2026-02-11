@@ -904,6 +904,35 @@
   background: rgba(18, 24, 33, 0.85);
   border: 1px solid var(--panel-border);
   border-radius: 8px;
+  cursor: move;
+  transition: all 0.2s;
+}
+
+.io-item:hover {
+  background: rgba(25, 32, 45, 0.95);
+  border-color: rgba(88, 166, 255, 0.4);
+}
+
+.io-item[draggable="true"] {
+  user-select: none;
+}
+
+.io-drag-handle {
+  color: var(--muted);
+  font-size: 0.875rem;
+  cursor: grab;
+  padding: 0 0.25rem;
+  letter-spacing: -2px;
+}
+
+.io-drag-handle:active {
+  cursor: grabbing;
+}
+
+.io-item.drag-over {
+  background: rgba(88, 166, 255, 0.15);
+  border-color: rgba(88, 166, 255, 0.6);
+  transform: scale(1.02);
 }
 
 .io-name {

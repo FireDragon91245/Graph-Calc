@@ -15,6 +15,7 @@ export default function RecipeMode() {
   const [inputs, setInputs] = useState<RecipeInput[]>([]);
   const [outputs, setOutputs] = useState<RecipeOutput[]>([]);
   const [draggedItem, setDraggedItem] = useState<Item | Tag | null>(null);
+  const [draggedIngredient, setDraggedIngredient] = useState<{type: 'input' | 'output', index: number} | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [recipeSearchTerm, setRecipeSearchTerm] = useState("");
   const [selectedRecipe, setSelectedRecipe] = useState<string | null>(null);
@@ -60,6 +61,17 @@ export default function RecipeMode() {
     document.querySelector('.config-main')?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleCopyRecipe = (recipe: Recipe) => {
+    setRecipeName(recipe.name + " (Copy)");
+    setTimeSeconds(recipe.timeSeconds);
+    setInputs([...recipe.inputs]);
+    setOutputs([...recipe.outputs]);
+    setEditingRecipe(null); // Don't set editing mode - this is a new recipe
+    setSelectedRecipe(null);
+    // Scroll to top to see the form
+    document.querySelector('.config-main')?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleDeleteRecipe = (recipeId: string) => {
     const recipe = recipes.find((r) => r.id === recipeId);
     if (confirm(`Delete recipe "${recipe?.name}"? This will remove it from all recipe tags.`)) {
@@ -91,7 +103,12 @@ export default function RecipeMode() {
 
   const handleDragStart = (e: DragEvent, itemOrTag: Item | Tag) => {
     setDraggedItem(itemOrTag);
+    setDraggedIngredient(null); // Clear any ingredient drag state
     e.dataTransfer.effectAllowed = "copy";
+  };
+
+  const handleSidebarDragEnd = () => {
+    setDraggedItem(null);
   };
 
   const handleDragOver = (e: DragEvent) => {
@@ -101,7 +118,8 @@ export default function RecipeMode() {
 
   const handleDropOnInputs = (e: DragEvent) => {
     e.preventDefault();
-    if (draggedItem) {
+    // Only add new inputs if dragging from sidebar (not reordering)
+    if (draggedItem && !draggedIngredient) {
       const isTag = "memberItemIds" in draggedItem;
       const newInput: RecipeInput = {
         id: `i${inputs.length + 1}`,
@@ -116,7 +134,8 @@ export default function RecipeMode() {
 
   const handleDropOnOutputs = (e: DragEvent) => {
     e.preventDefault();
-    if (draggedItem && !("memberItemIds" in draggedItem)) {
+    // Only add new outputs if dragging from sidebar (not reordering)
+    if (draggedItem && !draggedIngredient && !("memberItemIds" in draggedItem)) {
       const newOutput: RecipeOutput = {
         id: `o${outputs.length + 1}`,
         itemId: draggedItem.id,
@@ -124,6 +143,91 @@ export default function RecipeMode() {
         probability: 1
       };
       setOutputs([...outputs, newOutput]);
+      setDraggedItem(null);
+    }
+  };
+
+  // Ingredient drag-and-drop for reordering and swapping
+  const handleIngredientDragStart = (e: DragEvent, type: 'input' | 'output', index: number) => {
+    // Only allow dragging if starting from the drag handle or the item itself, not from inputs
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'BUTTON') {
+      e.preventDefault();
+      return;
+    }
+    e.stopPropagation(); // Prevent parent drag handlers from firing
+    setDraggedIngredient({ type, index });
+    setDraggedItem(null); // Clear any sidebar item drag state
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleIngredientDragEnd = () => {
+    setDraggedIngredient(null);
+  };
+
+  const handleIngredientDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Set appropriate drop effect based on what's being dragged
+    if (draggedIngredient) {
+      e.dataTransfer.dropEffect = "move";
+    } else if (draggedItem) {
+      e.dataTransfer.dropEffect = "copy";
+    }
+  };
+
+  const handleDropOnInput = (e: DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Case 1: Dragging an ingredient within the inputs list (reorder or swap)
+    if (draggedIngredient && draggedIngredient.type === 'input') {
+      const sourceIndex = draggedIngredient.index;
+      if (sourceIndex !== targetIndex) {
+        const newInputs = [...inputs];
+        // Swap the two ingredients
+        [newInputs[sourceIndex], newInputs[targetIndex]] = [newInputs[targetIndex], newInputs[sourceIndex]];
+        setInputs(newInputs);
+      }
+      setDraggedIngredient(null);
+    }
+    // Case 2: Dragging a new item from sidebar to replace existing ingredient
+    else if (draggedItem) {
+      const newInputs = [...inputs];
+      const isTag = "memberItemIds" in draggedItem;
+      newInputs[targetIndex] = {
+        ...newInputs[targetIndex],
+        refType: isTag ? "tag" : "item",
+        refId: draggedItem.id
+      };
+      setInputs(newInputs);
+      setDraggedItem(null);
+    }
+  };
+
+  const handleDropOnOutput = (e: DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Case 1: Dragging an ingredient within the outputs list (reorder or swap)
+    if (draggedIngredient && draggedIngredient.type === 'output') {
+      const sourceIndex = draggedIngredient.index;
+      if (sourceIndex !== targetIndex) {
+        const newOutputs = [...outputs];
+        // Swap the two ingredients
+        [newOutputs[sourceIndex], newOutputs[targetIndex]] = [newOutputs[targetIndex], newOutputs[sourceIndex]];
+        setOutputs(newOutputs);
+      }
+      setDraggedIngredient(null);
+    }
+    // Case 2: Dragging a new item from sidebar to replace existing ingredient
+    else if (draggedItem && !("memberItemIds" in draggedItem)) {
+      const newOutputs = [...outputs];
+      newOutputs[targetIndex] = {
+        ...newOutputs[targetIndex],
+        itemId: draggedItem.id
+      };
+      setOutputs(newOutputs);
       setDraggedItem(null);
     }
   };
@@ -248,6 +352,7 @@ export default function RecipeMode() {
                     className="draggable-item tag-item"
                     draggable
                     onDragStart={(e) => handleDragStart(e, tag)}
+                    onDragEnd={handleSidebarDragEnd}
                   >
                     <span className="tag-badge">{tag.name}</span>
                     <span className="item-count-mini">{tag.memberItemIds.length}</span>
@@ -268,6 +373,7 @@ export default function RecipeMode() {
                       className="draggable-item"
                       draggable
                       onDragStart={(e) => handleDragStart(e, item)}
+                      onDragEnd={handleSidebarDragEnd}
                     >
                       <div className="draggable-item-content">
                         <div className="item-name">{item.name}</div>
@@ -345,8 +451,17 @@ export default function RecipeMode() {
               >
                 <h4>Inputs</h4>
                 <div className="io-list">
-                  {inputs.map((input) => (
-                    <div key={input.id} className="io-item">
+                  {inputs.map((input, index) => (
+                    <div 
+                      key={input.id} 
+                      className="io-item"
+                      draggable
+                      onDragStart={(e) => handleIngredientDragStart(e, 'input', index)}
+                      onDragEnd={handleIngredientDragEnd}
+                      onDragOver={handleIngredientDragOver}
+                      onDrop={(e) => handleDropOnInput(e, index)}
+                    >
+                      <span className="io-drag-handle" onMouseDown={(e) => e.stopPropagation()}>⋮⋮</span>
                       <span className="io-name">{getInputDisplay(input)}</span>
                       <input
                         type="number"
@@ -354,8 +469,13 @@ export default function RecipeMode() {
                         value={input.amount}
                         onChange={(e) => updateInputAmount(input.id, parseInt(e.target.value))}
                         className="amount-input"
+                        onMouseDown={(e) => e.stopPropagation()}
                       />
-                      <button onClick={() => handleRemoveInput(input.id)} className="btn-remove">
+                      <button 
+                        onClick={() => handleRemoveInput(input.id)} 
+                        className="btn-remove"
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
                         ×
                       </button>
                     </div>
@@ -373,8 +493,17 @@ export default function RecipeMode() {
               >
                 <h4>Outputs</h4>
                 <div className="io-list">
-                  {outputs.map((output) => (
-                    <div key={output.id} className="io-item">
+                  {outputs.map((output, index) => (
+                    <div 
+                      key={output.id} 
+                      className="io-item"
+                      draggable
+                      onDragStart={(e) => handleIngredientDragStart(e, 'output', index)}
+                      onDragEnd={handleIngredientDragEnd}
+                      onDragOver={handleIngredientDragOver}
+                      onDrop={(e) => handleDropOnOutput(e, index)}
+                    >
+                      <span className="io-drag-handle" onMouseDown={(e) => e.stopPropagation()}>⋮⋮</span>
                       <span className="io-name">{getOutputDisplay(output)}</span>
                       <input
                         type="number"
@@ -383,6 +512,7 @@ export default function RecipeMode() {
                         onChange={(e) => updateOutputAmount(output.id, parseInt(e.target.value))}
                         className="amount-input"
                         placeholder="Amount"
+                        onMouseDown={(e) => e.stopPropagation()}
                       />
                       <input
                         type="number"
@@ -393,8 +523,13 @@ export default function RecipeMode() {
                         onChange={(e) => updateOutputProbability(output.id, parseFloat(e.target.value))}
                         className="amount-input"
                         placeholder="Prob"
+                        onMouseDown={(e) => e.stopPropagation()}
                       />
-                      <button onClick={() => handleRemoveOutput(output.id)} className="btn-remove">
+                      <button 
+                        onClick={() => handleRemoveOutput(output.id)} 
+                        className="btn-remove"
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
                         ×
                       </button>
                     </div>
@@ -466,6 +601,16 @@ export default function RecipeMode() {
                         <h4>{recipe.name}</h4>
                         <div className="recipe-actions">
                           <span className="recipe-time">{recipe.timeSeconds}s</span>
+                          <button
+                            className="btn-icon-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyRecipe(recipe);
+                            }}
+                            title="Copy recipe"
+                          >
+                            📋
+                          </button>
                           <button
                             className="btn-icon-sm"
                             onClick={(e) => {
