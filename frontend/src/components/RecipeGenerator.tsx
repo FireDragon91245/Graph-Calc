@@ -41,110 +41,195 @@ export default function RecipeGenerator() {
     }));
   }, [recipes]);
 
-  // Find item name similarity using word matching
-  const findSimilarItemName = (sourceItem: Item, targetPrefix: string = ""): Item | null => {
-    // Extract base name (e.g., "diamond" from "diamond_geode")
-    const sourceName = sourceItem.name.toLowerCase();
-    const sourceId = sourceItem.id.toLowerCase();
+  // Extract variable parts from an item ID pattern
+  const extractVariablePart = (itemId: string, patternIds: string[]): string | null => {
+    // Try to find the common pattern and extract the variable part
+    // E.g., from ["refined_diamond_ore", "refined_emerald_ore"], extract "diamond" or "emerald"
     
-    // Try to extract the gem/material name
-    const baseMatch = sourceId.match(/^(.+?)_geode$/);
-    if (!baseMatch) return null;
+    // Split all IDs into parts
+    const allParts = patternIds.map(id => id.split('_'));
     
-    const baseName = baseMatch[1]; // e.g., "diamond"
+    // Find common prefix and suffix
+    let prefixLen = 0;
+    let suffixLen = 0;
     
-    // Look for item with target prefix + base name
-    const targetId = targetPrefix ? `${targetPrefix}_${baseName}` : baseName;
-    const targetItem = items.find((item) => item.id.toLowerCase() === targetId);
+    if (allParts.length < 2) return null;
     
-    return targetItem || null;
+    // Find common prefix
+    while (prefixLen < allParts[0].length && allParts.every(parts => parts[prefixLen] === allParts[0][prefixLen])) {
+      prefixLen++;
+    }
+    
+    // Find common suffix
+    while (suffixLen < allParts[0].length - prefixLen && 
+           allParts.every(parts => parts[parts.length - 1 - suffixLen] === allParts[0][allParts[0].length - 1 - suffixLen])) {
+      suffixLen++;
+    }
+    
+    // Extract the variable part from the current itemId
+    const parts = itemId.split('_');
+    const variableParts = parts.slice(prefixLen, parts.length - suffixLen);
+    return variableParts.join('_');
+  };
+
+  // Find items matching a pattern
+  const findMatchingItems = (patternTemplate: string, variablePart: string): Item | null => {
+    const item = items.find(i => i.id === patternTemplate.replace('{var}', variablePart));
+    return item || null;
   };
 
   // Generate suggestions based on selected pattern
   const generateSuggestions = (patternId: string) => {
     const pattern = patterns.find((p) => p.id === patternId);
-    if (!pattern || pattern.recipes.length === 0) return;
-
-    const templateRecipe = pattern.recipes[0];
-    const suggestions: RecipeSuggestion[] = [];
-
-    // Detect if this is a geode cutting pattern
-    const isGeodePattern = templateRecipe.inputs.some((input) => {
-      const item = items.find((i) => i.id === input.refId);
-      return item?.id.includes("_geode");
-    });
-
-    if (isGeodePattern) {
-      // Find all geode items
-      const geodeTag = tags.find((t) => t.name === "@geode");
-      const geodeItems = geodeTag 
-        ? items.filter((item) => geodeTag.memberItemIds.includes(item.id))
-        : items.filter((item) => item.id.includes("_geode"));
-
-      // Check which geodes don't have recipes yet
-      geodeItems.forEach((geodeItem) => {
-        const hasRecipe = recipes.some((recipe) =>
-          recipe.inputs.some((input) => input.refId === geodeItem.id)
-        );
-
-        if (!hasRecipe) {
-          // Try to find corresponding output item (e.g., raw_diamond for diamond_geode)
-          const outputItem = findSimilarItemName(geodeItem, "raw");
-          
-          if (outputItem) {
-            // Find the static inputs (e.g., lubricant)
-            const staticInputs = templateRecipe.inputs.filter((input) => {
-              const item = items.find((i) => i.id === input.refId);
-              return item && !item.id.includes("_geode");
-            });
-
-            // Find the static outputs (e.g., stone_dust)
-            const staticOutputs = templateRecipe.outputs.filter((output) => {
-              const item = items.find((i) => i.id === output.itemId);
-              return item && !item.id.startsWith("raw_");
-            });
-
-            suggestions.push({
-              id: `gen_${geodeItem.id}_${Date.now()}`,
-              name: `Cut ${geodeItem.name}`,
-              timeSeconds: templateRecipe.timeSeconds,
-              inputs: [
-                {
-                  refType: "item",
-                  refId: geodeItem.id,
-                  amount: 1,
-                  displayName: geodeItem.name,
-                },
-                ...staticInputs.map((input) => ({
-                  refType: input.refType,
-                  refId: input.refId,
-                  amount: input.amount,
-                  displayName: items.find((i) => i.id === input.refId)?.name || input.refId,
-                })),
-              ],
-              outputs: [
-                {
-                  itemId: outputItem.id,
-                  amount: 1,
-                  probability: 1.0,
-                  displayName: outputItem.name,
-                },
-                ...staticOutputs.map((output) => ({
-                  itemId: output.itemId,
-                  amount: output.amount,
-                  probability: output.probability,
-                  displayName: items.find((i) => i.id === output.itemId)?.name || output.itemId,
-                })),
-              ],
-              approved: true,
-              sourceItem: geodeItem,
-            });
-          }
-        }
-      });
+    if (!pattern || pattern.recipes.length < 2) {
+      setSuggestions([]);
+      return;
     }
 
+    const suggestions: RecipeSuggestion[] = [];
+    
+    // Analyze the pattern from multiple recipes
+    const templateRecipe = pattern.recipes[0];
+    const inputIds = pattern.recipes.map(r => r.inputs[0]?.refId).filter(Boolean);
+    const outputIds = pattern.recipes.map(r => r.outputs[0]?.itemId).filter(Boolean);
+    
+    if (inputIds.length < 2 || outputIds.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    // Extract pattern templates
+    const inputPattern = extractPatternTemplate(inputIds);
+    const outputPattern = extractPatternTemplate(outputIds);
+    
+    if (!inputPattern || !outputPattern) {
+      setSuggestions([]);
+      return;
+    }
+
+    // Find all items that match the input pattern
+    const matchingInputs = items.filter(item => {
+      const variablePart = extractVariableFromPattern(item.id, inputPattern);
+      if (!variablePart) return false;
+      
+      // Check if this input already has a recipe
+      const hasRecipe = recipes.some(r => 
+        r.inputs.some(inp => inp.refId === item.id)
+      );
+      
+      return !hasRecipe;
+    });
+
+    // Generate suggestions for matching items
+    matchingInputs.forEach(inputItem => {
+      const variablePart = extractVariableFromPattern(inputItem.id, inputPattern);
+      if (!variablePart) return;
+      
+      // Find corresponding output
+      const outputId = outputPattern.prefix + variablePart + outputPattern.suffix;
+      const outputItem = items.find(i => i.id === outputId);
+      
+      if (!outputItem) return;
+
+      // Extract recipe name pattern
+      const recipeName = generateRecipeName(templateRecipe.name, pattern.recipes, inputItem.name);
+
+      suggestions.push({
+        id: `gen_${inputItem.id}_${Date.now()}`,
+        name: recipeName,
+        timeSeconds: templateRecipe.timeSeconds,
+        inputs: templateRecipe.inputs.map((inp, idx) => {
+          if (idx === 0) {
+            return {
+              refType: "item" as const,
+              refId: inputItem.id,
+              amount: inp.amount,
+              displayName: inputItem.name,
+            };
+          }
+          return {
+            refType: inp.refType,
+            refId: inp.refId,
+            amount: inp.amount,
+            displayName: items.find(i => i.id === inp.refId)?.name || inp.refId,
+          };
+        }),
+        outputs: templateRecipe.outputs.map((out, idx) => {
+          if (idx === 0) {
+            return {
+              itemId: outputItem.id,
+              amount: out.amount,
+              probability: out.probability,
+              displayName: outputItem.name,
+            };
+          }
+          return {
+            itemId: out.itemId,
+            amount: out.amount,
+            probability: out.probability,
+            displayName: items.find(i => i.id === out.itemId)?.name || out.itemId,
+          };
+        }),
+        approved: true,
+        sourceItem: inputItem,
+      });
+    });
+
     setSuggestions(suggestions);
+  };
+
+  // Extract pattern template from a list of IDs
+  const extractPatternTemplate = (ids: string[]): { prefix: string; suffix: string } | null => {
+    if (ids.length < 2) return null;
+    
+    const parts = ids.map(id => id.split('_'));
+    let prefixLen = 0;
+    let suffixLen = 0;
+    
+    // Find common prefix
+    while (prefixLen < parts[0].length && parts.every(p => p[prefixLen] === parts[0][prefixLen])) {
+      prefixLen++;
+    }
+    
+    // Find common suffix
+    while (suffixLen < parts[0].length - prefixLen && 
+           parts.every(p => p[p.length - 1 - suffixLen] === parts[0][parts[0].length - 1 - suffixLen])) {
+      suffixLen++;
+    }
+    
+    const prefix = parts[0].slice(0, prefixLen).join('_');
+    const suffix = parts[0].slice(parts[0].length - suffixLen).join('_');
+    
+    return { 
+      prefix: prefix ? prefix + '_' : '', 
+      suffix: suffix ? '_' + suffix : '' 
+    };
+  };
+
+  // Extract variable part from an ID given a pattern
+  const extractVariableFromPattern = (id: string, pattern: { prefix: string; suffix: string }): string | null => {
+    if (!id.startsWith(pattern.prefix)) return null;
+    if (!id.endsWith(pattern.suffix)) return null;
+    
+    const start = pattern.prefix.length;
+    const end = id.length - pattern.suffix.length;
+    const variable = id.substring(start, end);
+    
+    return variable || null;
+  };
+
+  // Generate recipe name by analyzing pattern
+  const generateRecipeName = (templateName: string, allRecipes: Recipe[], newItemName: string): string => {
+    // Try to extract the pattern from template name and first recipe input
+    const firstRecipe = allRecipes[0];
+    const firstInput = items.find(i => i.id === firstRecipe.inputs[0]?.refId);
+    
+    if (firstInput) {
+      // Replace the first input's name in template with new item name
+      return templateName.replace(firstInput.name, newItemName);
+    }
+    
+    return templateName;
   };
 
   const toggleApproval = (suggestionId: string) => {

@@ -339,6 +339,59 @@
           }
         ]
       }
+    },
+    {
+      "id": "recipetag-1770851653865",
+      "type": "recipetag",
+      "position": {
+        "x": 1796.526859879068,
+        "y": -2842.738170832861
+      },
+      "data": {
+        "recipeTagId": "@crush_refined",
+        "title": "@crush_refined",
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Mixed Input 1",
+            "amountPerCycle": 1,
+            "isMixed": true
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "name": "Mixed Output 1",
+            "amountPerCycle": 1,
+            "probability": 1,
+            "isMixed": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "output-1770851689718",
+      "type": "output",
+      "position": {
+        "x": 2198.8798310456837,
+        "y": -3079.83902884176
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "diamond_dust"
+          },
+          {
+            "id": "1770851775537",
+            "itemId": "quartzite_dust"
+          },
+          {
+            "id": "1770851836411",
+            "itemId": "certus_quartz_dust"
+          }
+        ]
+      }
     }
   ],
   "edges": [
@@ -488,6 +541,34 @@
       "target": "recipetag-1770851024838",
       "sourceHandle": "output-o1",
       "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipetag-1770851024838output-o1-recipetag-1770851653865input-i1",
+      "source": "recipetag-1770851024838",
+      "target": "recipetag-1770851653865",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipetag-1770851653865output-o1-output-1770851689718input-1",
+      "source": "recipetag-1770851653865",
+      "target": "output-1770851689718",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-1"
+    },
+    {
+      "id": "reactflow__edge-recipetag-1770851653865output-o1-output-1770851689718input-1770851775537",
+      "source": "recipetag-1770851653865",
+      "target": "output-1770851689718",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-1770851775537"
+    },
+    {
+      "id": "reactflow__edge-recipetag-1770851653865output-o1-output-1770851689718input-1770851836411",
+      "source": "recipetag-1770851653865",
+      "target": "output-1770851689718",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-1770851836411"
     }
   ]
 }

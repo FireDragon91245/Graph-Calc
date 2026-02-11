@@ -678,6 +678,25 @@
         "thermal_centrifuge_purified_monazite_ore",
         "thermal_centrifuge_purified_realgar_ore"
       ]
+    },
+    {
+      "id": "@crush_refined",
+      "name": "@crush_refined",
+      "memberRecipeIds": [
+        "crush_refined_diamond_ore",
+        "crush_refined_emerald_ore",
+        "crush_refined_ruby_ore",
+        "crush_refined_sapphire_ore",
+        "crush_refined_green_sapphire_ore",
+        "crush_refined_quartzite_ore",
+        "crush_refined_topaz_ore",
+        "crush_refined_blue_topaz_ore",
+        "crush_refined_spessartine_ore",
+        "crush_refined_certus_quartz_ore",
+        "crush_refined_apatite_ore",
+        "crush_refined_monazite_ore",
+        "crush_refined_realgar_ore"
+      ]
     }
   ],
   "recipes": [
@@ -2419,6 +2438,237 @@
         {
           "id": "o1",
           "itemId": "emerald_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_ruby_ore",
+      "name": "Crush Refined Ruby Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_ruby_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "ruby_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_sapphire_ore",
+      "name": "Crush Refined Sapphire Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_sapphire_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "sapphire_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_green_sapphire_ore",
+      "name": "Crush Refined Green Sapphire Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_green_sapphire_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "green_sapphire_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_quartzite_ore",
+      "name": "Crush Refined Quartzite Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_quartzite_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "quartzite_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_topaz_ore",
+      "name": "Crush Refined Topaz Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_topaz_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "topaz_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_blue_topaz_ore",
+      "name": "Crush Refined Blue Topaz Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_blue_topaz_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "blue_topaz_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_spessartine_ore",
+      "name": "Crush Refined Spessartine Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_spessartine_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "spessartine_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_certus_quartz_ore",
+      "name": "Crush Refined Certus Quartz Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_certus_quartz_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "certus_quartz_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_apatite_ore",
+      "name": "Crush Refined Apatite Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_apatite_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "apatite_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_monazite_ore",
+      "name": "Crush Refined Monazite Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_monazite_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "monazite_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_realgar_ore",
+      "name": "Crush Refined Realgar Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_realgar_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "realgar_dust",
           "amount": 1.0,
           "probability": 1.0
         }
