@@ -1,3 +1,4 @@
+import { ChangeEvent } from "react";
 import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
 import { useGraphStore } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
@@ -14,12 +15,26 @@ type InputRecipeNodeData = {
   title: string;
   timeSeconds: number;
   outputs: Port[];
+  multiplier?: number;
 };
 
 export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeData>) {
   const { setNodes, getEdges, setEdges } = useReactFlow();
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
+  const multiplier = Number.isFinite(data.multiplier) ? data.multiplier : 1;
+
+  const buildOutputs = (recipeId: string, nextMultiplier: number) => {
+    const recipe = recipes.find((r) => r.id === recipeId);
+    if (!recipe) return data.outputs;
+
+    return recipe.outputs.map((output) => ({
+      id: output.id,
+      name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
+      amountPerCycle: output.amount * nextMultiplier,
+      probability: output.probability
+    }));
+  };
 
   const handleRecipeChange = (newRecipeId: string) => {
     const recipe = recipes.find((r) => r.id === newRecipeId);
@@ -30,12 +45,7 @@ export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeD
     setEdges(edges.filter((edge) => edge.source !== id));
 
     // Build new outputs data
-    const outputs = recipe.outputs.map((output) => ({
-      id: output.id,
-      name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
-      amountPerCycle: output.amount,
-      probability: output.probability
-    }));
+    const outputs = buildOutputs(recipe.id, multiplier);
 
     // Update node data
     setNodes((nds) =>
@@ -47,6 +57,29 @@ export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeD
               recipeId: recipe.id,
               title: recipe.name,
               timeSeconds: recipe.timeSeconds,
+              outputs,
+              multiplier
+            }
+          };
+        }
+        return node;
+      })
+    );
+  };
+
+  const handleMultiplierChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const parsed = Number(event.target.value);
+    const nextMultiplier = Number.isFinite(parsed) && parsed >= 0 ? parsed : 1;
+    const outputs = buildOutputs(data.recipeId, nextMultiplier);
+
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === id) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              multiplier: nextMultiplier,
               outputs
             }
           };
@@ -66,7 +99,19 @@ export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeD
           onChange={handleRecipeChange}
           placeholder="Select recipe"
         />
-        <span className="node-sub">{data.timeSeconds}s</span>
+        <div className="node-meta">
+          <input
+            className="multiplier-input nodrag"
+            type="number"
+            min="0"
+            step="1"
+            value={multiplier}
+            onChange={handleMultiplierChange}
+            aria-label="Recipe multiplier"
+          />
+          <span className="node-sub">x</span>
+          <span className="node-sub">{data.timeSeconds}s</span>
+        </div>
       </div>
       <div className="node-body">
         <div className="ports single-col">

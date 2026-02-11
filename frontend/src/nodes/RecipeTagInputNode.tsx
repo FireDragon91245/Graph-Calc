@@ -1,3 +1,4 @@
+import { ChangeEvent } from "react";
 import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
 import { useGraphStore } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
@@ -15,6 +16,7 @@ type RecipeTagInputNodeData = {
   recipeTagId: string;
   title: string;
   outputs: PortPattern[];
+  multiplier?: number;
 };
 
 /**
@@ -23,10 +25,11 @@ type RecipeTagInputNodeData = {
 function analyzeRecipeOutputPattern(
   recipeIds: string[],
   recipes: any[],
-  items: any[]
+  items: any[],
+  multiplier: number
 ): PortPattern[] {
   if (recipeIds.length === 0) {
-    return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }];
+    return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1 * multiplier, isMixed: true }];
   }
 
   const recipeData = recipeIds
@@ -34,7 +37,7 @@ function analyzeRecipeOutputPattern(
     .filter((r): r is NonNullable<typeof r> => r !== undefined);
   
   if (recipeData.length === 0) {
-    return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }];
+    return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1 * multiplier, isMixed: true }];
   }
 
   // Check if all recipes have the same number of outputs
@@ -43,7 +46,7 @@ function analyzeRecipeOutputPattern(
 
   // If structure doesn't match, fallback to 1 mixed output
   if (!sameOutputCount) {
-    return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }];
+    return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1 * multiplier, isMixed: true }];
   }
 
   const numOutputs = outputCounts[0];
@@ -73,7 +76,7 @@ function analyzeRecipeOutputPattern(
     outputs.push({
       id: `o${i + 1}`,
       name,
-      amountPerCycle: allSameAmount ? amounts[0] : 1,
+      amountPerCycle: (allSameAmount ? amounts[0] : 1) * multiplier,
       probability: allSameProbability ? probabilities[0] : undefined,
       isMixed,
       fixedRefId: allSameItemId ? itemIds[0] : undefined
@@ -88,6 +91,7 @@ export default function RecipeTagInputNode({ id, data }: NodeProps<RecipeTagInpu
   const recipeTags = useGraphStore((state) => state.recipeTags);
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
+  const multiplier = Number.isFinite(data.multiplier) ? data.multiplier : 1;
 
   const handleRecipeTagChange = (newRecipeTagId: string) => {
     const recipeTag = recipeTags.find((rt) => rt.id === newRecipeTagId);
@@ -98,7 +102,7 @@ export default function RecipeTagInputNode({ id, data }: NodeProps<RecipeTagInpu
     setEdges(edges.filter((edge) => edge.source !== id));
 
     // Analyze output pattern
-    const outputs = analyzeRecipeOutputPattern(recipeTag.memberRecipeIds, recipes, items);
+    const outputs = analyzeRecipeOutputPattern(recipeTag.memberRecipeIds, recipes, items, multiplier);
 
     // Update node data
     setNodes((nds) =>
@@ -109,6 +113,32 @@ export default function RecipeTagInputNode({ id, data }: NodeProps<RecipeTagInpu
             data: {
               recipeTagId: recipeTag.id,
               title: recipeTag.name,
+              outputs,
+              multiplier
+            }
+          };
+        }
+        return node;
+      })
+    );
+  };
+
+  const handleMultiplierChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const parsed = Number(event.target.value);
+    const nextMultiplier = Number.isFinite(parsed) && parsed >= 0 ? parsed : 1;
+    const recipeTag = recipeTags.find((rt) => rt.id === data.recipeTagId);
+    const outputs = recipeTag
+      ? analyzeRecipeOutputPattern(recipeTag.memberRecipeIds, recipes, items, nextMultiplier)
+      : data.outputs;
+
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === id) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              multiplier: nextMultiplier,
               outputs
             }
           };
@@ -128,6 +158,18 @@ export default function RecipeTagInputNode({ id, data }: NodeProps<RecipeTagInpu
           onChange={handleRecipeTagChange}
           placeholder="Select recipe tag"
         />
+        <div className="node-meta">
+          <input
+            className="multiplier-input nodrag"
+            type="number"
+            min="0"
+            step="1"
+            value={multiplier}
+            onChange={handleMultiplierChange}
+            aria-label="Recipe tag multiplier"
+          />
+          <span className="node-sub">x</span>
+        </div>
       </div>
       <div className="node-body">
         <div className="ports single-col">

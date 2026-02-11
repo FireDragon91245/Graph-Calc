@@ -544,7 +544,8 @@ function AppContent() {
               recipeId: recipe.id,
               title: recipe.name,
               timeSeconds: recipe.timeSeconds,
-              outputs
+              outputs,
+              multiplier: 1
             }
           }
         ]);
@@ -618,7 +619,8 @@ function AppContent() {
             data: {
               recipeTagId: recipeTag.id,
               title: recipeTag.name,
-              outputs
+              outputs,
+              multiplier: 1
             }
           }
         ]);
@@ -735,7 +737,8 @@ function AppContent() {
               recipeId: recipe.id,
               title: recipe.name,
               timeSeconds: recipe.timeSeconds,
-              outputs
+              outputs,
+              multiplier: 1
             }
           }
         ]);
