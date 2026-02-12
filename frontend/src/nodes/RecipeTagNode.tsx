@@ -1,4 +1,5 @@
 import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
+import { useMemo, useState } from "react";
 import { useGraphStore } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
 import type { NodeFlowData } from "../api/solve";
@@ -6,6 +7,9 @@ import type { NodeFlowData } from "../api/solve";
 type PortPattern = {
   id: string;
   name: string;
+  itemId?: string;
+  refId?: string;
+  refType?: "item" | "tag";
   amountPerCycle: number;
   probability?: number;
   isMixed: boolean; // True if this port varies across recipes
@@ -97,6 +101,8 @@ function analyzeRecipePattern(
       name,
       amountPerCycle: allSameAmount ? amounts[0] : 1,
       isMixed,
+      refType: allSameRefType ? refTypes[0] : undefined,
+      refId: allSameRefId ? refIds[0] : undefined,
       fixedRefId: allSameRefId ? refIds[0] : undefined
     });
   }
@@ -126,6 +132,7 @@ function analyzeRecipePattern(
     outputs.push({
       id: `o${i + 1}`,
       name,
+      itemId: allSameItemId ? itemIds[0] : undefined,
       amountPerCycle: allSameAmount ? amounts[0] : 1,
       probability: allSameProbability ? probabilities[0] : undefined,
       isMixed,
@@ -142,6 +149,13 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
   const tags = useGraphStore((state) => state.tags);
+  const [showDetails, setShowDetails] = useState(false);
+  const hasSolveData = Boolean(data.solveData);
+  const itemNameById = useMemo(() => new Map(items.map((item) => [item.id, item.name])), [items]);
+  const itemIdByName = useMemo(() => new Map(items.map((item) => [item.name, item.id])), [items]);
+
+  const resolveInputId = (port: PortPattern) => port.refId ?? port.fixedRefId ?? itemIdByName.get(port.name) ?? port.name;
+  const resolveOutputId = (port: PortPattern) => port.itemId ?? port.fixedRefId ?? itemIdByName.get(port.name) ?? port.name;
 
   const handleRecipeTagChange = (newRecipeTagId: string) => {
     const recipeTag = recipeTags.find((rt) => rt.id === newRecipeTagId);
@@ -183,11 +197,29 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
           onChange={handleRecipeTagChange}
           placeholder="Select recipe tag"
         />
-        {data.solveData?.machineCount && (
-          <span className="node-badge" title="Total machines (all recipes)">
-            🏭 {data.solveData.machineCount.toFixed(2)}
+        {hasSolveData ? (
+          <span className="node-badge" title="Total input flow">
+            ↓ {(data.solveData?.totalInput ?? 0).toFixed(2)}/s
           </span>
-        )}
+        ) : null}
+        {data.solveData?.machineCount !== undefined ? (
+          <span className="node-badge" title="Total machines (all recipes)">
+            🏭 {(data.solveData.machineCount ?? 0).toFixed(2)}
+          </span>
+        ) : null}
+        {hasSolveData ? (
+          <span className="node-badge" title="Total output flow">
+            ↑ {(data.solveData?.totalOutput ?? 0).toFixed(2)}/s
+          </span>
+        ) : null}
+        <button
+          className="node-detail-btn"
+          onClick={() => hasSolveData && setShowDetails((prev) => !prev)}
+          disabled={!hasSolveData}
+          title={hasSolveData ? "Show details" : "Run solver first"}
+        >
+          ...
+        </button>
       </div>
       <div className="node-body">
         <div className="ports">
@@ -205,12 +237,22 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
                   {input.name}
                 </span>
                 <span className="port-amount">{input.amountPerCycle}</span>
+                {hasSolveData && !input.isMixed ? (
+                  <span className="port-rate" title="Actual input flow">
+                    {(data.solveData?.inputFlows[resolveInputId(input)] ?? 0).toFixed(2)}/s
+                  </span>
+                ) : null}
               </div>
             ))}
           </div>
           <div className="port-col">
             {data.outputs.map((output) => (
               <div key={output.id} className="port-row right">
+                {hasSolveData && !output.isMixed ? (
+                  <span className="port-rate" title="Actual output flow">
+                    {(data.solveData?.outputFlows[resolveOutputId(output)] ?? 0).toFixed(2)}/s
+                  </span>
+                ) : null}
                 <span className="port-amount">{output.amountPerCycle}</span>
                 <span className={`port-name ${output.isMixed ? "mixed-label" : ""}`}>
                   {output.name}
@@ -228,6 +270,52 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
             ))}
           </div>
         </div>
+        {showDetails && data.solveData ? (
+          <div className="node-detail-panel">
+            <div className="node-detail-title">Recipe Tag Details</div>
+            <div className="node-detail-row">
+              <span>{data.title}</span>
+              <span>{(data.solveData.machineCount ?? 0).toFixed(2)} machines</span>
+            </div>
+            {Object.entries(data.solveData.recipeRuns ?? {}).map(([recipeId, runCount]) => {
+              const recipe = recipes.find((entry) => entry.id === recipeId);
+              if (!recipe) return null;
+              return (
+                <div key={recipeId} className="node-detail-item">
+                  <div className="node-detail-row">
+                    <span className="flow-name">{recipe.name}</span>
+                    <span>{runCount.toFixed(2)} machines • {recipe.timeSeconds}s</span>
+                  </div>
+                  {recipe.inputs.map((input) => {
+                    const inputItemId = input.refId;
+                    const expectedRate = recipe.timeSeconds > 0 ? (runCount * input.amount) / recipe.timeSeconds : 0;
+                    return (
+                      <div key={`${recipeId}-in-${input.id}`} className="node-detail-subrow">
+                        <span>IN • {itemNameById.get(inputItemId) ?? inputItemId}</span>
+                        <span>{input.amount.toFixed(2)}/cycle</span>
+                        <span>{expectedRate.toFixed(2)}/s</span>
+                      </div>
+                    );
+                  })}
+                  {recipe.outputs.map((output) => {
+                    const outputItemId = output.itemId;
+                    const chance = output.probability ?? 1;
+                    const expectedRate = recipe.timeSeconds > 0
+                      ? (runCount * output.amount * chance) / recipe.timeSeconds
+                      : 0;
+                    return (
+                      <div key={`${recipeId}-out-${output.id}`} className="node-detail-subrow">
+                        <span>OUT • {itemNameById.get(outputItemId) ?? outputItemId}</span>
+                        <span>{output.amount.toFixed(2)}/cycle • {Math.round(chance * 100)}%</span>
+                        <span>{expectedRate.toFixed(2)}/s</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </div>
   );

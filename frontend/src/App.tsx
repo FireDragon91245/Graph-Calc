@@ -70,10 +70,10 @@ const initialNodes: Node[] = [
     data: {
       title: "Macerate Iron",
       timeSeconds: 2,
-      inputs: [{ id: "i1", name: "Iron Ore", amountPerCycle: 1 }],
+      inputs: [{ id: "i1", name: "Iron Ore", refId: "iron_ore", refType: "item", amountPerCycle: 1 }],
       outputs: [
-        { id: "o1", name: "Iron Dust", amountPerCycle: 1, probability: 1 },
-        { id: "o2", name: "Gold Dust", amountPerCycle: 1, probability: 0.1 }
+        { id: "o1", itemId: "iron_dust", name: "Iron Dust", amountPerCycle: 1, probability: 1 },
+        { id: "o2", itemId: "gold_dust", name: "Gold Dust", amountPerCycle: 1, probability: 0.1 }
       ]
     }
   },
@@ -84,8 +84,8 @@ const initialNodes: Node[] = [
     data: {
       title: "Smelt Iron",
       timeSeconds: 3.2,
-      inputs: [{ id: "i1", name: "Iron Dust", amountPerCycle: 1 }],
-      outputs: [{ id: "o1", name: "Iron Ingot", amountPerCycle: 1, probability: 1 }]
+      inputs: [{ id: "i1", name: "Iron Dust", refId: "iron_dust", refType: "item", amountPerCycle: 1 }],
+      outputs: [{ id: "o1", itemId: "iron_ingot", name: "Iron Ingot", amountPerCycle: 1, probability: 1 }]
     }
   },
   {
@@ -125,6 +125,15 @@ const initialEdges: Edge[] = [
     targetHandle: "input-row1"
   }
 ];
+
+const stripSolveData = (value: unknown): unknown => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return value;
+  }
+
+  const { solveData, ...rest } = value as Record<string, unknown>;
+  return rest;
+};
 
 function AppContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -192,7 +201,12 @@ function AppContent() {
         // Load graph data (nodes and edges)
         const graphData = await loadGraph();
         if (graphData.nodes.length > 0 || graphData.edges.length > 0) {
-          setNodes(graphData.nodes);
+          const sanitizedNodes = graphData.nodes.map((node) => ({
+            ...node,
+            data: stripSolveData(node.data)
+          }));
+
+          setNodes(sanitizedNodes);
           setEdges(graphData.edges);
         }
       } catch (error) {
@@ -221,7 +235,7 @@ function AppContent() {
           id: node.id,
           type: node.type ?? "recipe",
           position: node.position,
-          data: node.data
+          data: stripSolveData(node.data)
         })),
         edges: edges.map((edge) => ({
           id: edge.id,
@@ -444,12 +458,15 @@ function AppContent() {
           return {
             id: input.id,
             name,
+            refId: input.refId,
+            refType: input.refType,
             amountPerCycle: input.amount
           };
         });
 
         const outputs = recipe.outputs.map((output: any) => ({
           id: output.id,
+          itemId: output.itemId,
           name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
           amountPerCycle: output.amount,
           probability: output.probability
@@ -558,6 +575,8 @@ function AppContent() {
               name,
               amountPerCycle: allSameAmount ? amounts[0] : 1,
               isMixed,
+              refType: refTypes[0],
+              refId: allSameRefId ? refIds[0] : undefined,
               fixedRefId: allSameRefId ? refIds[0] : undefined
             });
           }
@@ -588,6 +607,7 @@ function AppContent() {
               amountPerCycle: allSameAmount ? amounts[0] : 1,
               probability: allSameProbability ? probabilities[0] : undefined,
               isMixed,
+              itemId: allSameItemId ? itemIds[0] : undefined,
               fixedRefId: allSameItemId ? itemIds[0] : undefined
             });
           }
@@ -615,6 +635,7 @@ function AppContent() {
         const recipe = config.recipe;
         const outputs = recipe.outputs.map((output: any) => ({
           id: output.id,
+          itemId: output.itemId,
           name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
           amountPerCycle: output.amount,
           probability: output.probability
@@ -687,6 +708,7 @@ function AppContent() {
               amountPerCycle: allSameAmount ? amounts[0] : 1,
               probability: allSameProbability ? probabilities[0] : undefined,
               isMixed,
+              itemId: allSameItemId ? itemIds[0] : undefined,
               fixedRefId: allSameItemId ? itemIds[0] : undefined
             });
           }
@@ -776,12 +798,15 @@ function AppContent() {
           return {
             id: input.id,
             name,
+            refId: input.refId,
+            refType: input.refType,
             amountPerCycle: input.amount
           };
         });
 
         const outputs = recipe.outputs.map((output: any) => ({
           id: output.id,
+          itemId: output.itemId,
           name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
           amountPerCycle: output.amount,
           probability: output.probability
@@ -808,6 +833,7 @@ function AppContent() {
 
         const outputs = recipe.outputs.map((output: any) => ({
           id: output.id,
+          itemId: output.itemId,
           name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
           amountPerCycle: output.amount,
           probability: output.probability
@@ -885,12 +911,15 @@ function AppContent() {
         return {
           id: input.id,
           name,
+          refId: input.refId,
+          refType: input.refType,
           amountPerCycle: input.amount
         };
       });
 
       const outputs = recipe.outputs.map((output) => ({
         id: output.id,
+        itemId: output.itemId,
         name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
         amountPerCycle: output.amount,
         probability: output.probability
@@ -1015,30 +1044,7 @@ function AppContent() {
               <div className="panel-title">Live Stats</div>
               <div className="panel-row">Nodes: {nodes.length}</div>
               <div className="panel-row">Edges: {edges.length}</div>
-            </Panel>
-            <Panel position="bottom-right" className="panel results">
-              <div className="panel-title">Solver Output</div>
               {solveError ? <div className="panel-error">{solveError}</div> : null}
-              {!solveResult ? (
-                <div className="panel-muted">Run solver to see results.</div>
-              ) : (
-                <div className="panel-section">
-                  <div className="panel-subtitle">Machines</div>
-                  {Object.entries(solveResult.machineCounts).map(([key, value]) => (
-                    <div key={key} className="panel-row">
-                      <span>{key}</span>
-                      <span>{value.toFixed(2)}</span>
-                    </div>
-                  ))}
-                  <div className="panel-subtitle">Flows / s</div>
-                  {Object.entries(solveResult.flowsPerSecond).map(([key, value]) => (
-                    <div key={key} className="panel-row">
-                      <span>{key}</span>
-                      <span>{value.toFixed(3)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </Panel>
             {menu && (
               <ContextMenu

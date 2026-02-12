@@ -20,6 +20,7 @@ export type SolveTargets = {
 
 export type NodeFlowData = {
   machineCount?: number;
+  recipeRuns?: Record<string, number>;  // recipe_id -> machine count
   inputFlows: Record<string, number>;  // item_id -> rate/s
   outputFlows: Record<string, number>;  // item_id -> rate/s
   totalInput: number;

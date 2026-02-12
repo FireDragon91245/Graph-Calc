@@ -93,7 +93,7 @@ export default function OutputNode({ id, data }: NodeProps<OutputNodeData>) {
       </div>
       <div className="node-body io-body">
         {nodeItems.map((item) => {
-          const flowRate = data.solveData?.inputFlows[item.itemId];
+          const flowRate = data.solveData?.inputFlows[item.itemId] ?? 0;
           return (
             <div key={item.id} className="node-row" style={{ position: "relative" }}>
               <Handle
@@ -111,7 +111,7 @@ export default function OutputNode({ id, data }: NodeProps<OutputNodeData>) {
                     onChange={(value) => updateItem(item.id, { itemId: value })}
                     placeholder="Select item"
                   />
-                  {flowRate && (
+                  {data.solveData && (
                     <span className="port-rate" title="Output rate">
                       {flowRate.toFixed(2)}/s
                     </span>

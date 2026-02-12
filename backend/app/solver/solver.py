@@ -737,7 +737,11 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
             if machine_count < 0.001:
                 continue
             
-            node_data = NodeFlowData(machineCount=round(machine_count, 3))
+            rounded_machine_count = round(machine_count, 3)
+            node_data = NodeFlowData(
+                machineCount=rounded_machine_count,
+                recipeRuns={recipe.recipe_id: rounded_machine_count}
+            )
             
             # Calculate input flows for this node (normalize item IDs)
             for input_item in recipe.inputs:
@@ -774,6 +778,8 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                 # Sum up for recipe tags
                 existing = node_flows[original_node_id]
                 existing.machineCount = round((existing.machineCount or 0) + node_data.machineCount, 3)
+                for recipe_id, run_count in node_data.recipeRuns.items():
+                    existing.recipeRuns[recipe_id] = round(existing.recipeRuns.get(recipe_id, 0) + run_count, 3)
                 for item_id, rate in node_data.inputFlows.items():
                     existing.inputFlows[item_id] = round(existing.inputFlows.get(item_id, 0) + rate, 3)
                 for item_id, rate in node_data.outputFlows.items():
@@ -947,6 +953,26 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
             edge_data.totalFlow = round(edge_data.totalFlow, 3)
             if edge_data.totalFlow > 0:
                 edge_flows_map[edge_flow.edge_id] = edge_data
+
+        # Populate mixed output node flows from incoming edge flows
+        for node in graph.nodes:
+            if node.type != "mixedoutput":
+                continue
+
+            mixed_node_data = NodeFlowData()
+            incoming_edges = [edge for edge in graph.edges if edge.target == node.id]
+
+            for edge in incoming_edges:
+                edge_data = edge_flows_map.get(edge.id)
+                if not edge_data:
+                    continue
+                for item_id, rate in edge_data.flows.items():
+                    mixed_node_data.inputFlows[item_id] = round(mixed_node_data.inputFlows.get(item_id, 0) + rate, 3)
+                    mixed_node_data.totalInput += rate
+
+            mixed_node_data.totalInput = round(mixed_node_data.totalInput, 3)
+            if mixed_node_data.totalInput > 0:
+                node_flows[node.id] = mixed_node_data
         
         return SolveResponse(
             status="ok",

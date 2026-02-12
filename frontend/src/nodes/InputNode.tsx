@@ -105,6 +105,11 @@ export default function InputNode({ id, data }: NodeProps<InputNodeData>) {
                 onChange={(value) => updateItem(item.id, { itemId: value })}
                 placeholder="Select item"
               />
+              {data.solveData && (
+                <span className="port-rate" title="Utilized rate from this input row">
+                  {(data.solveData.outputFlows[item.itemId] ?? 0).toFixed(2)}/s
+                </span>
+              )}
               <div className="row-actions">
                 <button
                    className={`mode-btn ${item.mode === "infinite" ? "active" : ""}`}

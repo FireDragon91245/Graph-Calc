@@ -1,4 +1,5 @@
 import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
+import { useMemo, useState } from "react";
 import { useGraphStore } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
 import type { NodeFlowData } from "../api/solve";
@@ -6,6 +7,9 @@ import type { NodeFlowData } from "../api/solve";
 type Port = {
   id: string;
   name: string;
+  itemId?: string;
+  refId?: string;
+  fixedRefId?: string;
   amountPerCycle: number;
   probability?: number;
 };
@@ -24,6 +28,12 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
   const tags = useGraphStore((state) => state.tags);
+  const [showDetails, setShowDetails] = useState(false);
+  const hasSolveData = Boolean(data.solveData);
+  const itemIdByName = useMemo(() => new Map(items.map((item) => [item.name, item.id])), [items]);
+
+  const resolveInputId = (port: Port) => port.refId ?? port.fixedRefId ?? itemIdByName.get(port.name) ?? port.name;
+  const resolveOutputId = (port: Port) => port.itemId ?? port.fixedRefId ?? itemIdByName.get(port.name) ?? port.name;
 
   const handleRecipeChange = (newRecipeId: string) => {
     const recipe = recipes.find((r) => r.id === newRecipeId);
@@ -43,12 +53,14 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
       return {
         id: input.id,
         name,
+        refId: input.refId,
         amountPerCycle: input.amount
       };
     });
 
     const outputs = recipe.outputs.map((output) => ({
       id: output.id,
+      itemId: output.itemId,
       name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
       amountPerCycle: output.amount,
       probability: output.probability
@@ -85,18 +97,36 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
           placeholder="Select recipe"
         />
         <span className="node-sub">{data.timeSeconds}s</span>
-        {data.solveData?.machineCount && (
-          <span className="node-badge" title="Machine Count">
-            🏭 {data.solveData.machineCount.toFixed(2)}
+        {hasSolveData ? (
+          <span className="node-badge" title="Total input flow">
+            ↓ {(data.solveData?.totalInput ?? 0).toFixed(2)}/s
           </span>
-        )}
+        ) : null}
+        {data.solveData?.machineCount !== undefined ? (
+          <span className="node-badge" title="Machine Count">
+            🏭 {(data.solveData.machineCount ?? 0).toFixed(2)}
+          </span>
+        ) : null}
+        {hasSolveData ? (
+          <span className="node-badge" title="Total output flow">
+            ↑ {(data.solveData?.totalOutput ?? 0).toFixed(2)}/s
+          </span>
+        ) : null}
+        <button
+          className="node-detail-btn"
+          onClick={() => hasSolveData && setShowDetails((prev) => !prev)}
+          disabled={!hasSolveData}
+          title={hasSolveData ? "Show details" : "Run solver first"}
+        >
+          ...
+        </button>
       </div>
       <div className="node-body">
         <div className="ports">
           <div className="port-col">
             {data.inputs.map((input) => {
-              const itemId = input.name; // Simplified - may need better mapping
-              const flowRate = data.solveData?.inputFlows[itemId];
+              const itemId = resolveInputId(input);
+              const flowRate = data.solveData?.inputFlows[itemId] ?? 0;
               return (
                 <div key={input.id} className="port-row">
                   <Handle
@@ -108,7 +138,7 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
                   />
                   <span className="port-name">{input.name}</span>
                   <span className="port-amount">{input.amountPerCycle}</span>
-                  {flowRate && (
+                  {hasSolveData && (
                     <span className="port-rate" title="Actual flow rate">
                       {flowRate.toFixed(2)}/s
                     </span>
@@ -119,11 +149,11 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
           </div>
           <div className="port-col">
             {data.outputs.map((output) => {
-              const itemId = output.name; // Simplified - may need better mapping
-              const flowRate = data.solveData?.outputFlows[itemId];
+              const itemId = resolveOutputId(output);
+              const flowRate = data.solveData?.outputFlows[itemId] ?? 0;
               return (
                 <div key={output.id} className="port-row right">
-                  {flowRate && (
+                  {hasSolveData && (
                     <span className="port-rate" title="Actual flow rate">
                       {flowRate.toFixed(2)}/s
                     </span>
@@ -144,6 +174,60 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
             })}
           </div>
         </div>
+        {showDetails && data.solveData ? (
+          <div className="node-detail-panel">
+            <div className="node-detail-title">Recipe Details</div>
+            <div className="node-detail-row">
+              <span>{data.title}</span>
+              <span>{data.timeSeconds}s</span>
+            </div>
+            <div className="node-detail-row">
+              <span>Machines</span>
+              <span>{(data.solveData.machineCount ?? 0).toFixed(2)}</span>
+            </div>
+            {data.inputs.map((input) => {
+              const itemId = resolveInputId(input);
+              const machineCount = data.solveData?.machineCount ?? 0;
+              const expectedRate = data.timeSeconds > 0 ? (machineCount * input.amountPerCycle) / data.timeSeconds : 0;
+              const actualRate = data.solveData?.inputFlows[itemId] ?? 0;
+              const pct = expectedRate > 0 ? (actualRate / expectedRate) * 100 : 0;
+              return (
+                <div key={`in-${input.id}`} className="node-detail-item">
+                  <div className="node-detail-row">
+                    <span className="flow-name">IN • {input.name}</span>
+                    <span>{actualRate.toFixed(2)}/s</span>
+                  </div>
+                  <div className="node-detail-subrow">
+                    <span>{input.amountPerCycle.toFixed(2)}/cycle</span>
+                    <span>expected {expectedRate.toFixed(2)}/s</span>
+                    <span>{pct.toFixed(1)}%</span>
+                  </div>
+                </div>
+              );
+            })}
+            {data.outputs.map((output) => {
+              const itemId = resolveOutputId(output);
+              const machineCount = data.solveData?.machineCount ?? 0;
+              const chance = output.probability ?? 1;
+              const expectedRate = data.timeSeconds > 0 ? (machineCount * output.amountPerCycle * chance) / data.timeSeconds : 0;
+              const actualRate = data.solveData?.outputFlows[itemId] ?? 0;
+              const pct = expectedRate > 0 ? (actualRate / expectedRate) * 100 : 0;
+              return (
+                <div key={`out-${output.id}`} className="node-detail-item">
+                  <div className="node-detail-row">
+                    <span className="flow-name">OUT • {output.name}</span>
+                    <span>{actualRate.toFixed(2)}/s</span>
+                  </div>
+                  <div className="node-detail-subrow">
+                    <span>{output.amountPerCycle.toFixed(2)}/cycle • {Math.round(chance * 100)}%</span>
+                    <span>expected {expectedRate.toFixed(2)}/s</span>
+                    <span>{pct.toFixed(1)}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </div>
   );

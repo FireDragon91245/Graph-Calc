@@ -58,6 +58,7 @@ class SolveRequest(BaseModel):
 class NodeFlowData(BaseModel):
     """Flow data for a specific node"""
     machineCount: Optional[float] = None
+    recipeRuns: Dict[str, float] = {}  # recipe_id -> machine count (for recipe tag breakdown)
     inputFlows: Dict[str, float] = {}  # item_id -> rate/s
     outputFlows: Dict[str, float] = {}  # item_id -> rate/s
     totalInput: float = 0
