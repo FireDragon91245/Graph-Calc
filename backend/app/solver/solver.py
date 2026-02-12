@@ -861,29 +861,118 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
         # so edges (which reference the tag node) can find the items
         port_to_item: Dict[Tuple[str, str], Set[str]] = {}  # (node_id, port_id) -> set of item_ids
         
+        # Build lookup from tag node ID -> tag node port definitions
+        # This is needed to correctly map sub-recipe ports to the tag node's
+        # collapsed/pattern ports (e.g. when recipes have different output counts
+        # and get collapsed into a single Mixed Output)
+        tag_node_port_defs: Dict[str, Dict] = {}
+        for node in graph.nodes:
+            if node.type in ["recipetag", "inputrecipetag"] and node.data:
+                tag_node_port_defs[node.id] = {
+                    "inputs": node.data.get("inputs", []),
+                    "outputs": node.data.get("outputs", []),
+                }
+        
         for recipe in recipes:
             # Use parent tag node ID for sub-recipes so edge lookups work
             display_node_id = recipe.parent_tag_node_id or recipe.node_id
             
-            for input_item in recipe.inputs:
-                port_id = input_item.get("id", "input")
-                item_id = input_item.get("itemId") or input_item.get("refId") or input_item.get("name")
-                if item_id:
-                    item_id = name_to_id.get(item_id, item_id)
-                    key = (display_node_id, f"input-{port_id}")
-                    if key not in port_to_item:
-                        port_to_item[key] = set()
-                    port_to_item[key].add(item_id)
+            # Check if this is a sub-recipe of a recipe tag node
+            tag_ports = tag_node_port_defs.get(recipe.parent_tag_node_id) if recipe.parent_tag_node_id else None
             
-            for output in recipe.outputs:
-                port_id = output.get("id", "output")
-                item_id = output.get("itemId") or output.get("name")
-                if item_id:
-                    item_id = name_to_id.get(item_id, item_id)
-                    key = (display_node_id, f"output-{port_id}")
-                    if key not in port_to_item:
-                        port_to_item[key] = set()
-                    port_to_item[key].add(item_id)
+            if tag_ports:
+                # --- Recipe tag sub-recipe: map ports to tag node's port definitions ---
+                # The tag node's ports may be collapsed (e.g. 4 recipe outputs -> 1 Mixed Output)
+                # so we can't use the store recipe's port IDs directly.
+                tag_inputs = tag_ports["inputs"]
+                tag_outputs = tag_ports["outputs"]
+                
+                # Map sub-recipe INPUTS to tag node input ports
+                if len(tag_inputs) == len(recipe.inputs):
+                    # Same count: positional mapping (sub-recipe input[i] -> tag input[i])
+                    for idx, input_item in enumerate(recipe.inputs):
+                        item_id = input_item.get("itemId") or input_item.get("refId") or input_item.get("name")
+                        if item_id:
+                            item_id = name_to_id.get(item_id, item_id)
+                            tag_port_id = tag_inputs[idx].get("id", f"i{idx+1}")
+                            key = (display_node_id, f"input-{tag_port_id}")
+                            port_to_item.setdefault(key, set()).add(item_id)
+                else:
+                    # Different count (collapsed): fixed ports by ID match, rest to mixed
+                    fixed_input_map = {}
+                    mixed_input_ports = []
+                    for tp in tag_inputs:
+                        if not tp.get("isMixed") and tp.get("fixedRefId"):
+                            fixed_input_map[tp["fixedRefId"]] = tp
+                        elif tp.get("isMixed"):
+                            mixed_input_ports.append(tp)
+                    
+                    for input_item in recipe.inputs:
+                        item_id = input_item.get("itemId") or input_item.get("refId") or input_item.get("name")
+                        if not item_id:
+                            continue
+                        item_id = name_to_id.get(item_id, item_id)
+                        if item_id in fixed_input_map:
+                            tag_port_id = fixed_input_map[item_id]["id"]
+                        elif mixed_input_ports:
+                            tag_port_id = mixed_input_ports[0]["id"]
+                        else:
+                            continue
+                        key = (display_node_id, f"input-{tag_port_id}")
+                        port_to_item.setdefault(key, set()).add(item_id)
+                
+                # Map sub-recipe OUTPUTS to tag node output ports
+                if len(tag_outputs) == len(recipe.outputs):
+                    # Same count: positional mapping (sub-recipe output[i] -> tag output[i])
+                    for idx, output in enumerate(recipe.outputs):
+                        item_id = output.get("itemId") or output.get("name")
+                        if item_id:
+                            item_id = name_to_id.get(item_id, item_id)
+                            tag_port_id = tag_outputs[idx].get("id", f"o{idx+1}")
+                            key = (display_node_id, f"output-{tag_port_id}")
+                            port_to_item.setdefault(key, set()).add(item_id)
+                else:
+                    # Different count (collapsed): fixed ports by itemId match, rest to mixed
+                    # This is the key fix: when a tag has 1 Mixed Output but recipes have
+                    # 3-4 outputs, ALL non-fixed outputs must map to that Mixed Output port
+                    fixed_output_map = {}
+                    mixed_output_ports = []
+                    for tp in tag_outputs:
+                        if not tp.get("isMixed") and tp.get("fixedRefId"):
+                            fixed_output_map[tp["fixedRefId"]] = tp
+                        elif tp.get("isMixed"):
+                            mixed_output_ports.append(tp)
+                    
+                    for output in recipe.outputs:
+                        item_id = output.get("itemId") or output.get("name")
+                        if not item_id:
+                            continue
+                        item_id = name_to_id.get(item_id, item_id)
+                        if item_id in fixed_output_map:
+                            tag_port_id = fixed_output_map[item_id]["id"]
+                        elif mixed_output_ports:
+                            tag_port_id = mixed_output_ports[0]["id"]
+                        else:
+                            continue
+                        key = (display_node_id, f"output-{tag_port_id}")
+                        port_to_item.setdefault(key, set()).add(item_id)
+            else:
+                # --- Non-tag recipe: use port IDs directly (original behavior) ---
+                for input_item in recipe.inputs:
+                    port_id = input_item.get("id", "input")
+                    item_id = input_item.get("itemId") or input_item.get("refId") or input_item.get("name")
+                    if item_id:
+                        item_id = name_to_id.get(item_id, item_id)
+                        key = (display_node_id, f"input-{port_id}")
+                        port_to_item.setdefault(key, set()).add(item_id)
+                
+                for output in recipe.outputs:
+                    port_id = output.get("id", "output")
+                    item_id = output.get("itemId") or output.get("name")
+                    if item_id:
+                        item_id = name_to_id.get(item_id, item_id)
+                        key = (display_node_id, f"output-{port_id}")
+                        port_to_item.setdefault(key, set()).add(item_id)
         
         # Add input/output node ports
         for node in input_nodes:
