@@ -37,6 +37,7 @@ import RecipeTagMode from "./components/RecipeTagMode";
 import RecipeGenerator from "./components/RecipeGenerator";
 import ItemGenerator from "./components/ItemGenerator";
 import { NodeType } from "./components/NodeTypeSelector";
+import EdgeWithTooltip from "./edges/EdgeWithTooltip";
 
 const nodeTypes = {
   recipe: RecipeNode,
@@ -47,6 +48,10 @@ const nodeTypes = {
   output: OutputNode,
   requester: RequesterNode,
   mixedoutput: MixedOutputNode
+};
+
+const edgeTypes = {
+  default: EdgeWithTooltip,
 };
 
 const initialNodes: Node[] = [
@@ -138,6 +143,7 @@ function AppContent() {
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
   const tags = useGraphStore((state) => state.tags);
+  const recipeTags = useGraphStore((state) => state.recipeTags);
   const loadStoreData = useGraphStore((state) => state.loadStoreData);
   const reactFlowInstance = useReactFlow();
 
@@ -237,6 +243,43 @@ function AppContent() {
       }
     };
   }, [nodes, edges, isLoaded]);
+
+  // Inject solve results into node and edge data
+  useEffect(() => {
+    if (!solveResult) return;
+
+    // Update nodes with their flow data
+    setNodes((currentNodes) =>
+      currentNodes.map((node) => {
+        const flowData = solveResult.nodeFlows[node.id];
+        if (flowData) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              solveData: flowData
+            }
+          };
+        }
+        return node;
+      })
+    );
+
+    // Update edges with their flow data
+    setEdges((currentEdges) =>
+      currentEdges.map((edge) => {
+        const flowData = solveResult.edgeFlows[edge.id];
+        if (flowData) {
+          return {
+            ...edge,
+            data: flowData,
+            label: flowData.totalFlow > 0 ? `${flowData.totalFlow.toFixed(2)}/s` : undefined
+          };
+        }
+        return edge;
+      })
+    );
+  }, [solveResult, setNodes, setEdges]);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -878,7 +921,7 @@ function AppContent() {
       graph: {
         nodes: nodes.map((node) => ({
           id: node.id,
-          type: (node.type ?? "recipe") as "recipe" | "recipetag" | "input" | "inputrecipe" | "inputrecipetag" | "output" | "requester",
+          type: (node.type ?? "recipe") as "recipe" | "recipetag" | "input" | "inputrecipe" | "inputrecipetag" | "output" | "requester" | "mixedoutput",
           data: node.data as Record<string, unknown>
         })),
         edges: edges.map((edge) => ({
@@ -888,9 +931,15 @@ function AppContent() {
           sourceHandle: edge.sourceHandle ?? null,
           targetHandle: edge.targetHandle ?? null
         }))
+      },
+      storeData: {
+        items: items,
+        recipes: recipes as unknown as Record<string, unknown>[],
+        recipeTags: recipeTags,
+        tags: tags
       }
     }),
-    [nodes, edges]
+    [nodes, edges, items, recipes, recipeTags, tags]
   );
 
   const handleSolve = useCallback(async () => {
@@ -899,6 +948,7 @@ function AppContent() {
 
     try {
       const result = await solveGraph(graphPayload);
+      console.log("Solve result:", result);
       setSolveResult(result);
     } catch (error) {
       setSolveError(error instanceof Error ? error.message : "Solve failed");
@@ -956,6 +1006,7 @@ function AppContent() {
             nodesDraggable
             fitView
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
           >
             <Background gap={20} size={1} color="#1f2a3a" />
             <MiniMap pannable zoomable />
@@ -999,9 +1050,9 @@ function AppContent() {
               />
             )}
           </ReactFlow>
-          {pendingNodeType && (
+          {pendingNodeType && pendingNodeType !== "mixedoutput" && (
             <NodeConfigDialog
-              nodeType={pendingNodeType}
+              nodeType={pendingNodeType as Exclude<typeof pendingNodeType, "mixedoutput">}
               onConfirm={handleNodeConfigConfirm}
               onCancel={handleNodeConfigCancel}
             />

@@ -45,7 +45,44 @@
             "isMixed": false,
             "fixedRefId": "stone_dust"
           }
-        ]
+        ],
+        "solveData": {
+          "machineCount": 1.601,
+          "inputFlows": {
+            "diamond_geode": 0.028,
+            "lubricant": 1.28,
+            "emerald_geode": 0.028,
+            "ruby_geode": 0.035,
+            "sapphire_geode": 0.037,
+            "green_sapphire_geode": 0.037,
+            "quartzite_geode": 0.027,
+            "topaz_geode": 0.015,
+            "blue_topaz_geode": 0.015,
+            "spessartine_geode": 0.015,
+            "certus_quartz_geode": 0.019,
+            "apatite_geode": 0.019,
+            "monazite_geode": 0.016,
+            "realgar_geode": 0.032
+          },
+          "outputFlows": {
+            "raw_diamond": 0.028,
+            "stone_dust": 0.323,
+            "raw_emerald": 0.028,
+            "raw_ruby": 0.035,
+            "raw_sapphire": 0.037,
+            "raw_green_sapphire": 0.037,
+            "raw_quartzite": 0.027,
+            "raw_topaz": 0.015,
+            "raw_blue_topaz": 0.015,
+            "raw_spessartine": 0.015,
+            "raw_certus_quartz": 0.019,
+            "raw_apatite": 0.019,
+            "raw_monazite": 0.016,
+            "raw_realgar": 0.032
+          },
+          "totalInput": 1.601,
+          "totalOutput": 0.638
+        }
       }
     },
     {
@@ -97,7 +134,21 @@
             "probability": 0.45
           }
         ],
-        "multiplier": 2
+        "multiplier": 2,
+        "solveData": {
+          "machineCount": 1,
+          "inputFlows": {},
+          "outputFlows": {
+            "blue_topaz_geode": 0.015,
+            "topaz_geode": 0.015,
+            "apatite_geode": 0.019,
+            "spessartine_geode": 0.015,
+            "monazite_geode": 0.016,
+            "certus_quartz_geode": 0.019
+          },
+          "totalInput": 0,
+          "totalOutput": 0.097
+        }
       }
     },
     {
@@ -155,7 +206,22 @@
             "probability": 0.4
           }
         ],
-        "multiplier": 2
+        "multiplier": 2,
+        "solveData": {
+          "machineCount": 1,
+          "inputFlows": {},
+          "outputFlows": {
+            "diamond_geode": 0.028,
+            "emerald_geode": 0.028,
+            "ruby_geode": 0.035,
+            "realgar_geode": 0.032,
+            "green_sapphire_geode": 0.037,
+            "sapphire_geode": 0.037,
+            "quartzite_geode": 0.027
+          },
+          "totalInput": 0,
+          "totalOutput": 0.223
+        }
       }
     },
     {
@@ -177,15 +243,25 @@
             "itemId": "water",
             "mode": "infinite"
           }
-        ]
+        ],
+        "solveData": {
+          "machineCount": null,
+          "inputFlows": {},
+          "outputFlows": {
+            "lubricant": 1.281,
+            "water": 119.815
+          },
+          "totalInput": 0,
+          "totalOutput": 121.096
+        }
       }
     },
     {
       "id": "output-1770675554208",
       "type": "output",
       "position": {
-        "x": 1335.48153409615,
-        "y": -2466.897203352963
+        "x": 1341.2574818470966,
+        "y": -2464.5868242525844
       },
       "data": {
         "items": [
@@ -193,7 +269,16 @@
             "id": "1",
             "itemId": "stone_dust"
           }
-        ]
+        ],
+        "solveData": {
+          "machineCount": null,
+          "inputFlows": {
+            "stone_dust": 1.402
+          },
+          "outputFlows": {},
+          "totalInput": 1.402,
+          "totalOutput": 0
+        }
       }
     },
     {
@@ -222,7 +307,42 @@
             "probability": 1,
             "isMixed": true
           }
-        ]
+        ],
+        "solveData": {
+          "machineCount": 3.202,
+          "inputFlows": {
+            "raw_diamond": 0.028,
+            "raw_emerald": 0.028,
+            "raw_ruby": 0.035,
+            "raw_sapphire": 0.037,
+            "raw_green_sapphire": 0.037,
+            "raw_quartzite": 0.027,
+            "raw_topaz": 0.015,
+            "raw_blue_topaz": 0.015,
+            "raw_spessartine": 0.015,
+            "raw_certus_quartz": 0.019,
+            "raw_apatite": 0.019,
+            "raw_monazite": 0.016,
+            "raw_realgar": 0.032
+          },
+          "outputFlows": {
+            "crushed_diamond_ore": 0.057,
+            "crushed_emerald_ore": 0.113,
+            "crushed_ruby_ore": 0.07,
+            "crushed_sapphire_ore": 0.073,
+            "crushed_green_sapphire_ore": 0.073,
+            "crushed_quartzite_ore": 0.107,
+            "crushed_topaz_ore": 0.029,
+            "crushed_blue_topaz_ore": 0.058,
+            "crushed_spessartine_ore": 0.087,
+            "crushed_certus_quartz_ore": 0.075,
+            "crushed_apatite_ore": 0.15,
+            "crushed_monazite_ore": 0.125,
+            "crushed_realgar_ore": 0.063
+          },
+          "totalInput": 0.323,
+          "totalOutput": 1.08
+        }
       }
     },
     {
@@ -250,7 +370,18 @@
             "amountPerCycle": 260,
             "probability": 1
           }
-        ]
+        ],
+        "solveData": {
+          "machineCount": 1.664,
+          "inputFlows": {
+            "water": 119.815
+          },
+          "outputFlows": {
+            "distilled_water": 108.167
+          },
+          "totalInput": 119.815,
+          "totalOutput": 108.167
+        }
       }
     },
     {
@@ -301,7 +432,55 @@
             "isMixed": false,
             "fixedRefId": "stone_dust"
           }
-        ]
+        ],
+        "solveData": {
+          "machineCount": 5.409,
+          "inputFlows": {
+            "crushed_diamond_ore": 0.057,
+            "distilled_water": 108.166,
+            "crushed_emerald_ore": 0.113,
+            "crushed_ruby_ore": 0.07,
+            "crushed_sapphire_ore": 0.073,
+            "crushed_green_sapphire_ore": 0.073,
+            "crushed_certus_quartz_ore": 0.075,
+            "crushed_topaz_ore": 0.029,
+            "crushed_blue_topaz_ore": 0.058,
+            "crushed_spessartine_ore": 0.087,
+            "crushed_quartzite_ore": 0.107,
+            "crushed_apatite_ore": 0.15,
+            "crushed_monazite_ore": 0.125,
+            "crushed_realgar_ore": 0.063
+          },
+          "outputFlows": {
+            "purified_diamond_ore": 0.057,
+            "graphite_dust": 0.019,
+            "stone_dust": 1.08,
+            "purified_emerald_ore": 0.113,
+            "beryllium_dust": 0.037,
+            "purified_ruby_ore": 0.07,
+            "chromium_dust": 0.023,
+            "purified_sapphire_ore": 0.073,
+            "aluminium_dust": 0.048,
+            "purified_green_sapphire_ore": 0.073,
+            "purified_certus_quartz_ore": 0.075,
+            "nether_quartz_dust": 0.025,
+            "purified_topaz_ore": 0.029,
+            "blue_topaz_dust": 0.01,
+            "purified_blue_topaz_ore": 0.058,
+            "topaz_dust": 0.019,
+            "purified_spessartine_ore": 0.087,
+            "red_garnet_dust": 0.029,
+            "purified_quartzite_ore": 0.107,
+            "certus_quartz_dust": 0.076,
+            "purified_apatite_ore": 0.15,
+            "tricalcium_phosphate_dust": 0.049,
+            "purified_monazite_ore": 0.125,
+            "purified_realgar_ore": 0.063,
+            "sulfur_dust": 0.021
+          },
+          "totalInput": 109.249,
+          "totalOutput": 2.521
+        }
       }
     },
     {
@@ -337,7 +516,54 @@
             "probability": 0.33,
             "isMixed": true
           }
-        ]
+        ],
+        "solveData": {
+          "machineCount": 10.816,
+          "inputFlows": {
+            "purified_diamond_ore": 0.057,
+            "purified_emerald_ore": 0.113,
+            "purified_ruby_ore": 0.07,
+            "purified_sapphire_ore": 0.073,
+            "purified_green_sapphire_ore": 0.073,
+            "purified_quartzite_ore": 0.107,
+            "purified_topaz_ore": 0.029,
+            "purified_blue_topaz_ore": 0.058,
+            "purified_spessartine_ore": 0.087,
+            "purified_certus_quartz_ore": 0.075,
+            "purified_apatite_ore": 0.15,
+            "purified_monazite_ore": 0.125,
+            "purified_realgar_ore": 0.063
+          },
+          "outputFlows": {
+            "refined_diamond_ore": 0.057,
+            "graphite_dust": 0.019,
+            "refined_emerald_ore": 0.113,
+            "aluminium_dust": 0.037,
+            "refined_ruby_ore": 0.07,
+            "red_garnet_dust": 0.023,
+            "refined_sapphire_ore": 0.073,
+            "green_sapphire_dust": 0.024,
+            "refined_green_sapphire_ore": 0.073,
+            "sapphire_dust": 0.024,
+            "refined_quartzite_ore": 0.107,
+            "barite_dust": 0.06,
+            "refined_topaz_ore": 0.029,
+            "blue_topaz_dust": 0.01,
+            "refined_blue_topaz_ore": 0.058,
+            "topaz_dust": 0.019,
+            "refined_spessartine_ore": 0.087,
+            "manganese_dust": 0.029,
+            "refined_certus_quartz_ore": 0.075,
+            "refined_apatite_ore": 0.15,
+            "phosphate_dust": 0.049,
+            "refined_monazite_ore": 0.125,
+            "neodymium_dust": 0.041,
+            "refined_realgar_ore": 0.063,
+            "antimony_dust": 0.021
+          },
+          "totalInput": 1.08,
+          "totalOutput": 1.439
+        }
       }
     },
     {
@@ -366,7 +592,42 @@
             "probability": 1,
             "isMixed": true
           }
-        ]
+        ],
+        "solveData": {
+          "machineCount": 0.27,
+          "inputFlows": {
+            "refined_diamond_ore": 0.057,
+            "refined_emerald_ore": 0.113,
+            "refined_ruby_ore": 0.07,
+            "refined_sapphire_ore": 0.073,
+            "refined_green_sapphire_ore": 0.073,
+            "refined_quartzite_ore": 0.107,
+            "refined_topaz_ore": 0.029,
+            "refined_blue_topaz_ore": 0.058,
+            "refined_spessartine_ore": 0.087,
+            "refined_certus_quartz_ore": 0.075,
+            "refined_apatite_ore": 0.15,
+            "refined_monazite_ore": 0.125,
+            "refined_realgar_ore": 0.063
+          },
+          "outputFlows": {
+            "diamond_dust": 0.057,
+            "emerald_dust": 0.113,
+            "ruby_dust": 0.07,
+            "sapphire_dust": 0.073,
+            "green_sapphire_dust": 0.073,
+            "quartzite_dust": 0.107,
+            "topaz_dust": 0.029,
+            "blue_topaz_dust": 0.058,
+            "spessartine_dust": 0.087,
+            "certus_quartz_dust": 0.075,
+            "apatite_dust": 0.15,
+            "monazite_dust": 0.125,
+            "realgar_dust": 0.063
+          },
+          "totalInput": 1.08,
+          "totalOutput": 1.08
+        }
       }
     },
     {
@@ -390,7 +651,18 @@
             "id": "1770851836411",
             "itemId": "certus_quartz_dust"
           }
-        ]
+        ],
+        "solveData": {
+          "machineCount": null,
+          "inputFlows": {
+            "diamond_dust": 0.057,
+            "quartzite_dust": 0.107,
+            "certus_quartz_dust": 0.151
+          },
+          "outputFlows": {},
+          "totalInput": 0.315,
+          "totalOutput": 0
+        }
       }
     },
     {
@@ -418,7 +690,38 @@
             "amountPerCycle": 1,
             "isMixed": true
           }
-        ]
+        ],
+        "solveData": {
+          "machineCount": 0.899,
+          "inputFlows": {
+            "emerald_dust": 0.113,
+            "ruby_dust": 0.07,
+            "sapphire_dust": 0.098,
+            "green_sapphire_dust": 0.098,
+            "topaz_dust": 0.068,
+            "blue_topaz_dust": 0.078,
+            "spessartine_dust": 0.087,
+            "apatite_dust": 0.15,
+            "monazite_dust": 0.125
+          },
+          "outputFlows": {
+            "beryllium_dust": 0.012,
+            "aluminium_dust": 0.153,
+            "silicon_dust": 0.053,
+            "oxygen": 310.693,
+            "chromium_dust": 0.012,
+            "fluorine": 23.214,
+            "hydrogen": 34.492,
+            "manganese_dust": 0.013,
+            "calcium_dust": 0.083,
+            "phosphorus_dust": 0.05,
+            "chlorine": 16.667,
+            "rare_earth": 0.062,
+            "phosphate_dust": 0.062
+          },
+          "totalInput": 0.887,
+          "totalOutput": 385.565
+        }
       }
     },
     {
@@ -452,15 +755,27 @@
             "amountPerCycle": 1,
             "probability": 1
           }
-        ]
+        ],
+        "solveData": {
+          "machineCount": 0.125,
+          "inputFlows": {
+            "realgar_dust": 0.063
+          },
+          "outputFlows": {
+            "arsenic_dust": 0.032,
+            "sulfur_dust": 0.032
+          },
+          "totalInput": 0.063,
+          "totalOutput": 0.063
+        }
       }
     },
     {
       "id": "mixedoutput-1770853577244",
       "type": "mixedoutput",
       "position": {
-        "x": 2560.5824222847314,
-        "y": -2680.623332116823
+        "x": 2643.500780587945,
+        "y": -2674.8550984957296
       },
       "data": {}
     }
@@ -563,13 +878,6 @@
       "target": "recipetag-1770673269873",
       "sourceHandle": "output-1",
       "targetHandle": "input-i2"
-    },
-    {
-      "id": "reactflow__edge-recipetag-1770673269873output-o2-output-1770675554208input-1",
-      "source": "recipetag-1770673269873",
-      "target": "output-1770675554208",
-      "sourceHandle": "output-o2",
-      "targetHandle": "input-1"
     },
     {
       "id": "reactflow__edge-recipetag-1770673269873output-o1-recipetag-1770678519567input-i1",
@@ -689,6 +997,13 @@
       "target": "mixedoutput-1770853577244",
       "sourceHandle": "output-o2",
       "targetHandle": "mixed-input"
+    },
+    {
+      "id": "reactflow__edge-recipetag-1770673269873output-o2-output-1770675554208input-1",
+      "source": "recipetag-1770673269873",
+      "target": "output-1770675554208",
+      "sourceHandle": "output-o2",
+      "targetHandle": "input-1"
     }
   ]
 }

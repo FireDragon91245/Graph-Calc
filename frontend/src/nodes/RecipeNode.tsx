@@ -1,6 +1,7 @@
 import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
 import { useGraphStore } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
+import type { NodeFlowData } from "../api/solve";
 
 type Port = {
   id: string;
@@ -15,6 +16,7 @@ type RecipeNodeData = {
   timeSeconds: number;
   inputs: Port[];
   outputs: Port[];
+  solveData?: NodeFlowData;
 };
 
 export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
@@ -83,40 +85,63 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
           placeholder="Select recipe"
         />
         <span className="node-sub">{data.timeSeconds}s</span>
+        {data.solveData?.machineCount && (
+          <span className="node-badge" title="Machine Count">
+            🏭 {data.solveData.machineCount.toFixed(2)}
+          </span>
+        )}
       </div>
       <div className="node-body">
         <div className="ports">
           <div className="port-col">
-            {data.inputs.map((input) => (
-              <div key={input.id} className="port-row">
-                <Handle
-                  type="target"
-                  position={Position.Left}
-                  id={`input-${input.id}`}
-                  className="handle"
-                  isConnectableStart={true}
-                />
-                <span className="port-name">{input.name}</span>
-                <span className="port-amount">{input.amountPerCycle}</span>
-              </div>
-            ))}
+            {data.inputs.map((input) => {
+              const itemId = input.name; // Simplified - may need better mapping
+              const flowRate = data.solveData?.inputFlows[itemId];
+              return (
+                <div key={input.id} className="port-row">
+                  <Handle
+                    type="target"
+                    position={Position.Left}
+                    id={`input-${input.id}`}
+                    className="handle"
+                    isConnectableStart={true}
+                  />
+                  <span className="port-name">{input.name}</span>
+                  <span className="port-amount">{input.amountPerCycle}</span>
+                  {flowRate && (
+                    <span className="port-rate" title="Actual flow rate">
+                      {flowRate.toFixed(2)}/s
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <div className="port-col">
-            {data.outputs.map((output) => (
-              <div key={output.id} className="port-row right">
-                <span className="port-amount">{output.amountPerCycle}</span>
-                <span className="port-name">{output.name}</span>
-                {output.probability !== undefined && output.probability < 1 ? (
-                  <span className="prob">{Math.round(output.probability * 100)}%</span>
-                ) : null}
-                <Handle
-                  type="source"
-                  position={Position.Right}
-                  id={`output-${output.id}`}
-                  className="handle"
-                />
-              </div>
-            ))}
+            {data.outputs.map((output) => {
+              const itemId = output.name; // Simplified - may need better mapping
+              const flowRate = data.solveData?.outputFlows[itemId];
+              return (
+                <div key={output.id} className="port-row right">
+                  {flowRate && (
+                    <span className="port-rate" title="Actual flow rate">
+                      {flowRate.toFixed(2)}/s
+                    </span>
+                  )}
+                  <span className="port-amount">{output.amountPerCycle}</span>
+                  <span className="port-name">{output.name}</span>
+                  {output.probability !== undefined && output.probability < 1 ? (
+                    <span className="prob">{Math.round(output.probability * 100)}%</span>
+                  ) : null}
+                  <Handle
+                    type="source"
+                    position={Position.Right}
+                    id={`output-${output.id}`}
+                    className="handle"
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

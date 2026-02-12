@@ -18,7 +18,7 @@ class RecipeNodeData(BaseModel):
 
 class GraphNode(BaseModel):
     id: str
-    type: Literal["recipe", "input", "output", "requester"]
+    type: Literal["recipe", "recipetag", "input", "inputrecipe", "inputrecipetag", "output", "requester", "mixedoutput"]
     data: Optional[dict] = None
 
 
@@ -41,17 +41,43 @@ class SolveTargets(BaseModel):
     balance: bool = False
 
 
+class SolveStoreData(BaseModel):
+    """Store data sent alongside solve requests for recipe tag expansion"""
+    items: List[dict] = []
+    recipes: List[dict] = []
+    recipeTags: List[dict] = []
+    tags: List[dict] = []
+
+
 class SolveRequest(BaseModel):
     graph: Graph
     targets: SolveTargets = SolveTargets()
+    storeData: Optional[SolveStoreData] = None
+
+
+class NodeFlowData(BaseModel):
+    """Flow data for a specific node"""
+    machineCount: Optional[float] = None
+    inputFlows: Dict[str, float] = {}  # item_id -> rate/s
+    outputFlows: Dict[str, float] = {}  # item_id -> rate/s
+    totalInput: float = 0
+    totalOutput: float = 0
+
+
+class EdgeFlowData(BaseModel):
+    """Flow data for a specific edge"""
+    flows: Dict[str, float] = {}  # item_id -> rate/s
+    totalFlow: float = 0
 
 
 class SolveResponse(BaseModel):
     status: Literal["ok", "error"]
-    machineCounts: Dict[str, float] = {}
-    flowsPerSecond: Dict[str, float] = {}
+    machineCounts: Dict[str, float] = {}  # Legacy: recipe_name -> count
+    flowsPerSecond: Dict[str, float] = {}  # Legacy: item_id -> total rate
     bottlenecks: List[str] = []
     warnings: List[str] = []
+    nodeFlows: Dict[str, NodeFlowData] = {}  # node_id -> flow data
+    edgeFlows: Dict[str, EdgeFlowData] = {}  # edge_id -> flow data
 
 
 # Persistence Models

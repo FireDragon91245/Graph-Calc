@@ -300,3 +300,62 @@
   margin-bottom: 8px;
   font-size: 12px;
 }
+/* Solve Data Display */
+.node-badge {
+  background: rgba(110, 168, 254, 0.14);
+  color: var(--accent);
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.port-rate {
+  background: rgba(16, 185, 129, 0.14);
+  color: #10b981;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.solve-details {
+  padding: 8px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 8px;
+}
+
+.flow-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.flow-name {
+  color: var(--muted);
+}
+
+.flow-rate {
+  color: #10b981;
+  font-weight: 500;
+}
+
+/* Edge Labels */
+.react-flow__edge-text {
+  font-size: 11px;
+  fill: #10b981;
+  font-weight: 600;
+}
+
+.react-flow__edge-textbg {
+  fill: rgba(16, 20, 28, 0.9);
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: #6ea8fe;
+  stroke-width: 2px;
+}

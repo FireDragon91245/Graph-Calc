@@ -17,7 +17,10 @@ app.add_middleware(
 
 @app.post("/solve", response_model=SolveResponse)
 def solve(request: SolveRequest) -> SolveResponse:
-    return solve_graph(request.graph)
+    store_data = None
+    if request.storeData:
+        store_data = request.storeData.dict()
+    return solve_graph(request.graph, store_data=store_data)
 
 
 @app.get("/graph")

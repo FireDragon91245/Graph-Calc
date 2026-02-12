@@ -1,6 +1,7 @@
 import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
 import { useGraphStore } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
+import type { NodeFlowData } from "../api/solve";
 
 type RequesterItem = {
   id: string;
@@ -9,7 +10,8 @@ type RequesterItem = {
 };
 
 type RequesterNodeData = {
-  requests: RequesterItem[]; // Kept property name 'requests' for compatibility if needed, using array now
+  requests: RequesterItem[];
+  solveData?: NodeFlowData;
 };
 
 export default function RequesterNode({ id, data }: NodeProps<RequesterNodeData>) {
@@ -85,6 +87,11 @@ export default function RequesterNode({ id, data }: NodeProps<RequesterNodeData>
     <div className="node io requester">
       <div className="node-header">
         <span className="node-title">Requester</span>
+        {data.solveData && data.solveData.totalInput > 0 && (
+          <span className="node-badge" title="Total requested rate">
+            ↓ {data.solveData.totalInput.toFixed(2)}/s
+          </span>
+        )}
       </div>
       <div className="node-body io-body">
         {requests.map((req) => (

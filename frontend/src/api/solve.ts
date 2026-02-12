@@ -1,6 +1,6 @@
 export type GraphNode = {
   id: string;
-  type: "recipe" | "input" | "output" | "requester";
+  type: "recipe" | "recipetag" | "input" | "inputrecipe" | "inputrecipetag" | "output" | "requester" | "mixedoutput";
   data?: Record<string, unknown>;
 };
 
@@ -18,12 +18,33 @@ export type SolveTargets = {
   balance?: boolean;
 };
 
+export type NodeFlowData = {
+  machineCount?: number;
+  inputFlows: Record<string, number>;  // item_id -> rate/s
+  outputFlows: Record<string, number>;  // item_id -> rate/s
+  totalInput: number;
+  totalOutput: number;
+};
+
+export type EdgeFlowData = {
+  flows: Record<string, number>;  // item_id -> rate/s
+  totalFlow: number;
+};
+
+export type StoreDataForSolve = {
+  items: { id: string; name: string; categoryId?: string }[];
+  recipes: Record<string, unknown>[];
+  recipeTags: { id: string; name: string; memberRecipeIds: string[] }[];
+  tags: { id: string; name: string; memberItemIds: string[] }[];
+};
+
 export type SolveRequest = {
   graph: {
     nodes: GraphNode[];
     edges: GraphEdge[];
   };
   targets?: SolveTargets;
+  storeData?: StoreDataForSolve;
 };
 
 export type SolveResponse = {
@@ -32,6 +53,8 @@ export type SolveResponse = {
   flowsPerSecond: Record<string, number>;
   bottlenecks: string[];
   warnings: string[];
+  nodeFlows: Record<string, NodeFlowData>;  // node_id -> flow data
+  edgeFlows: Record<string, EdgeFlowData>;  // edge_id -> flow data
 };
 
 export async function solveGraph(payload: SolveRequest): Promise<SolveResponse> {

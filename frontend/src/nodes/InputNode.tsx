@@ -1,6 +1,7 @@
 import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
 import { useGraphStore } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
+import type { NodeFlowData } from "../api/solve";
 
 type InputItem = {
   id: string;
@@ -11,6 +12,7 @@ type InputItem = {
 
 type InputNodeData = {
   items: InputItem[];
+  solveData?: NodeFlowData;
 };
 
 export default function InputNode({ id, data }: NodeProps<InputNodeData>) {
@@ -87,6 +89,11 @@ export default function InputNode({ id, data }: NodeProps<InputNodeData>) {
     <div className="node io input">
       <div className="node-header">
         <span className="node-title">Input</span>
+        {data.solveData && data.solveData.totalOutput > 0 && (
+          <span className="node-badge" title="Total output rate">
+            ↑ {data.solveData.totalOutput.toFixed(2)}/s
+          </span>
+        )}
       </div>
       <div className="node-body io-body">
         {nodeItems.map((item) => (

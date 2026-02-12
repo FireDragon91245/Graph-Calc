@@ -1,6 +1,7 @@
 import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
 import { useGraphStore } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
+import type { NodeFlowData } from "../api/solve";
 
 type PortPattern = {
   id: string;
@@ -16,6 +17,7 @@ type RecipeTagNodeData = {
   title: string;
   inputs: PortPattern[];
   outputs: PortPattern[];
+  solveData?: NodeFlowData;
 };
 
 /**
@@ -181,6 +183,11 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
           onChange={handleRecipeTagChange}
           placeholder="Select recipe tag"
         />
+        {data.solveData?.machineCount && (
+          <span className="node-badge" title="Total machines (all recipes)">
+            🏭 {data.solveData.machineCount.toFixed(2)}
+          </span>
+        )}
       </div>
       <div className="node-body">
         <div className="ports">
