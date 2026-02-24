@@ -58,16 +58,97 @@ export interface StoreData {
   recipes: Recipe[];
 }
 
-export async function loadGraph(): Promise<GraphData> {
-  const response = await fetch(`${API_BASE}/graph`);
+// ── Project types ──────────────────────────────────────────────
+
+export interface Project {
+  id: string;
+  name: string;
+}
+
+export interface ProjectsResponse {
+  projects: Project[];
+  activeProjectId: string | null;
+}
+
+// ── Project API ────────────────────────────────────────────────
+
+export async function listProjects(): Promise<ProjectsResponse> {
+  const response = await fetch(`${API_BASE}/projects`);
+  if (!response.ok) {
+    throw new Error(`Failed to list projects: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function createProject(name: string): Promise<Project> {
+  const response = await fetch(`${API_BASE}/projects`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name })
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to create project: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function activateProject(projectId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/projects/${projectId}/activate`, {
+    method: "PUT"
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to activate project: ${response.statusText}`);
+  }
+}
+
+export async function renameProject(projectId: string, name: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/projects/${projectId}/rename`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name })
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to rename project: ${response.statusText}`);
+  }
+}
+
+export async function copyProject(projectId: string, name: string): Promise<Project> {
+  const response = await fetch(`${API_BASE}/projects/${projectId}/copy`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name })
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to copy project: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function deleteProject(projectId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/projects/${projectId}`, {
+    method: "DELETE"
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to delete project: ${response.statusText}`);
+  }
+}
+
+// ── Graph / Store (project-scoped) ─────────────────────────────
+
+function qs(projectId?: string): string {
+  return projectId ? `?project_id=${encodeURIComponent(projectId)}` : "";
+}
+
+export async function loadGraph(projectId?: string): Promise<GraphData> {
+  const response = await fetch(`${API_BASE}/graph${qs(projectId)}`);
   if (!response.ok) {
     throw new Error(`Failed to load graph: ${response.statusText}`);
   }
   return response.json();
 }
 
-export async function saveGraph(graph: GraphData): Promise<void> {
-  const response = await fetch(`${API_BASE}/graph`, {
+export async function saveGraph(graph: GraphData, projectId?: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/graph${qs(projectId)}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -79,16 +160,16 @@ export async function saveGraph(graph: GraphData): Promise<void> {
   }
 }
 
-export async function loadStore(): Promise<StoreData> {
-  const response = await fetch(`${API_BASE}/store`);
+export async function loadStore(projectId?: string): Promise<StoreData> {
+  const response = await fetch(`${API_BASE}/store${qs(projectId)}`);
   if (!response.ok) {
     throw new Error(`Failed to load store: ${response.statusText}`);
   }
   return response.json();
 }
 
-export async function saveStore(store: StoreData): Promise<void> {
-  const response = await fetch(`${API_BASE}/store`, {
+export async function saveStore(store: StoreData, projectId?: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/store${qs(projectId)}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"

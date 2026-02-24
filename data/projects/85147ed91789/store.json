@@ -1,0 +1,3078 @@
+{
+  "categories": [
+    {
+      "id": "raw",
+      "name": "Raw"
+    },
+    {
+      "id": "dust",
+      "name": "Dust"
+    },
+    {
+      "id": "liquid",
+      "name": "Liquid"
+    },
+    {
+      "id": "gas",
+      "name": "Gas"
+    }
+  ],
+  "items": [
+    {
+      "id": "diamond_geode",
+      "name": "Diamond Geode",
+      "categoryId": "raw"
+    },
+    {
+      "id": "emerald_geode",
+      "name": "Emerald Geode",
+      "categoryId": "raw"
+    },
+    {
+      "id": "ruby_geode",
+      "name": "Ruby Geode",
+      "categoryId": "raw"
+    },
+    {
+      "id": "sapphire_geode",
+      "name": "Sapphire Geode",
+      "categoryId": "raw"
+    },
+    {
+      "id": "green_sapphire_geode",
+      "name": "Green Sapphire Geode",
+      "categoryId": "raw"
+    },
+    {
+      "id": "quartzite_geode",
+      "name": "Quartzite Geode",
+      "categoryId": "raw"
+    },
+    {
+      "id": "topaz_geode",
+      "name": "Topaz Geode",
+      "categoryId": "raw"
+    },
+    {
+      "id": "blue_topaz_geode",
+      "name": "Blue Topaz Geode",
+      "categoryId": "raw"
+    },
+    {
+      "id": "spessartine_geode",
+      "name": "Spessartine Geode",
+      "categoryId": "raw"
+    },
+    {
+      "id": "certus_quartz_geode",
+      "name": "Certus Quartz Geode",
+      "categoryId": "raw"
+    },
+    {
+      "id": "apatite_geode",
+      "name": "Apatite Geode",
+      "categoryId": "raw"
+    },
+    {
+      "id": "monazite_geode",
+      "name": "Monazite Geode",
+      "categoryId": "raw"
+    },
+    {
+      "id": "realgar_geode",
+      "name": "Realgar Geode",
+      "categoryId": "raw"
+    },
+    {
+      "id": "raw_diamond",
+      "name": "Raw Diamond",
+      "categoryId": "raw"
+    },
+    {
+      "id": "raw_emerald",
+      "name": "Raw Emerald",
+      "categoryId": "raw"
+    },
+    {
+      "id": "raw_ruby",
+      "name": "Raw Ruby",
+      "categoryId": "raw"
+    },
+    {
+      "id": "raw_sapphire",
+      "name": "Raw Sapphire",
+      "categoryId": "raw"
+    },
+    {
+      "id": "raw_green_sapphire",
+      "name": "Raw Green Sapphire",
+      "categoryId": "raw"
+    },
+    {
+      "id": "stone_dust",
+      "name": "Stone Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "lubricant",
+      "name": "Lubricant",
+      "categoryId": "liquid"
+    },
+    {
+      "id": "raw_quartzite",
+      "name": "Raw Quartzite",
+      "categoryId": "raw"
+    },
+    {
+      "id": "raw_topaz",
+      "name": "Raw Topaz",
+      "categoryId": "raw"
+    },
+    {
+      "id": "raw_blue_topaz",
+      "name": "Raw Blue Topaz",
+      "categoryId": "raw"
+    },
+    {
+      "id": "raw_spessartine",
+      "name": "Raw Spessartine",
+      "categoryId": "raw"
+    },
+    {
+      "id": "raw_certus_quartz",
+      "name": "Raw Certus Quartz",
+      "categoryId": "raw"
+    },
+    {
+      "id": "raw_apatite",
+      "name": "Raw Apatite",
+      "categoryId": "raw"
+    },
+    {
+      "id": "raw_monazite",
+      "name": "Raw Monazite",
+      "categoryId": "raw"
+    },
+    {
+      "id": "raw_realgar",
+      "name": "Raw Realgar",
+      "categoryId": "raw"
+    },
+    {
+      "id": "sand",
+      "name": "Sand",
+      "categoryId": null
+    },
+    {
+      "id": "gravel",
+      "name": "Gravel",
+      "categoryId": null
+    },
+    {
+      "id": "distilled_water",
+      "name": "Distilled Water",
+      "categoryId": "liquid"
+    },
+    {
+      "id": "crushed_diamond_ore",
+      "name": "Crushed Diamond Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_emerald_ore",
+      "name": "Crushed Emerald Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_ruby_ore",
+      "name": "Crushed Ruby Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_sapphire_ore",
+      "name": "Crushed Sapphire Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_green_sapphire_ore",
+      "name": "Crushed Green Sapphire Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_quartzite_ore",
+      "name": "Crushed Quartzite Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_topaz_ore",
+      "name": "Crushed Topaz Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_blue_topaz_ore",
+      "name": "Crushed Blue Topaz Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_spessartine_ore",
+      "name": "Crushed Spessartine Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_certus_quartz_ore",
+      "name": "Crushed Certus Quartz Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_apatite_ore",
+      "name": "Crushed Apatite Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_monazite_ore",
+      "name": "Crushed Monazite Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "crushed_realgar_ore",
+      "name": "Crushed Realgar Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "water",
+      "name": "Water",
+      "categoryId": "liquid"
+    },
+    {
+      "id": "purified_diamond_ore",
+      "name": "Purified Diamond Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "purified_emerald_ore",
+      "name": "Purified Emerald Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "purified_ruby_ore",
+      "name": "Purified Ruby Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "purified_sapphire_ore",
+      "name": "Purified Sapphire Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "purified_green_sapphire_ore",
+      "name": "Purified Green Sapphire Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "purified_quartzite_ore",
+      "name": "Purified Quartzite Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "purified_topaz_ore",
+      "name": "Purified Topaz Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "purified_blue_topaz_ore",
+      "name": "Purified Blue Topaz Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "purified_spessartine_ore",
+      "name": "Purified Spessartine Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "purified_certus_quartz_ore",
+      "name": "Purified Certus Quartz Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "purified_apatite_ore",
+      "name": "Purified Apatite Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "purified_monazite_ore",
+      "name": "Purified Monazite Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "purified_realgar_ore",
+      "name": "Purified Realgar Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "graphite_dust",
+      "name": "Graphite Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "beryllium_dust",
+      "name": "Beryllium Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "chromium_dust",
+      "name": "Chromium Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "aluminium_dust",
+      "name": "Aluminium Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "certus_quartz_dust",
+      "name": "Certus Quartz Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "blue_topaz_dust",
+      "name": "Blue Topaz Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "topaz_dust",
+      "name": "Topaz Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "red_garnet_dust",
+      "name": "Red Garnet Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "nether_quartz_dust",
+      "name": "Nether Quartz Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "tricalcium_phosphate_dust",
+      "name": "Tricalcium Phosphate Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "thorium_dust",
+      "name": "Thorium Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "sulfur_dust",
+      "name": "Sulfur Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "refined_diamond_ore",
+      "name": "Refined Diamond Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "refined_emerald_ore",
+      "name": "Refined Emerald Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "refined_ruby_ore",
+      "name": "Refined Ruby Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "refined_sapphire_ore",
+      "name": "Refined Sapphire Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "refined_green_sapphire_ore",
+      "name": "Refined Green Sapphire Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "refined_quartzite_ore",
+      "name": "Refined Quartzite Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "refined_topaz_ore",
+      "name": "Refined Topaz Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "refined_blue_topaz_ore",
+      "name": "Refined Blue Topaz Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "refined_spessartine_ore",
+      "name": "Refined Spessartine Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "refined_certus_quartz_ore",
+      "name": "Refined Certus Quartz Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "refined_apatite_ore",
+      "name": "Refined Apatite Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "refined_monazite_ore",
+      "name": "Refined Monazite Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "refined_realgar_ore",
+      "name": "Refined Realgar Ore",
+      "categoryId": "raw"
+    },
+    {
+      "id": "sapphire_dust",
+      "name": "Sapphire Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "green_sapphire_dust",
+      "name": "Green Sapphire Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "barite_dust",
+      "name": "Barite Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "manganese_dust",
+      "name": "Manganese Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "phosphate_dust",
+      "name": "Phosphate Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "neodymium_dust",
+      "name": "Neodymium Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "antimony_dust",
+      "name": "Antimony Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "diamond_dust",
+      "name": "Diamond Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "emerald_dust",
+      "name": "Emerald Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "ruby_dust",
+      "name": "Ruby Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "quartzite_dust",
+      "name": "Quartzite Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "spessartine_dust",
+      "name": "Spessartine Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "apatite_dust",
+      "name": "Apatite Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "monazite_dust",
+      "name": "Monazite Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "realgar_dust",
+      "name": "Realgar Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "oxygen",
+      "name": "Oxygen",
+      "categoryId": "gas"
+    },
+    {
+      "id": "hydrogen",
+      "name": "Hydrogen",
+      "categoryId": "gas"
+    },
+    {
+      "id": "fluorine",
+      "name": "Fluorine",
+      "categoryId": "gas"
+    },
+    {
+      "id": "chlorine",
+      "name": "Chlorine",
+      "categoryId": "gas"
+    },
+    {
+      "id": "silicon_dust",
+      "name": "Silicon Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "calcium_dust",
+      "name": "Calcium Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "phosphorus_dust",
+      "name": "Phosphorus Dust",
+      "categoryId": "dust"
+    },
+    {
+      "id": "rare_earth",
+      "name": "Rare Earth",
+      "categoryId": "dust"
+    },
+    {
+      "id": "arsenic_dust",
+      "name": "Arsenic Dust",
+      "categoryId": "dust"
+    }
+  ],
+  "tags": [
+    {
+      "id": "@geode",
+      "name": "@geode",
+      "memberItemIds": [
+        "diamond_geode",
+        "emerald_geode",
+        "ruby_geode",
+        "sapphire_geode",
+        "green_sapphire_geode",
+        "quartzite_geode",
+        "topaz_geode",
+        "blue_topaz_geode",
+        "spessartine_geode",
+        "certus_quartz_geode",
+        "apatite_geode",
+        "monazite_geode",
+        "realgar_geode"
+      ]
+    },
+    {
+      "id": "@raw_gem",
+      "name": "@raw_gem",
+      "memberItemIds": [
+        "raw_realgar",
+        "raw_monazite",
+        "raw_apatite",
+        "raw_certus_quartz",
+        "raw_spessartine",
+        "raw_blue_topaz",
+        "raw_topaz",
+        "raw_quartzite",
+        "raw_green_sapphire",
+        "raw_sapphire",
+        "raw_ruby",
+        "raw_emerald",
+        "raw_diamond"
+      ]
+    },
+    {
+      "id": "@crushed_ore",
+      "name": "@crushed_ore",
+      "memberItemIds": [
+        "crushed_diamond_ore",
+        "crushed_emerald_ore",
+        "crushed_ruby_ore",
+        "crushed_sapphire_ore",
+        "crushed_green_sapphire_ore",
+        "crushed_quartzite_ore",
+        "crushed_topaz_ore",
+        "crushed_blue_topaz_ore",
+        "crushed_spessartine_ore",
+        "crushed_certus_quartz_ore",
+        "crushed_apatite_ore",
+        "crushed_monazite_ore",
+        "crushed_realgar_ore"
+      ]
+    },
+    {
+      "id": "@purified_ore",
+      "name": "@purified_ore",
+      "memberItemIds": [
+        "purified_diamond_ore",
+        "purified_emerald_ore",
+        "purified_ruby_ore",
+        "purified_sapphire_ore",
+        "purified_green_sapphire_ore",
+        "purified_quartzite_ore",
+        "purified_topaz_ore",
+        "purified_blue_topaz_ore",
+        "purified_spessartine_ore",
+        "purified_certus_quartz_ore",
+        "purified_apatite_ore",
+        "purified_monazite_ore",
+        "purified_realgar_ore"
+      ]
+    },
+    {
+      "id": "@refined_ore",
+      "name": "@refined_ore",
+      "memberItemIds": [
+        "refined_diamond_ore",
+        "refined_emerald_ore",
+        "refined_ruby_ore",
+        "refined_sapphire_ore",
+        "refined_green_sapphire_ore",
+        "refined_quartzite_ore",
+        "refined_topaz_ore",
+        "refined_blue_topaz_ore",
+        "refined_spessartine_ore",
+        "refined_certus_quartz_ore",
+        "refined_apatite_ore",
+        "refined_monazite_ore",
+        "refined_realgar_ore"
+      ]
+    }
+  ],
+  "recipeTags": [
+    {
+      "id": "@cut_geode",
+      "name": "@cut_geode",
+      "memberRecipeIds": [
+        "cut_diamond_geode",
+        "cut_emerald_geode",
+        "cut_ruby_geode",
+        "cut_sapphire_geode",
+        "cut_green_sapphire_geode",
+        "cut_quartzite_geode",
+        "cut_topaz_geode",
+        "cut_blue_topaz_geode",
+        "cut_spessartine_geode",
+        "cut_certus_quartz_geode",
+        "cut_apatite_geode",
+        "cut_monazite_geode",
+        "cut_realgar_geode"
+      ]
+    },
+    {
+      "id": "@grind_raw_gem",
+      "name": "@grind_raw_gem",
+      "memberRecipeIds": [
+        "grind_raw_diamond",
+        "grind_raw_emerald",
+        "grind_raw_ruby",
+        "grind_raw_sapphire",
+        "grind_raw_green_sapphire",
+        "grind_raw_quartzite",
+        "grind_raw_topaz",
+        "grind_raw_blue_topaz",
+        "grind_raw_spessartine",
+        "grind_raw_certus_quarz",
+        "grind_raw_apatite",
+        "grind_raw_monazite",
+        "grind_raw_realgar"
+      ]
+    },
+    {
+      "id": "@wash_crushed",
+      "name": "@wash_crushed",
+      "memberRecipeIds": [
+        "wash_crushed_diamond_ore",
+        "wash_crushed_emerald_ore",
+        "wash_crushed_ruby_ore",
+        "wash_crushed_sapphire_ore",
+        "wash_crushed_green_sapphire_ore",
+        "wash_crushed_certus_quartz_ore",
+        "wash_crushed_topaz_ore",
+        "wash_crushed_blue_topaz_ore",
+        "wash_crushed_spessartine_ore",
+        "wash_crushed_quartzite_ore",
+        "wash_crushed_apatite_ore",
+        "wash_crushed_monazite_ore",
+        "wash_crushed_realgar_ore"
+      ]
+    },
+    {
+      "id": "@thermal_centrifuge",
+      "name": "@thermal_centrifuge",
+      "memberRecipeIds": [
+        "thermal_centrifuge_purified_diamond_ore",
+        "thermal_centrifuge_purified_emerald_ore",
+        "thermal_centrifuge_purified_ruby_ore",
+        "thermal_centrifuge_purified_sapphire_ore",
+        "thermal_centrifuge_purified_green_sapphire_ore",
+        "thermal_centrifuge_purified_quartzite_ore",
+        "thermal_centrifuge_purified_topaz_ore",
+        "thermal_centrifuge_purified_blue_topaz_ore",
+        "thermal_centrifuge_purified_spessartine_ore",
+        "thermal_centrifuge_purified_certus_quartz_ore",
+        "thermal_centrifuge_purified_apatite_ore",
+        "thermal_centrifuge_purified_monazite_ore",
+        "thermal_centrifuge_purified_realgar_ore"
+      ]
+    },
+    {
+      "id": "@crush_refined",
+      "name": "@crush_refined",
+      "memberRecipeIds": [
+        "crush_refined_diamond_ore",
+        "crush_refined_emerald_ore",
+        "crush_refined_ruby_ore",
+        "crush_refined_sapphire_ore",
+        "crush_refined_green_sapphire_ore",
+        "crush_refined_quartzite_ore",
+        "crush_refined_topaz_ore",
+        "crush_refined_blue_topaz_ore",
+        "crush_refined_spessartine_ore",
+        "crush_refined_certus_quartz_ore",
+        "crush_refined_apatite_ore",
+        "crush_refined_monazite_ore",
+        "crush_refined_realgar_ore"
+      ]
+    },
+    {
+      "id": "@electrolyze_dust",
+      "name": "@electrolyze_dust",
+      "memberRecipeIds": [
+        "electrolyze_emerald_dust",
+        "electrolyze_ruby_dust",
+        "electrolyze_sapphire_dust",
+        "electrolyze_green_sapphire_dust",
+        "electrolyze_topaz_dust",
+        "electrolyze_blue_topaz_dust",
+        "electrolyze_spessartine_dust",
+        "electrolyze_apatite_dust",
+        "electrolyze_monazite_dust"
+      ]
+    }
+  ],
+  "recipes": [
+    {
+      "id": "cut_diamond_geode",
+      "name": "Cut Diamond Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "diamond_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_diamond",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_emerald_geode",
+      "name": "Cut Emerald Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "emerald_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_emerald",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_ruby_geode",
+      "name": "Cut Ruby Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "ruby_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o2",
+          "itemId": "raw_ruby",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_sapphire_geode",
+      "name": "Cut Sapphire Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "sapphire_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_sapphire",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_green_sapphire_geode",
+      "name": "Cut Green Sapphire Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "green_sapphire_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_green_sapphire",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_quartzite_geode",
+      "name": "Cut Quartzite Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "quartzite_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_quartzite",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_topaz_geode",
+      "name": "Cut Topaz Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "topaz_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_topaz",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_blue_topaz_geode",
+      "name": "Cut Blue Topaz Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "blue_topaz_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_blue_topaz",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_spessartine_geode",
+      "name": "Cut Spessartine Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "spessartine_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_spessartine",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_certus_quartz_geode",
+      "name": "Cut Certus Quartz Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "certus_quartz_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_certus_quartz",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_apatite_geode",
+      "name": "Cut Apatite Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "apatite_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_apatite",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_monazite_geode",
+      "name": "Cut Monazite Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "monazite_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_monazite",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "cut_realgar_geode",
+      "name": "Cut Realgar Geode",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "realgar_geode",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "lubricant",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "raw_realgar",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "rock_filtrator_sand",
+      "name": "Rock Filtrator Sand",
+      "timeSeconds": 48.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "sand",
+          "amount": 32.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 1000.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "blue_topaz_geode",
+          "amount": 1.0,
+          "probability": 0.35
+        },
+        {
+          "id": "o2",
+          "itemId": "topaz_geode",
+          "amount": 1.0,
+          "probability": 0.35
+        },
+        {
+          "id": "o3",
+          "itemId": "apatite_geode",
+          "amount": 1.0,
+          "probability": 0.45
+        },
+        {
+          "id": "o4",
+          "itemId": "spessartine_geode",
+          "amount": 1.0,
+          "probability": 0.35
+        },
+        {
+          "id": "o5",
+          "itemId": "monazite_geode",
+          "amount": 1.0,
+          "probability": 0.375
+        },
+        {
+          "id": "o6",
+          "itemId": "certus_quartz_geode",
+          "amount": 1.0,
+          "probability": 0.45
+        }
+      ]
+    },
+    {
+      "id": "rock_filtrator_gravel",
+      "name": "Rock Filtrator Gravel",
+      "timeSeconds": 30.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "gravel",
+          "amount": 32.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 1000.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "diamond_geode",
+          "amount": 1.0,
+          "probability": 0.425
+        },
+        {
+          "id": "o2",
+          "itemId": "emerald_geode",
+          "amount": 1.0,
+          "probability": 0.425
+        },
+        {
+          "id": "o3",
+          "itemId": "ruby_geode",
+          "amount": 1.0,
+          "probability": 0.525
+        },
+        {
+          "id": "o4",
+          "itemId": "realgar_geode",
+          "amount": 1.0,
+          "probability": 0.475
+        },
+        {
+          "id": "o5",
+          "itemId": "green_sapphire_geode",
+          "amount": 1.0,
+          "probability": 0.55
+        },
+        {
+          "id": "o6",
+          "itemId": "sapphire_geode",
+          "amount": 1.0,
+          "probability": 0.55
+        },
+        {
+          "id": "o7",
+          "itemId": "quartzite_geode",
+          "amount": 1.0,
+          "probability": 0.4
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_diamond",
+      "name": "Grind Raw Diamond",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_diamond",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_diamond_ore",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_emerald",
+      "name": "Grind Raw Emerald",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_emerald",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_emerald_ore",
+          "amount": 4.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_ruby",
+      "name": "Grind Raw Ruby",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_ruby",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_ruby_ore",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_sapphire",
+      "name": "Grind Raw Sapphire",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_sapphire",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_sapphire_ore",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_green_sapphire",
+      "name": "Grind Raw Green Sapphire",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_green_sapphire",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_green_sapphire_ore",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_quartzite",
+      "name": "Grind Raw Quartzite",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_quartzite",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_quartzite_ore",
+          "amount": 4.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_topaz",
+      "name": "Grind Raw Topaz",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_topaz",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_topaz_ore",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_blue_topaz",
+      "name": "Grind Raw Blue Topaz",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_blue_topaz",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_blue_topaz_ore",
+          "amount": 4.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_spessartine",
+      "name": "Grind Raw Spessartine",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_spessartine",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_spessartine_ore",
+          "amount": 6.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_certus_quarz",
+      "name": "Grind Raw Certus Quarz",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_certus_quartz",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_certus_quartz_ore",
+          "amount": 4.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_apatite",
+      "name": "Grind Raw Apatite",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_apatite",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_apatite_ore",
+          "amount": 8.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_monazite",
+      "name": "Grind Raw Monazite",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_monazite",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_monazite_ore",
+          "amount": 8.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "grind_raw_realgar",
+      "name": "Grind Raw Realgar",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "raw_realgar",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "crushed_realgar_ore",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "distill_water",
+      "name": "Distill Water",
+      "timeSeconds": 4.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "water",
+          "amount": 288.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "distilled_water",
+          "amount": 260.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wash_crushed_diamond_ore",
+      "name": "Wash Crushed Diamond Ore",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crushed_diamond_ore",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 100.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "purified_diamond_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "graphite_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        },
+        {
+          "id": "o3",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wash_crushed_emerald_ore",
+      "name": "Wash Crushed Emerald Ore",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crushed_emerald_ore",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 100.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "purified_emerald_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "beryllium_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        },
+        {
+          "id": "o3",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wash_crushed_ruby_ore",
+      "name": "Wash Crushed Ruby Ore",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crushed_ruby_ore",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 100.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "purified_ruby_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "chromium_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        },
+        {
+          "id": "o3",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wash_crushed_sapphire_ore",
+      "name": "Wash Crushed Sapphire Ore",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crushed_sapphire_ore",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 100.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "purified_sapphire_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "aluminium_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        },
+        {
+          "id": "o3",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wash_crushed_green_sapphire_ore",
+      "name": "Wash Crushed Green Sapphire Ore",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crushed_green_sapphire_ore",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 100.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "purified_green_sapphire_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "aluminium_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        },
+        {
+          "id": "o3",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wash_crushed_certus_quartz_ore",
+      "name": "Wash Crushed Certus Quartz Ore",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crushed_certus_quartz_ore",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 100.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "purified_certus_quartz_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "nether_quartz_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        },
+        {
+          "id": "o3",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wash_crushed_topaz_ore",
+      "name": "Wash Crushed Topaz Ore",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crushed_topaz_ore",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 100.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "purified_topaz_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "blue_topaz_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        },
+        {
+          "id": "o3",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wash_crushed_blue_topaz_ore",
+      "name": "Wash Crushed Blue Topaz Ore",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crushed_blue_topaz_ore",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 100.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "purified_blue_topaz_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "topaz_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        },
+        {
+          "id": "o3",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wash_crushed_spessartine_ore",
+      "name": "Wash Crushed Spessartine Ore",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crushed_spessartine_ore",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 100.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "purified_spessartine_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "red_garnet_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        },
+        {
+          "id": "o3",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wash_crushed_quartzite_ore",
+      "name": "Wash Crushed Quartzite Ore",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crushed_quartzite_ore",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 100.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "purified_quartzite_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "certus_quartz_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        },
+        {
+          "id": "o3",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wash_crushed_apatite_ore",
+      "name": "Wash Crushed Apatite Ore",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crushed_apatite_ore",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 100.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "purified_apatite_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "tricalcium_phosphate_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        },
+        {
+          "id": "o3",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wash_crushed_monazite_ore",
+      "name": "Wash Crushed Monazite Ore",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crushed_monazite_ore",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 100.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "purified_monazite_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "certus_quartz_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        },
+        {
+          "id": "o3",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "wash_crushed_realgar_ore",
+      "name": "Wash Crushed Realgar Ore",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crushed_realgar_ore",
+          "amount": 1.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "distilled_water",
+          "amount": 100.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "purified_realgar_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "sulfur_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        },
+        {
+          "id": "o3",
+          "itemId": "stone_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "thermal_centrifuge_purified_diamond_ore",
+      "name": "Thermal Centrifuge Purified Diamond Ore",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "purified_diamond_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "refined_diamond_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "graphite_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        }
+      ]
+    },
+    {
+      "id": "thermal_centrifuge_purified_emerald_ore",
+      "name": "Thermal Centrifuge Purified Emerald Ore",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "purified_emerald_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "refined_emerald_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "aluminium_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        }
+      ]
+    },
+    {
+      "id": "thermal_centrifuge_purified_ruby_ore",
+      "name": "Thermal Centrifuge Purified Ruby Ore",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "purified_ruby_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "refined_ruby_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "red_garnet_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        }
+      ]
+    },
+    {
+      "id": "thermal_centrifuge_purified_sapphire_ore",
+      "name": "Thermal Centrifuge Purified Sapphire Ore",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "purified_sapphire_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "refined_sapphire_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "green_sapphire_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        }
+      ]
+    },
+    {
+      "id": "thermal_centrifuge_purified_green_sapphire_ore",
+      "name": "Thermal Centrifuge Purified Green Sapphire Ore",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "purified_green_sapphire_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "refined_green_sapphire_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "sapphire_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        }
+      ]
+    },
+    {
+      "id": "thermal_centrifuge_purified_quartzite_ore",
+      "name": "Thermal Centrifuge Purified Quartzite Ore",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "purified_quartzite_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "refined_quartzite_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "barite_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        }
+      ]
+    },
+    {
+      "id": "thermal_centrifuge_purified_topaz_ore",
+      "name": "Thermal Centrifuge Purified Topaz Ore",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "purified_topaz_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "refined_topaz_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "blue_topaz_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        }
+      ]
+    },
+    {
+      "id": "thermal_centrifuge_purified_blue_topaz_ore",
+      "name": "Thermal Centrifuge Purified Blue Topaz Ore",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "purified_blue_topaz_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "refined_blue_topaz_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "topaz_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        }
+      ]
+    },
+    {
+      "id": "thermal_centrifuge_purified_spessartine_ore",
+      "name": "Thermal Centrifuge Purified Spessartine Ore",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "purified_spessartine_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "refined_spessartine_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "manganese_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        }
+      ]
+    },
+    {
+      "id": "thermal_centrifuge_purified_certus_quartz_ore",
+      "name": "Thermal Centrifuge Purified Certus Quartz Ore",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "purified_certus_quartz_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "refined_certus_quartz_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "barite_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        }
+      ]
+    },
+    {
+      "id": "thermal_centrifuge_purified_apatite_ore",
+      "name": "Thermal Centrifuge Purified Apatite Ore",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "purified_apatite_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "refined_apatite_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "phosphate_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        }
+      ]
+    },
+    {
+      "id": "thermal_centrifuge_purified_monazite_ore",
+      "name": "Thermal Centrifuge Purified Monazite Ore",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "purified_monazite_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "refined_monazite_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "neodymium_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        }
+      ]
+    },
+    {
+      "id": "thermal_centrifuge_purified_realgar_ore",
+      "name": "Thermal Centrifuge Purified Realgar Ore",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "purified_realgar_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "refined_realgar_ore",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "antimony_dust",
+          "amount": 1.0,
+          "probability": 0.33
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_diamond_ore",
+      "name": "Crush Refined Diamond Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_diamond_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "diamond_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_emerald_ore",
+      "name": "Crush Refined Emerald Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_emerald_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "emerald_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_ruby_ore",
+      "name": "Crush Refined Ruby Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_ruby_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "ruby_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_sapphire_ore",
+      "name": "Crush Refined Sapphire Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_sapphire_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "sapphire_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_green_sapphire_ore",
+      "name": "Crush Refined Green Sapphire Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_green_sapphire_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "green_sapphire_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_quartzite_ore",
+      "name": "Crush Refined Quartzite Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_quartzite_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "quartzite_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_topaz_ore",
+      "name": "Crush Refined Topaz Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_topaz_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "topaz_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_blue_topaz_ore",
+      "name": "Crush Refined Blue Topaz Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_blue_topaz_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "blue_topaz_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_spessartine_ore",
+      "name": "Crush Refined Spessartine Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_spessartine_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "spessartine_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_certus_quartz_ore",
+      "name": "Crush Refined Certus Quartz Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_certus_quartz_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "certus_quartz_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_apatite_ore",
+      "name": "Crush Refined Apatite Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_apatite_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "apatite_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_monazite_ore",
+      "name": "Crush Refined Monazite Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_monazite_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "monazite_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "crush_refined_realgar_ore",
+      "name": "Crush Refined Realgar Ore",
+      "timeSeconds": 0.25,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "refined_realgar_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "realgar_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_emerald_dust",
+      "name": "Electrolyze Emerald Dust",
+      "timeSeconds": 26.1,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "emerald_dust",
+          "amount": 29.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "beryllium_dust",
+          "amount": 3.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o3",
+          "itemId": "aluminium_dust",
+          "amount": 2.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "silicon_dust",
+          "amount": 6.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o4",
+          "itemId": "oxygen",
+          "amount": 18000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_ruby_dust",
+      "name": "Electrolyze Ruby Dust",
+      "timeSeconds": 7.2,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "ruby_dust",
+          "amount": 6.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "chromium_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "aluminium_dust",
+          "amount": 2.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o3",
+          "itemId": "oxygen",
+          "amount": 3000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_sapphire_dust",
+      "name": "Electrolyze Sapphire Dust",
+      "timeSeconds": 2.5,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "sapphire_dust",
+          "amount": 5.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "aluminium_dust",
+          "amount": 2.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "oxygen",
+          "amount": 3000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_green_sapphire_dust",
+      "name": "Electrolyze Green Sapphire Dust",
+      "timeSeconds": 2.5,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "green_sapphire_dust",
+          "amount": 5.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "aluminium_dust",
+          "amount": 2.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "oxygen",
+          "amount": 3000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_topaz_dust",
+      "name": "Electrolyze Topaz Dust",
+      "timeSeconds": 4.8,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "topaz_dust",
+          "amount": 6.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "aluminium_dust",
+          "amount": 2.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "silicon_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o3",
+          "itemId": "fluorine",
+          "amount": 1000.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o4",
+          "itemId": "hydrogen",
+          "amount": 2000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_blue_topaz_dust",
+      "name": "Electrolyze Blue Topaz Dust",
+      "timeSeconds": 10.4,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "blue_topaz_dust",
+          "amount": 13.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "aluminium_dust",
+          "amount": 2.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "silicon_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o3",
+          "itemId": "fluorine",
+          "amount": 2000.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o4",
+          "itemId": "hydrogen",
+          "amount": 2000.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o5",
+          "itemId": "oxygen",
+          "amount": 6000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_spessartine_dust",
+      "name": "Electrolyze Spessartine Dust",
+      "timeSeconds": 22.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "spessartine_dust",
+          "amount": 20.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "aluminium_dust",
+          "amount": 2.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "manganese_dust",
+          "amount": 3.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o3",
+          "itemId": "silicon_dust",
+          "amount": 3.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o4",
+          "itemId": "oxygen",
+          "amount": 12000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_apatite_dust",
+      "name": "Electrolyze Apatite Dust",
+      "timeSeconds": 14.4,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "apatite_dust",
+          "amount": 9.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "calcium_dust",
+          "amount": 5.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "phosphorus_dust",
+          "amount": 3.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o3",
+          "itemId": "chlorine",
+          "amount": 1000.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "electrolyze_monazite_dust",
+      "name": "Electrolyze Monazite Dust",
+      "timeSeconds": 2.6,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "monazite_dust",
+          "amount": 2.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "rare_earth",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "phosphate_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "centrifuge_realgar_dust",
+      "name": "Centrifuge Realgar Dust",
+      "timeSeconds": 3.95,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "realgar_dust",
+          "amount": 2.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o2",
+          "itemId": "arsenic_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o1",
+          "itemId": "sulfur_dust",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    }
+  ]
+}

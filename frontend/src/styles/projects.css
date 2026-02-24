@@ -1,0 +1,207 @@
+/* Project Selector */
+
+.project-selector {
+  position: relative;
+  z-index: 100;
+}
+
+.project-selector-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(12, 16, 23, 0.8);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  max-width: 260px;
+  white-space: nowrap;
+}
+
+.project-selector-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.project-selector-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.project-selector-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-selector-chevron {
+  font-size: 0.65rem;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* Dropdown */
+
+.project-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 260px;
+  max-width: 360px;
+  background: rgba(18, 22, 30, 0.97);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  backdrop-filter: blur(16px);
+}
+
+.project-dropdown-header {
+  padding: 0.75rem 1rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.project-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.project-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.project-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.project-item.active {
+  background: rgba(110, 168, 254, 0.12);
+  border-left: 3px solid var(--accent);
+}
+
+.project-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+.project-item-menu-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 2px 6px;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.project-item:hover .project-item-menu-btn {
+  opacity: 1;
+}
+
+.project-item-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+/* Edit input */
+.project-edit-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 4px 8px;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+/* New project row */
+.project-new-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid var(--panel-border);
+}
+
+.project-action-confirm {
+  background: var(--accent);
+  border: none;
+  color: #0b0f14;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.project-new-btn {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--panel-border);
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.project-new-btn:hover {
+  background: rgba(110, 168, 254, 0.08);
+}
+
+/* Context menu */
+.project-context-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 160px;
+  background: rgba(18, 22, 30, 0.97);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  backdrop-filter: blur(16px);
+}
+
+.project-context-menu button {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 1rem;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.project-context-menu button:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.project-context-menu button.danger {
+  color: #f87171;
+}
+
+.project-context-menu button.danger:hover {
+  background: rgba(248, 113, 113, 0.1);
+}

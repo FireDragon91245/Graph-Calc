@@ -15,7 +15,7 @@ import ReactFlow, {
   useReactFlow
 } from "reactflow";
 import { solveGraph, SolveResponse } from "./api/solve";
-import { loadGraph, saveGraph, loadStore, saveStore } from "./api/persistence";
+import { loadGraph, saveGraph, loadStore, saveStore, listProjects } from "./api/persistence";
 import ContextMenu from "./editor/ContextMenu";
 import CommandPalette, { CommandAction } from "./editor/CommandPalette";
 import { useGraphStore } from "./store/graphStore";
@@ -36,6 +36,7 @@ import RecipeMode from "./components/RecipeMode";
 import RecipeTagMode from "./components/RecipeTagMode";
 import RecipeGenerator from "./components/RecipeGenerator";
 import ItemGenerator from "./components/ItemGenerator";
+import ProjectSelector from "./components/ProjectSelector";
 import { NodeType } from "./components/NodeTypeSelector";
 import EdgeWithTooltip from "./edges/EdgeWithTooltip";
 
@@ -149,6 +150,8 @@ function AppContent() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   
+  const activeProjectId = useGraphStore((state) => state.activeProjectId);
+  const setActiveProjectId = useGraphStore((state) => state.setActiveProjectId);
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
   const tags = useGraphStore((state) => state.tags);
@@ -177,8 +180,15 @@ function AppContent() {
   useEffect(() => {
     const loadData = async () => {
       try {
+        // First, fetch project list to discover the active project
+        const projectsRes = await listProjects();
+        const pid = projectsRes.activeProjectId;
+        if (pid) {
+          setActiveProjectId(pid);
+        }
+
         // Load store data (categories, items, tags, recipes, etc.)
-        const storeData = await loadStore();
+        const storeData = await loadStore(pid ?? undefined);
         
         // If store has data, load it; otherwise keep the default state and save it
         if (storeData.categories.length > 0 || storeData.items.length > 0 || 
@@ -195,11 +205,11 @@ function AppContent() {
             recipeTags: currentState.recipeTags,
             recipes: currentState.recipes
           };
-          saveStore(defaultData).catch(console.error);
+          saveStore(defaultData, pid ?? undefined).catch(console.error);
         }
 
         // Load graph data (nodes and edges)
-        const graphData = await loadGraph();
+        const graphData = await loadGraph(pid ?? undefined);
         if (graphData.nodes.length > 0 || graphData.edges.length > 0) {
           const sanitizedNodes = graphData.nodes.map((node) => ({
             ...node,
@@ -217,7 +227,7 @@ function AppContent() {
     };
 
     loadData();
-  }, [loadStoreData, setNodes, setEdges]);
+  }, [loadStoreData, setNodes, setEdges, setActiveProjectId]);
 
   // Auto-save graph (nodes and edges) with debouncing
   const saveTimeoutRef = useRef<number | null>(null);
@@ -246,7 +256,7 @@ function AppContent() {
         }))
       };
 
-      saveGraph(graphData).catch((error) => {
+      saveGraph(graphData, activeProjectId ?? undefined).catch((error) => {
         console.error("Error auto-saving graph:", error);
       });
     }, 500); // 500ms debounce
@@ -256,7 +266,36 @@ function AppContent() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [nodes, edges, isLoaded]);
+  }, [nodes, edges, isLoaded, activeProjectId]);
+
+  // Handle project change (reload all data for new project)
+  const handleProjectChange = useCallback(async (newProjectId: string) => {
+    setIsLoaded(false);
+    setSolveResult(null);
+    setSolveError(null);
+    setActiveProjectId(newProjectId);
+    try {
+      const storeData = await loadStore(newProjectId);
+      loadStoreData(storeData);
+
+      const graphData = await loadGraph(newProjectId);
+      if (graphData.nodes.length > 0 || graphData.edges.length > 0) {
+        const sanitizedNodes = graphData.nodes.map((node: any) => ({
+          ...node,
+          data: stripSolveData(node.data)
+        }));
+        setNodes(sanitizedNodes);
+        setEdges(graphData.edges);
+      } else {
+        setNodes([]);
+        setEdges([]);
+      }
+    } catch (error) {
+      console.error("Error loading project data:", error);
+    } finally {
+      setIsLoaded(true);
+    }
+  }, [setActiveProjectId, loadStoreData, setNodes, setEdges]);
 
   // Inject solve results into node and edge data
   useEffect(() => {
@@ -990,6 +1029,10 @@ function AppContent() {
     <div className="app-root">
       <div className="top-bar">
         <div className="brand">GraphCalc</div>
+        <ProjectSelector
+          activeProjectId={activeProjectId}
+          onProjectChange={handleProjectChange}
+        />
         <ModeSelector
           currentMode={appMode}
           onModeChange={setAppMode}

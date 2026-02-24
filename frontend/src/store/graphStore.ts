@@ -47,6 +47,8 @@ type Recipe = {
 };
 
 type GraphStore = {
+  activeProjectId: string | null;
+  setActiveProjectId: (id: string | null) => void;
   categories: Category[];
   items: Item[];
   tags: Tag[];
@@ -90,13 +92,16 @@ const debouncedSave = (state: GraphStore) => {
       recipeTags: state.recipeTags,
       recipes: state.recipes
     };
-    saveStore(dataToSave).catch((err) => {
+    const projectId = state.activeProjectId ?? undefined;
+    saveStore(dataToSave, projectId).catch((err) => {
       console.error("Failed to auto-save store:", err);
     });
   }, 300); // 300ms debounce
 };
 
 export const useGraphStore = create<GraphStore>((set, get) => ({
+  activeProjectId: null,
+  setActiveProjectId: (id) => set({ activeProjectId: id }),
   categories: [
     { id: "ore", name: "Ore" },
     { id: "ingot", name: "Ingot" }
