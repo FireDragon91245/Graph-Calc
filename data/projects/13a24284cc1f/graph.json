@@ -4,8 +4,8 @@
       "id": "input-1771954258785",
       "type": "input",
       "position": {
-        "x": -150.8380142090612,
-        "y": 278.80641926553767
+        "x": -339.2698416335269,
+        "y": 267.474359223731
       },
       "data": {
         "items": [
@@ -22,8 +22,8 @@
       "id": "recipe-1771954269806",
       "type": "recipe",
       "position": {
-        "x": 278.33851559322636,
-        "y": 298.29329648775
+        "x": 93.07107965368641,
+        "y": 304.6818287615273
       },
       "data": {
         "recipeId": "smelt_iron",
@@ -49,27 +49,11 @@
       }
     },
     {
-      "id": "output-1771954961006",
-      "type": "output",
-      "position": {
-        "x": 845.7965750198724,
-        "y": 354.3638678704178
-      },
-      "data": {
-        "items": [
-          {
-            "id": "1",
-            "itemId": "iron_ingot"
-          }
-        ]
-      }
-    },
-    {
-      "id": "recipe-1771955092442",
+      "id": "recipe-1771955965868",
       "type": "recipe",
       "position": {
-        "x": 228.05137640387915,
-        "y": 557.0463584681299
+        "x": 82.5013907340383,
+        "y": 505.9549801910904
       },
       "data": {
         "recipeId": "alloy_steel_ingot",
@@ -103,40 +87,307 @@
       }
     },
     {
-      "id": "output-1771955107415",
-      "type": "output",
+      "id": "input-1771955981976",
+      "type": "input",
       "position": {
-        "x": 914.6504354621574,
-        "y": 647.2352179207003
+        "x": -301.0228572389565,
+        "y": 519.9619517502596
       },
       "data": {
         "items": [
           {
             "id": "1",
-            "itemId": "steel_ingot"
+            "itemId": "coal",
+            "mode": "infinite"
           }
         ]
       }
     },
     {
-      "id": "input-1771955461391",
-      "type": "input",
+      "id": "recipe-1771956718968",
+      "type": "recipe",
       "position": {
-        "x": -162.12750000000005,
-        "y": 487.23625000000004
+        "x": 1110.6004337007535,
+        "y": 549.1210717219727
       },
       "data": {
-        "items": [
+        "recipeId": "construct_steel_screws",
+        "title": "Construct Steel Screws",
+        "timeSeconds": 12,
+        "inputs": [
           {
-            "id": "1",
-            "itemId": "iron_ore",
-            "mode": "limit",
-            "limit": 10
+            "id": "i1",
+            "name": "Steel Beam",
+            "refId": "steel_beam",
+            "refType": "item",
+            "amountPerCycle": 1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "screws",
+            "name": "Screws",
+            "amountPerCycle": 52,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1771956754288",
+      "type": "recipe",
+      "position": {
+        "x": 1127.953486879671,
+        "y": 286.8508886328755
+      },
+      "data": {
+        "recipeId": "construct_iron_plate",
+        "title": "Construct Iron Plate",
+        "timeSeconds": 6,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Iron Ingot",
+            "refId": "iron_ingot",
+            "refType": "item",
+            "amountPerCycle": 3
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "iron_plate",
+            "name": "Iron Plate",
+            "amountPerCycle": 2,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1771956764417",
+      "type": "recipe",
+      "position": {
+        "x": 1708.961070518609,
+        "y": 521.362992551858
+      },
+      "data": {
+        "recipeId": "fabricate_reinforced_plates",
+        "title": "Fabricate Reinforced Plates",
+        "timeSeconds": 12,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Iron Plate",
+            "refId": "iron_plate",
+            "refType": "item",
+            "amountPerCycle": 6
           },
           {
-            "id": "1771955463424",
-            "itemId": "coal",
-            "mode": "infinite"
+            "id": "i2",
+            "name": "Screws",
+            "refId": "screws",
+            "refType": "item",
+            "amountPerCycle": 12
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "reinforced_plate",
+            "name": "Reinforced Plate",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "requester-1771956782807",
+      "type": "requester",
+      "position": {
+        "x": 2287.6609932865545,
+        "y": 502.9402434398669
+      },
+      "data": {
+        "requests": [
+          {
+            "id": "req1",
+            "itemId": "reinforced_plate",
+            "targetPerSecond": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1771957628036",
+      "type": "recipe",
+      "position": {
+        "x": 568.2365179891419,
+        "y": 528.8931740651944
+      },
+      "data": {
+        "recipeId": "construct_steel_beam",
+        "title": "Construct Steel Beam",
+        "timeSeconds": 4,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Steel Ingot",
+            "refId": "steel_ingot",
+            "refType": "item",
+            "amountPerCycle": 4
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "steel_beam",
+            "name": "Steel Beam",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1771958290130",
+      "type": "recipe",
+      "position": {
+        "x": 2086.0467276368336,
+        "y": 165.99380256576822
+      },
+      "data": {
+        "recipeId": "fabricate_rotor",
+        "title": "Fabricate Rotor",
+        "timeSeconds": 15,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Iron Rod",
+            "refId": "iron_rod",
+            "refType": "item",
+            "amountPerCycle": 5
+          },
+          {
+            "id": "i2",
+            "name": "Screws",
+            "refId": "screws",
+            "refType": "item",
+            "amountPerCycle": 25
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "rotor",
+            "name": "Rotor",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1771958302221",
+      "type": "recipe",
+      "position": {
+        "x": 1160.937679386781,
+        "y": 156.64926672485856
+      },
+      "data": {
+        "recipeId": "construct_iron_rods",
+        "title": "Construct Iron Rods",
+        "timeSeconds": 4,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Iron Ingot",
+            "refId": "iron_ingot",
+            "refType": "item",
+            "amountPerCycle": 1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "iron_rod",
+            "name": "Iron Rod",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1771958333510",
+      "type": "recipe",
+      "position": {
+        "x": 1912.8613300519746,
+        "y": -62.16861421644162
+      },
+      "data": {
+        "recipeId": "fabricate_modular_frame",
+        "title": "Fabricate Modular Frame",
+        "timeSeconds": 60,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Reinforced Plate",
+            "refId": "reinforced_plate",
+            "refType": "item",
+            "amountPerCycle": 3
+          },
+          {
+            "id": "i2",
+            "name": "Iron Rod",
+            "refId": "iron_rod",
+            "refType": "item",
+            "amountPerCycle": 12
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "modular_frame",
+            "name": "Modular Frame",
+            "amountPerCycle": 2,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "requester-1771958351386",
+      "type": "requester",
+      "position": {
+        "x": 2512.469046510342,
+        "y": -65.28345949674483
+      },
+      "data": {
+        "requests": [
+          {
+            "id": "req1",
+            "itemId": "modular_frame",
+            "targetPerSecond": 0.7
+          }
+        ]
+      }
+    },
+    {
+      "id": "requester-1771958356176",
+      "type": "requester",
+      "position": {
+        "x": 2651.8583728039102,
+        "y": 185.4615855676633
+      },
+      "data": {
+        "requests": [
+          {
+            "id": "req1",
+            "itemId": "rotor",
+            "targetPerSecond": 1
           }
         ]
       }
@@ -151,32 +402,109 @@
       "targetHandle": "input-i1"
     },
     {
-      "id": "reactflow__edge-recipe-1771954269806output-o1-output-1771954961006input-1",
-      "source": "recipe-1771954269806",
-      "target": "output-1771954961006",
-      "sourceHandle": "output-o1",
-      "targetHandle": "input-1"
-    },
-    {
-      "id": "reactflow__edge-recipe-1771955092442output-o1-output-1771955107415input-1",
-      "source": "recipe-1771955092442",
-      "target": "output-1771955107415",
-      "sourceHandle": "output-o1",
-      "targetHandle": "input-1"
-    },
-    {
-      "id": "reactflow__edge-input-1771955461391output-1-recipe-1771955092442input-i1",
-      "source": "input-1771955461391",
-      "target": "recipe-1771955092442",
+      "id": "reactflow__edge-input-1771954258785output-1-recipe-1771955965868input-i1",
+      "source": "input-1771954258785",
+      "target": "recipe-1771955965868",
       "sourceHandle": "output-1",
       "targetHandle": "input-i1"
     },
     {
-      "id": "reactflow__edge-input-1771955461391output-1771955463424-recipe-1771955092442input-i2",
-      "source": "input-1771955461391",
-      "target": "recipe-1771955092442",
-      "sourceHandle": "output-1771955463424",
+      "id": "reactflow__edge-input-1771955981976output-1-recipe-1771955965868input-i2",
+      "source": "input-1771955981976",
+      "target": "recipe-1771955965868",
+      "sourceHandle": "output-1",
       "targetHandle": "input-i2"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771954269806output-o1-recipe-1771956754288input-i1",
+      "source": "recipe-1771954269806",
+      "target": "recipe-1771956754288",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771956754288output-o1-recipe-1771956764417input-i1",
+      "source": "recipe-1771956754288",
+      "target": "recipe-1771956764417",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771956718968output-o1-recipe-1771956764417input-i2",
+      "source": "recipe-1771956718968",
+      "target": "recipe-1771956764417",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i2"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771955965868output-o1-recipe-1771957628036input-i1",
+      "source": "recipe-1771955965868",
+      "target": "recipe-1771957628036",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771957628036output-o1-recipe-1771956718968input-i1",
+      "source": "recipe-1771957628036",
+      "target": "recipe-1771956718968",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771958302221output-o1-recipe-1771958290130input-i1",
+      "source": "recipe-1771958302221",
+      "target": "recipe-1771958290130",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771954269806output-o1-recipe-1771958302221input-i1",
+      "source": "recipe-1771954269806",
+      "target": "recipe-1771958302221",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771956718968output-o1-recipe-1771958290130input-i2",
+      "source": "recipe-1771956718968",
+      "target": "recipe-1771958290130",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i2"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771958302221output-o1-recipe-1771958333510input-i2",
+      "source": "recipe-1771958302221",
+      "target": "recipe-1771958333510",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i2"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771956764417output-o1-recipe-1771958333510input-i1",
+      "source": "recipe-1771956764417",
+      "target": "recipe-1771958333510",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771958333510output-o1-requester-1771958351386input-req1",
+      "source": "recipe-1771958333510",
+      "target": "requester-1771958351386",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-req1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771958290130output-o1-requester-1771958356176input-req1",
+      "source": "recipe-1771958290130",
+      "target": "requester-1771958356176",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-req1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771956764417output-o1-requester-1771956782807input-req1",
+      "source": "recipe-1771956764417",
+      "target": "requester-1771956782807",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-req1"
     }
   ]
 }

@@ -45,6 +45,16 @@
       "id": "steel_beam",
       "name": "Steel Beam",
       "categoryId": null
+    },
+    {
+      "id": "rotor",
+      "name": "Rotor",
+      "categoryId": null
+    },
+    {
+      "id": "modular_frame",
+      "name": "Modular Frame",
+      "categoryId": null
     }
   ],
   "tags": [],
@@ -205,6 +215,60 @@
           "id": "o1",
           "itemId": "reinforced_plate",
           "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "fabricate_rotor",
+      "name": "Fabricate Rotor",
+      "timeSeconds": 15.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "iron_rod",
+          "amount": 5.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "screws",
+          "amount": 25.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "rotor",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "fabricate_modular_frame",
+      "name": "Fabricate Modular Frame",
+      "timeSeconds": 60.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "reinforced_plate",
+          "amount": 3.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "iron_rod",
+          "amount": 12.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "modular_frame",
+          "amount": 2.0,
           "probability": 1.0
         }
       ]

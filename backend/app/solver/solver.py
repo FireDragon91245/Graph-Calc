@@ -717,17 +717,11 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                 objective.SetMaximization()
         
         elif has_input_constraints and has_output_demands:
-            # Both constrained: Try to meet demands while respecting limits
-            # Prioritize meeting demands - PER COMPONENT
-            for comp_idx in range(len(components)):
-                c_demands = comp_output_demands.get(comp_idx, {})
-                c_production = comp_item_production.get(comp_idx, {})
-                for item_id, demand in c_demands.items():
-                    if item_id in c_production:
-                        # Try to meet demand exactly
-                        solver.Add(c_production[item_id] >= demand)
-            
-            # Minimize total machine count (efficiency)
+            # Both constrained: Meet demands while respecting input limits.
+            # Input limits are upper bounds only (already added as <= in per-component loop).
+            # Demands are hard lower bounds (already added as >= in per-component loop).
+            # Intermediate items have production == consumption (already added).
+            # Minimize total machine count - solver uses just enough input to satisfy demands.
             for recipe_node_id, var in recipe_vars.items():
                 objective.SetCoefficient(var, 1)
             objective.SetMinimization()
@@ -1138,13 +1132,44 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
             
             # Calculate flow for each item
             for item_id in common_items:
-                # Get the flow rate from the source node
+                source_rate = 0.0
+                target_rate = 0.0
+                
+                # Get the total output rate at the source node for this item
                 if edge_flow.source_node in node_flows:
                     source_node_data = node_flows[edge_flow.source_node]
-                    if item_id in source_node_data.outputFlows:
-                        rate = source_node_data.outputFlows[item_id]
-                        edge_data.flows[item_id] = rate
-                        edge_data.totalFlow += rate
+                    source_rate = source_node_data.outputFlows.get(item_id, 0.0)
+                
+                # Get the consumption rate at the target node for this item
+                if edge_flow.target_node in node_flows:
+                    target_node_data = node_flows[edge_flow.target_node]
+                    target_rate = target_node_data.inputFlows.get(item_id, 0.0)
+                
+                # Determine edge flow based on available source/target info.
+                # Target consumption is preferred (correctly handles fanout where
+                # one source feeds multiple targets - each edge gets its target's
+                # actual consumption, not the source total).
+                # Fall back to source output ONLY when the target node hasn't been
+                # processed into node_flows yet (e.g. mixedoutput nodes whose flows
+                # are derived from edges later).
+                target_node_type = node_type_map.get(edge_flow.target_node)
+                target_in_node_flows = edge_flow.target_node in node_flows
+                
+                if source_rate > 0.001 and target_rate > 0.001:
+                    rate = min(source_rate, target_rate)
+                elif target_rate > 0.001:
+                    rate = target_rate
+                elif source_rate > 0.001 and not target_in_node_flows and \
+                     target_node_type not in ("recipe", "recipetag", "inputrecipe", "inputrecipetag"):
+                    # Target not yet computed (e.g. mixedoutput nodes) - use source
+                    rate = source_rate
+                else:
+                    # Target IS in node_flows but has 0 consumption → edge carries nothing
+                    rate = 0.0
+                
+                if rate > 0.001:
+                    edge_data.flows[item_id] = round(rate, 3)
+                    edge_data.totalFlow += rate
             
             edge_data.totalFlow = round(edge_data.totalFlow, 3)
             if edge_data.totalFlow > 0:
