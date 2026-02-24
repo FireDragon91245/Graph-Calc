@@ -43,10 +43,16 @@ export default function ProjectSelector({
     refresh();
   }, []);
 
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(target) &&
+        (!contextMenuRef.current || !contextMenuRef.current.contains(target))
+      ) {
         setIsOpen(false);
         setContextMenu(null);
         setShowNew(false);
@@ -250,6 +256,7 @@ export default function ProjectSelector({
 
       {contextMenu && (
         <div
+          ref={contextMenuRef}
           className="project-context-menu"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >

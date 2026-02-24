@@ -106,7 +106,7 @@
   font-size: 1.1rem;
   padding: 2px 6px;
   border-radius: 6px;
-  opacity: 0;
+  opacity: 0.45;
   transition: opacity 0.15s ease, background 0.15s ease;
 }
 
