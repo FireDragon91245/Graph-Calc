@@ -1,0 +1,213 @@
+{
+  "categories": [],
+  "items": [
+    {
+      "id": "iron_ore",
+      "name": "Iron Ore",
+      "categoryId": null
+    },
+    {
+      "id": "iron_ingot",
+      "name": "Iron Ingot",
+      "categoryId": null
+    },
+    {
+      "id": "iron_plate",
+      "name": "Iron Plate",
+      "categoryId": null
+    },
+    {
+      "id": "iron_rod",
+      "name": "Iron Rod",
+      "categoryId": null
+    },
+    {
+      "id": "coal",
+      "name": "Coal",
+      "categoryId": null
+    },
+    {
+      "id": "steel_ingot",
+      "name": "Steel Ingot",
+      "categoryId": null
+    },
+    {
+      "id": "screws",
+      "name": "Screws",
+      "categoryId": null
+    },
+    {
+      "id": "reinforced_plate",
+      "name": "Reinforced Plate",
+      "categoryId": null
+    },
+    {
+      "id": "steel_beam",
+      "name": "Steel Beam",
+      "categoryId": null
+    }
+  ],
+  "tags": [],
+  "recipeTags": [],
+  "recipes": [
+    {
+      "id": "smelt_iron",
+      "name": "Smelt Iron",
+      "timeSeconds": 2.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "iron_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "iron_ingot",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "construct_iron_plate",
+      "name": "Construct Iron Plate",
+      "timeSeconds": 6.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "iron_ingot",
+          "amount": 3.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "iron_plate",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "construct_iron_rods",
+      "name": "Construct Iron Rods",
+      "timeSeconds": 4.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "iron_ingot",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "iron_rod",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "alloy_steel_ingot",
+      "name": "Alloy Steel Ingot",
+      "timeSeconds": 4.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "iron_ore",
+          "amount": 3.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "coal",
+          "amount": 3.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "steel_ingot",
+          "amount": 3.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "construct_steel_beam",
+      "name": "Construct Steel Beam",
+      "timeSeconds": 4.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "steel_ingot",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "steel_beam",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "construct_steel_screws",
+      "name": "Construct Steel Screws",
+      "timeSeconds": 12.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "steel_beam",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "screws",
+          "amount": 52.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "fabricate_reinforced_plates",
+      "name": "Fabricate Reinforced Plates",
+      "timeSeconds": 12.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "iron_plate",
+          "amount": 6.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "screws",
+          "amount": 12.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "reinforced_plate",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    }
+  ]
+}

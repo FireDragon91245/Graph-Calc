@@ -1,4 +1,182 @@
 {
-  "nodes": [],
-  "edges": []
+  "nodes": [
+    {
+      "id": "input-1771954258785",
+      "type": "input",
+      "position": {
+        "x": -150.8380142090612,
+        "y": 278.80641926553767
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "iron_ore",
+            "mode": "limit",
+            "limit": 24
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1771954269806",
+      "type": "recipe",
+      "position": {
+        "x": 278.33851559322636,
+        "y": 298.29329648775
+      },
+      "data": {
+        "recipeId": "smelt_iron",
+        "title": "Smelt Iron",
+        "timeSeconds": 2,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Iron Ore",
+            "refId": "iron_ore",
+            "amountPerCycle": 1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "iron_ingot",
+            "name": "Iron Ingot",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "output-1771954961006",
+      "type": "output",
+      "position": {
+        "x": 845.7965750198724,
+        "y": 354.3638678704178
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "iron_ingot"
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1771955092442",
+      "type": "recipe",
+      "position": {
+        "x": 228.05137640387915,
+        "y": 557.0463584681299
+      },
+      "data": {
+        "recipeId": "alloy_steel_ingot",
+        "title": "Alloy Steel Ingot",
+        "timeSeconds": 4,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Iron Ore",
+            "refId": "iron_ore",
+            "refType": "item",
+            "amountPerCycle": 3
+          },
+          {
+            "id": "i2",
+            "name": "Coal",
+            "refId": "coal",
+            "refType": "item",
+            "amountPerCycle": 3
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "steel_ingot",
+            "name": "Steel Ingot",
+            "amountPerCycle": 3,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "output-1771955107415",
+      "type": "output",
+      "position": {
+        "x": 914.6504354621574,
+        "y": 647.2352179207003
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "steel_ingot"
+          }
+        ]
+      }
+    },
+    {
+      "id": "input-1771955461391",
+      "type": "input",
+      "position": {
+        "x": -162.12750000000005,
+        "y": 487.23625000000004
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "iron_ore",
+            "mode": "limit",
+            "limit": 10
+          },
+          {
+            "id": "1771955463424",
+            "itemId": "coal",
+            "mode": "infinite"
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "reactflow__edge-input-1771954258785output-1-recipe-1771954269806input-i1",
+      "source": "input-1771954258785",
+      "target": "recipe-1771954269806",
+      "sourceHandle": "output-1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771954269806output-o1-output-1771954961006input-1",
+      "source": "recipe-1771954269806",
+      "target": "output-1771954961006",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771955092442output-o1-output-1771955107415input-1",
+      "source": "recipe-1771955092442",
+      "target": "output-1771955107415",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-1"
+    },
+    {
+      "id": "reactflow__edge-input-1771955461391output-1-recipe-1771955092442input-i1",
+      "source": "input-1771955461391",
+      "target": "recipe-1771955092442",
+      "sourceHandle": "output-1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-input-1771955461391output-1771955463424-recipe-1771955092442input-i2",
+      "source": "input-1771955461391",
+      "target": "recipe-1771955092442",
+      "sourceHandle": "output-1771955463424",
+      "targetHandle": "input-i2"
+    }
+  ]
 }

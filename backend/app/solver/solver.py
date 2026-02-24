@@ -487,13 +487,56 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                             solver.Add(recipe_vars[source_node_id] * production_rate == total_outflow)
                             break
         
-        # Track input limits and output demands
+        # === Find connected components ===
+        # Scope all flow balance constraints per connected subgraph so that
+        # disconnected nodes / separate graphs don't interfere with each other.
+        adjacency: Dict[str, Set[str]] = defaultdict(set)
+        all_graph_node_ids = {node.id for node in graph.nodes}
+        
+        for edge in graph.edges:
+            adjacency[edge.source].add(edge.target)
+            adjacency[edge.target].add(edge.source)
+        
+        # BFS to find connected components
+        visited_nodes: Set[str] = set()
+        components: List[Set[str]] = []
+        for node_id in all_graph_node_ids:
+            if node_id not in visited_nodes:
+                component: Set[str] = set()
+                queue = [node_id]
+                while queue:
+                    current = queue.pop(0)
+                    if current in visited_nodes:
+                        continue
+                    visited_nodes.add(current)
+                    component.add(current)
+                    for neighbor in adjacency.get(current, set()):
+                        if neighbor not in visited_nodes:
+                            queue.append(neighbor)
+                components.append(component)
+        
+        # Map each node to its component index
+        node_to_component: Dict[str, int] = {}
+        for comp_idx, component in enumerate(components):
+            for nid in component:
+                node_to_component[nid] = comp_idx
+        
+        # Helper: get component index for a recipe (uses parent tag node for sub-recipes)
+        def _recipe_component(recipe: RecipeInstance) -> int:
+            original = recipe.parent_tag_node_id or recipe.node_id
+            return node_to_component.get(original, 0)
+        
+        # Track input limits and output demands PER COMPONENT
+        # Also keep global aggregates for the objective mode decision
+        comp_input_limits: Dict[int, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        comp_output_demands: Dict[int, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
         input_limits: Dict[str, float] = {}
         output_demands: Dict[str, float] = {}
         
         # Extract input limits
         for node in input_nodes:
             if node.data:
+                comp_idx = node_to_component.get(node.id, 0)
                 items_list = node.data.get("items", [])
                 for item_entry in items_list:
                     item_id = item_entry.get("itemId")
@@ -501,6 +544,7 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                     limit = item_entry.get("limit")
                     
                     if item_id and mode == "limit" and limit is not None:
+                        comp_input_limits[comp_idx][item_id] += float(limit)
                         if item_id not in input_limits:
                             input_limits[item_id] = 0
                         input_limits[item_id] += float(limit)
@@ -508,24 +552,31 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
         # Extract output demands from requester nodes
         for node in requester_nodes:
             if node.data:
+                comp_idx = node_to_component.get(node.id, 0)
                 requests = node.data.get("requests", [])
                 for request in requests:
                     item_id = request.get("itemId")
                     target = request.get("targetPerSecond")
                     
                     if item_id and target is not None:
+                        comp_output_demands[comp_idx][item_id] += float(target)
                         if item_id not in output_demands:
                             output_demands[item_id] = 0
                         output_demands[item_id] += float(target)
         
-        # Build flow balance constraints for each item
-        # Track production and consumption per item (using normalized item IDs)
+        # Build flow balance constraints for each item PER COMPONENT
+        # Track production and consumption per (component, item) so disconnected
+        # subgraphs using the same item don't get linked together.
+        comp_item_production: Dict[int, Dict[str, pywraplp.LinearExpr]] = defaultdict(dict)
+        comp_item_consumption: Dict[int, Dict[str, pywraplp.LinearExpr]] = defaultdict(dict)
+        
+        # Also build global aggregates (used by results / bottleneck logic later)
         item_production: Dict[str, pywraplp.LinearExpr] = {}
         item_consumption: Dict[str, pywraplp.LinearExpr] = {}
-        item_from_input: Dict[str, pywraplp.LinearExpr] = {}
         
         # Calculate production from recipes
         for recipe in recipes:
+            comp_idx = _recipe_component(recipe)
             for output in recipe.outputs:
                 item_id = output.get("itemId") or output.get("name")
                 if not item_id:
@@ -542,12 +593,17 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                 probability = float(output.get("probability", 1.0))
                 rate = amount * probability / recipe.time_seconds
                 
+                if item_id not in comp_item_production[comp_idx]:
+                    comp_item_production[comp_idx][item_id] = 0
+                comp_item_production[comp_idx][item_id] += recipe_vars[recipe.node_id] * rate
+                
                 if item_id not in item_production:
                     item_production[item_id] = 0
                 item_production[item_id] += recipe_vars[recipe.node_id] * rate
         
         # Calculate consumption from recipes
         for recipe in recipes:
+            comp_idx = _recipe_component(recipe)
             for input_item in recipe.inputs:
                 # Skip mixed inputs - their items are determined by edges, not by name
                 if input_item.get("isMixed"):
@@ -562,6 +618,10 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                 amount = float(input_item.get("amountPerCycle", input_item.get("amount", 0)))
                 rate = amount / recipe.time_seconds
                 
+                if item_id not in comp_item_consumption[comp_idx]:
+                    comp_item_consumption[comp_idx][item_id] = 0
+                comp_item_consumption[comp_idx][item_id] += recipe_vars[recipe.node_id] * rate
+                
                 if item_id not in item_consumption:
                     item_consumption[item_id] = 0
                 item_consumption[item_id] += recipe_vars[recipe.node_id] * rate
@@ -572,39 +632,49 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
         has_input_constraints = len(input_limits) > 0 or has_inputrecipe_constraints
         has_output_demands = len(output_demands) > 0
         
-        # Apply constraints based on mode
+        # Apply constraints PER COMPONENT so disconnected subgraphs are independent
+        for comp_idx in range(len(components)):
+            c_production = comp_item_production.get(comp_idx, {})
+            c_consumption = comp_item_consumption.get(comp_idx, {})
+            c_limits = comp_input_limits.get(comp_idx, {})
+            c_demands = comp_output_demands.get(comp_idx, {})
+            
+            comp_all_items = set(list(c_production.keys()) + list(c_consumption.keys()) +
+                                 list(c_limits.keys()) + list(c_demands.keys()))
+            
+            for item_id in comp_all_items:
+                production = c_production.get(item_id, 0)
+                consumption = c_consumption.get(item_id, 0)
+                
+                # Input limit constraints
+                if item_id in c_limits:
+                    # Total consumption cannot exceed input limit
+                    solver.Add(consumption <= c_limits[item_id])
+                
+                # Output demand constraints
+                if item_id in c_demands:
+                    # Production must meet demand
+                    solver.Add(production >= c_demands[item_id])
+                
+                # Flow balance constraints:
+                # - Items both produced AND consumed (intermediate): strict equality
+                #   (everything produced must be consumed, everything consumed must be produced)
+                # - Items only produced (final outputs/byproducts): no constraint (goes to sinks)
+                # - Items only consumed (from external Input nodes): no constraint (infinite supply)
+                has_production = item_id in c_production
+                has_consumption = item_id in c_consumption
+                
+                if has_production and has_consumption:
+                    # Intermediate item: strict mass balance
+                    solver.Add(production == consumption)
+                elif has_production and not has_consumption:
+                    # Only produced, not consumed - goes to output sinks (no constraint needed)
+                    pass
+                # Items only consumed come from Input nodes (infinite supply) - no constraint
+        
+        # Build global all_items set for results calculation
         all_items = set(list(item_production.keys()) + list(item_consumption.keys()) + 
                        list(input_limits.keys()) + list(output_demands.keys()))
-        
-        for item_id in all_items:
-            production = item_production.get(item_id, 0)
-            consumption = item_consumption.get(item_id, 0)
-            
-            # Input limit constraints
-            if item_id in input_limits:
-                # Total consumption cannot exceed input limit
-                solver.Add(consumption <= input_limits[item_id])
-            
-            # Output demand constraints
-            if item_id in output_demands:
-                # Production must meet demand
-                solver.Add(production >= output_demands[item_id])
-            
-            # Flow balance constraints:
-            # - Items both produced AND consumed (intermediate): strict equality
-            #   (everything produced must be consumed, everything consumed must be produced)
-            # - Items only produced (final outputs/byproducts): no constraint (goes to sinks)
-            # - Items only consumed (from external Input nodes): no constraint (infinite supply)
-            has_production = item_id in item_production
-            has_consumption = item_id in item_consumption
-            
-            if has_production and has_consumption:
-                # Intermediate item: strict mass balance
-                solver.Add(production == consumption)
-            elif has_production and not has_consumption:
-                # Only produced, not consumed - goes to output sinks (no constraint needed)
-                pass
-            # Items only consumed come from Input nodes (infinite supply) - no constraint
         
         # Define objective based on constraint mode
         objective = solver.Objective()
@@ -617,10 +687,13 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
         
         elif has_input_constraints and not has_output_demands:
             # Input-constrained: Maximize inputrecipe utilization, minimize everything else
-            # Force using 100% of limited inputs from Input nodes (if any)
-            for item_id, limit in input_limits.items():
-                if item_id in item_consumption:
-                    solver.Add(item_consumption[item_id] == limit)
+            # Force using 100% of limited inputs from Input nodes (if any) - PER COMPONENT
+            for comp_idx in range(len(components)):
+                c_limits = comp_input_limits.get(comp_idx, {})
+                c_consumption = comp_item_consumption.get(comp_idx, {})
+                for item_id, limit in c_limits.items():
+                    if item_id in c_consumption:
+                        solver.Add(c_consumption[item_id] == limit)
             
             # Maximize inputrecipe node utilization with high positive weight
             # Minimize all other recipes with small negative weight to prevent unbounded solutions
@@ -645,11 +718,14 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
         
         elif has_input_constraints and has_output_demands:
             # Both constrained: Try to meet demands while respecting limits
-            # Prioritize meeting demands
-            for item_id, demand in output_demands.items():
-                if item_id in item_production:
-                    # Try to meet demand exactly
-                    solver.Add(item_production[item_id] >= demand)
+            # Prioritize meeting demands - PER COMPONENT
+            for comp_idx in range(len(components)):
+                c_demands = comp_output_demands.get(comp_idx, {})
+                c_production = comp_item_production.get(comp_idx, {})
+                for item_id, demand in c_demands.items():
+                    if item_id in c_production:
+                        # Try to meet demand exactly
+                        solver.Add(c_production[item_id] >= demand)
             
             # Minimize total machine count (efficiency)
             for recipe_node_id, var in recipe_vars.items():
@@ -720,13 +796,36 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                 if total_consumption >= limit * 0.95:  # Within 5% of limit
                     bottlenecks.append(item_id)
         
-        # Add warnings about unmet demands
-        for item_id, demand in output_demands.items():
-            if item_id in flows_per_second:
-                actual = flows_per_second[item_id]
+        # Build per-component flows_per_second for node-level calculations
+        comp_flows_per_second: Dict[int, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        for recipe in recipes:
+            comp_idx = _recipe_component(recipe)
+            machine_count = recipe_vars[recipe.node_id].solution_value()
+            if machine_count < 0.001:
+                continue
+            for output in recipe.outputs:
+                out_item_id = output.get("itemId") or output.get("name")
+                if not out_item_id:
+                    continue
+                out_item_id = name_to_id.get(out_item_id, out_item_id)
+                amount = float(output.get("amountPerCycle", output.get("amount", 0)))
+                probability = float(output.get("probability", 1.0))
+                rate = machine_count * amount * probability / recipe.time_seconds
+                if rate > 0.001:
+                    comp_flows_per_second[comp_idx][out_item_id] += rate
+        for ci in comp_flows_per_second:
+            for iid in comp_flows_per_second[ci]:
+                comp_flows_per_second[ci][iid] = round(comp_flows_per_second[ci][iid], 3)
+
+        # Add warnings about unmet demands (per-component)
+        for comp_idx in range(len(components)):
+            c_demands = comp_output_demands.get(comp_idx, {})
+            comp_fps = comp_flows_per_second.get(comp_idx, {})
+            for item_id, demand in c_demands.items():
+                actual = comp_fps.get(item_id, 0)
                 if actual < demand * 0.95:  # More than 5% short
                     warnings.append(f"Demand for {item_id} ({demand}/s) not fully met (producing {actual}/s)")
-        
+
         # Calculate detailed node flows
         from app.api.models import NodeFlowData, EdgeFlowData
         node_flows: Dict[str, NodeFlowData] = {}
@@ -787,18 +886,22 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                 existing.totalInput = round(existing.totalInput + node_data.totalInput, 3)
                 existing.totalOutput = round(existing.totalOutput + node_data.totalOutput, 3)
         
-        # Process input nodes
+        # Process input nodes (scoped to same connected component)
         for node in input_nodes:
             if node.data:
                 node_data = NodeFlowData()
                 items_list = node.data.get("items", [])
+                node_comp = node_to_component.get(node.id, 0)
                 
                 for item_entry in items_list:
                     item_id = item_entry.get("itemId")
                     if item_id and item_id in item_consumption:
                         # Calculate how much is being consumed from this input
+                        # Only count recipes in the same connected component
                         consumed = 0
                         for recipe in recipes:
+                            if _recipe_component(recipe) != node_comp:
+                                continue
                             machine_count = recipe_vars[recipe.node_id].solution_value()
                             for input_item in recipe.inputs:
                                 in_item_id = input_item.get("itemId") or input_item.get("refId") or input_item.get("name")
@@ -817,16 +920,18 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                 if node_data.totalOutput > 0:
                     node_flows[node.id] = node_data
         
-        # Process output nodes
+        # Process output nodes (scoped to same connected component)
         for node in output_nodes:
             if node.data:
                 node_data = NodeFlowData()
                 items_list = node.data.get("items", [])
+                node_comp = node_to_component.get(node.id, 0)
+                comp_fps = comp_flows_per_second.get(node_comp, {})
                 
                 for item_entry in items_list:
                     item_id = item_entry.get("itemId")
-                    if item_id and item_id in flows_per_second:
-                        rate = flows_per_second[item_id]
+                    if item_id and item_id in comp_fps:
+                        rate = comp_fps[item_id]
                         if rate > 0.001:
                             node_data.inputFlows[item_id] = round(rate, 3)
                             node_data.totalInput += rate
@@ -835,16 +940,18 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                 if node_data.totalInput > 0:
                     node_flows[node.id] = node_data
         
-        # Process requester nodes
+        # Process requester nodes (scoped to same connected component)
         for node in requester_nodes:
             if node.data:
                 node_data = NodeFlowData()
                 requests = node.data.get("requests", [])
+                node_comp = node_to_component.get(node.id, 0)
+                comp_fps = comp_flows_per_second.get(node_comp, {})
                 
                 for request in requests:
                     item_id = request.get("itemId")
-                    if item_id and item_id in flows_per_second:
-                        rate = flows_per_second[item_id]
+                    if item_id and item_id in comp_fps:
+                        rate = comp_fps[item_id]
                         if rate > 0.001:
                             node_data.inputFlows[item_id] = round(rate, 3)
                             node_data.totalInput += rate
