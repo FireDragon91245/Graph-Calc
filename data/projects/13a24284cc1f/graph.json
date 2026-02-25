@@ -204,23 +204,6 @@
       }
     },
     {
-      "id": "requester-1771956782807",
-      "type": "requester",
-      "position": {
-        "x": 2287.6609932865545,
-        "y": 502.9402434398669
-      },
-      "data": {
-        "requests": [
-          {
-            "id": "req1",
-            "itemId": "reinforced_plate",
-            "targetPerSecond": 1
-          }
-        ]
-      }
-    },
-    {
       "id": "recipe-1771957628036",
       "type": "recipe",
       "position": {
@@ -362,15 +345,15 @@
       "id": "requester-1771958351386",
       "type": "requester",
       "position": {
-        "x": 2512.469046510342,
-        "y": -65.28345949674483
+        "x": 2628.9103514174253,
+        "y": -79.41498602250378
       },
       "data": {
         "requests": [
           {
             "id": "req1",
             "itemId": "modular_frame",
-            "targetPerSecond": 0.7
+            "targetPerSecond": 0.5
           }
         ]
       }
@@ -379,8 +362,8 @@
       "id": "requester-1771958356176",
       "type": "requester",
       "position": {
-        "x": 2651.8583728039102,
-        "y": 185.4615855676633
+        "x": 2663.418776190783,
+        "y": 163.52357672473434
       },
       "data": {
         "requests": [
@@ -388,6 +371,57 @@
             "id": "req1",
             "itemId": "rotor",
             "targetPerSecond": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "requester-1771958651808",
+      "type": "requester",
+      "position": {
+        "x": 2630.775641796748,
+        "y": 506.83587742105044
+      },
+      "data": {
+        "requests": [
+          {
+            "id": "req1",
+            "itemId": "reinforced_plate",
+            "targetPerSecond": 0.1
+          }
+        ]
+      }
+    },
+    {
+      "id": "requester-1771960017001",
+      "type": "requester",
+      "position": {
+        "x": 1741.0558977873156,
+        "y": -279.9781251372182
+      },
+      "data": {
+        "requests": [
+          {
+            "id": "req1",
+            "itemId": "iron_plate",
+            "targetPerSecond": 0.5
+          }
+        ]
+      }
+    },
+    {
+      "id": "requester-1771960048469",
+      "type": "requester",
+      "position": {
+        "x": 1739.9556508826245,
+        "y": -461.6185260548036
+      },
+      "data": {
+        "requests": [
+          {
+            "id": "req1",
+            "itemId": "iron_rod",
+            "targetPerSecond": 0.5
           }
         ]
       }
@@ -500,9 +534,23 @@
       "targetHandle": "input-req1"
     },
     {
-      "id": "reactflow__edge-recipe-1771956764417output-o1-requester-1771956782807input-req1",
+      "id": "reactflow__edge-recipe-1771956764417output-o1-requester-1771958651808input-req1",
       "source": "recipe-1771956764417",
-      "target": "requester-1771956782807",
+      "target": "requester-1771958651808",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-req1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771958302221output-o1-requester-1771960048469input-req1",
+      "source": "recipe-1771958302221",
+      "target": "requester-1771960048469",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-req1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1771956754288output-o1-requester-1771960017001input-req1",
+      "source": "recipe-1771956754288",
+      "target": "requester-1771960017001",
       "sourceHandle": "output-o1",
       "targetHandle": "input-req1"
     }

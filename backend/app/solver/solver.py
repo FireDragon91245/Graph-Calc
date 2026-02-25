@@ -651,24 +651,31 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                     # Total consumption cannot exceed input limit
                     solver.Add(consumption <= c_limits[item_id])
                 
-                # Output demand constraints
-                if item_id in c_demands:
-                    # Production must meet demand
-                    solver.Add(production >= c_demands[item_id])
-                
                 # Flow balance constraints:
-                # - Items both produced AND consumed (intermediate): strict equality
-                #   (everything produced must be consumed, everything consumed must be produced)
-                # - Items only produced (final outputs/byproducts): no constraint (goes to sinks)
-                # - Items only consumed (from external Input nodes): no constraint (infinite supply)
+                # Items can be intermediate (produced & consumed by recipes),
+                # demanded externally (by requesters), or both.
+                # When an item is both intermediate AND demanded, the net surplus
+                # (production - consumption) must meet the external demand.
                 has_production = item_id in c_production
                 has_consumption = item_id in c_consumption
+                has_demand = item_id in c_demands
                 
-                if has_production and has_consumption:
-                    # Intermediate item: strict mass balance
+                if has_production and has_consumption and has_demand:
+                    # Intermediate item WITH external demand (e.g. requester):
+                    # Net surplus must satisfy the demand. Minimization objective
+                    # will push this to equality (produce only what's needed).
+                    solver.Add(production >= consumption + c_demands[item_id])
+                elif has_production and has_consumption:
+                    # Pure intermediate item: strict mass balance (no waste)
                     solver.Add(production == consumption)
+                elif has_production and not has_consumption and has_demand:
+                    # Final output with demand: production must meet demand
+                    solver.Add(production >= c_demands[item_id])
                 elif has_production and not has_consumption:
                     # Only produced, not consumed - goes to output sinks (no constraint needed)
+                    pass
+                elif not has_production and has_demand:
+                    # Demanded but not produced by any recipe in this component - warn later
                     pass
                 # Items only consumed come from Input nodes (infinite supply) - no constraint
         
@@ -718,9 +725,9 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
         
         elif has_input_constraints and has_output_demands:
             # Both constrained: Meet demands while respecting input limits.
-            # Input limits are upper bounds only (already added as <= in per-component loop).
-            # Demands are hard lower bounds (already added as >= in per-component loop).
-            # Intermediate items have production == consumption (already added).
+            # Input limits are upper bounds (consumption <= limit).
+            # Demands: for intermediate items, net surplus >= demand;
+            #          for final outputs, production >= demand.
             # Minimize total machine count - solver uses just enough input to satisfy demands.
             for recipe_node_id, var in recipe_vars.items():
                 objective.SetCoefficient(var, 1)
@@ -792,6 +799,7 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
         
         # Build per-component flows_per_second for node-level calculations
         comp_flows_per_second: Dict[int, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        comp_consumption_solved: Dict[int, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
         for recipe in recipes:
             comp_idx = _recipe_component(recipe)
             machine_count = recipe_vars[recipe.node_id].solution_value()
@@ -807,9 +815,31 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                 rate = machine_count * amount * probability / recipe.time_seconds
                 if rate > 0.001:
                     comp_flows_per_second[comp_idx][out_item_id] += rate
+            for inp in recipe.inputs:
+                if inp.get("isMixed"):
+                    continue
+                in_item_id = inp.get("itemId") or inp.get("refId") or inp.get("name")
+                if not in_item_id:
+                    continue
+                in_item_id = name_to_id.get(in_item_id, in_item_id)
+                amount = float(inp.get("amountPerCycle", inp.get("amount", 0)))
+                rate = machine_count * amount / recipe.time_seconds
+                if rate > 0.001:
+                    comp_consumption_solved[comp_idx][in_item_id] += rate
         for ci in comp_flows_per_second:
             for iid in comp_flows_per_second[ci]:
                 comp_flows_per_second[ci][iid] = round(comp_flows_per_second[ci][iid], 3)
+        for ci in comp_consumption_solved:
+            for iid in comp_consumption_solved[ci]:
+                comp_consumption_solved[ci][iid] = round(comp_consumption_solved[ci][iid], 3)
+        
+        # Net production per component = production - internal recipe consumption
+        # Used for requester/output nodes that consume the net surplus
+        comp_net_production: Dict[int, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        for ci in comp_flows_per_second:
+            for iid in comp_flows_per_second[ci]:
+                net = comp_flows_per_second[ci][iid] - comp_consumption_solved[ci].get(iid, 0)
+                comp_net_production[ci][iid] = round(max(net, 0), 3)
 
         # Add warnings about unmet demands (per-component)
         for comp_idx in range(len(components)):
@@ -935,17 +965,30 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                     node_flows[node.id] = node_data
         
         # Process requester nodes (scoped to same connected component)
+        # Use net production (production - internal consumption) so that items
+        # which are both intermediate AND demanded show the correct surplus flow
         for node in requester_nodes:
             if node.data:
                 node_data = NodeFlowData()
                 requests = node.data.get("requests", [])
                 node_comp = node_to_component.get(node.id, 0)
-                comp_fps = comp_flows_per_second.get(node_comp, {})
+                comp_net = comp_net_production.get(node_comp, {})
                 
                 for request in requests:
                     item_id = request.get("itemId")
-                    if item_id and item_id in comp_fps:
-                        rate = comp_fps[item_id]
+                    target = request.get("targetPerSecond")
+                    if item_id:
+                        # Use the net production available for this item.
+                        # For items only produced (not consumed internally), this
+                        # equals total production. For intermediate items with
+                        # external demand, this is the surplus after recipes.
+                        net = comp_net.get(item_id, 0)
+                        # Cap at demand if specified (requesters shouldn't show
+                        # more than demanded; surplus stays in the system)
+                        if target is not None and float(target) > 0:
+                            rate = min(net, float(target))
+                        else:
+                            rate = net
                         if rate > 0.001:
                             node_data.inputFlows[item_id] = round(rate, 3)
                             node_data.totalInput += rate
