@@ -15,7 +15,7 @@ import ReactFlow, {
   useReactFlow
 } from "reactflow";
 import { solveGraph, SolveResponse } from "./api/solve";
-import { loadGraph, saveGraph, loadStore, saveStore, listProjects } from "./api/persistence";
+import { loadGraph, saveGraph, loadStore, saveStore, listProjects, listGraphs } from "./api/persistence";
 import ContextMenu from "./editor/ContextMenu";
 import CommandPalette, { CommandAction } from "./editor/CommandPalette";
 import { useGraphStore } from "./store/graphStore";
@@ -37,6 +37,7 @@ import RecipeTagMode from "./components/RecipeTagMode";
 import RecipeGenerator from "./components/RecipeGenerator";
 import ItemGenerator from "./components/ItemGenerator";
 import ProjectSelector from "./components/ProjectSelector";
+import GraphSelector from "./components/GraphSelector";
 import { NodeType } from "./components/NodeTypeSelector";
 import EdgeWithTooltip from "./edges/EdgeWithTooltip";
 
@@ -152,6 +153,8 @@ function AppContent() {
   
   const activeProjectId = useGraphStore((state) => state.activeProjectId);
   const setActiveProjectId = useGraphStore((state) => state.setActiveProjectId);
+  const activeGraphId = useGraphStore((state) => state.activeGraphId);
+  const setActiveGraphId = useGraphStore((state) => state.setActiveGraphId);
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
   const tags = useGraphStore((state) => state.tags);
@@ -208,8 +211,18 @@ function AppContent() {
           saveStore(defaultData, pid ?? undefined).catch(console.error);
         }
 
+        // Fetch active graph for this project
+        let gid: string | undefined;
+        if (pid) {
+          const graphsRes = await listGraphs(pid);
+          gid = graphsRes.activeGraphId ?? undefined;
+          if (gid) {
+            setActiveGraphId(gid);
+          }
+        }
+
         // Load graph data (nodes and edges)
-        const graphData = await loadGraph(pid ?? undefined);
+        const graphData = await loadGraph(pid ?? undefined, gid);
         if (graphData.nodes.length > 0 || graphData.edges.length > 0) {
           const sanitizedNodes = graphData.nodes.map((node) => ({
             ...node,
@@ -227,7 +240,7 @@ function AppContent() {
     };
 
     loadData();
-  }, [loadStoreData, setNodes, setEdges, setActiveProjectId]);
+  }, [loadStoreData, setNodes, setEdges, setActiveProjectId, setActiveGraphId]);
 
   // Auto-save graph (nodes and edges) with debouncing
   const saveTimeoutRef = useRef<number | null>(null);
@@ -256,7 +269,7 @@ function AppContent() {
         }))
       };
 
-      saveGraph(graphData, activeProjectId ?? undefined).catch((error) => {
+      saveGraph(graphData, activeProjectId ?? undefined, activeGraphId ?? undefined).catch((error) => {
         console.error("Error auto-saving graph:", error);
       });
     }, 500); // 500ms debounce
@@ -266,7 +279,7 @@ function AppContent() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [nodes, edges, isLoaded, activeProjectId]);
+  }, [nodes, edges, isLoaded, activeProjectId, activeGraphId]);
 
   // Handle project change (reload all data for new project)
   const handleProjectChange = useCallback(async (newProjectId: string) => {
@@ -278,7 +291,12 @@ function AppContent() {
       const storeData = await loadStore(newProjectId);
       loadStoreData(storeData);
 
-      const graphData = await loadGraph(newProjectId);
+      // Fetch active graph for the new project
+      const graphsRes = await listGraphs(newProjectId);
+      const gid = graphsRes.activeGraphId ?? undefined;
+      setActiveGraphId(gid ?? null);
+
+      const graphData = await loadGraph(newProjectId, gid);
       if (graphData.nodes.length > 0 || graphData.edges.length > 0) {
         const sanitizedNodes = graphData.nodes.map((node: any) => ({
           ...node,
@@ -295,7 +313,33 @@ function AppContent() {
     } finally {
       setIsLoaded(true);
     }
-  }, [setActiveProjectId, loadStoreData, setNodes, setEdges]);
+  }, [setActiveProjectId, setActiveGraphId, loadStoreData, setNodes, setEdges]);
+
+  // Handle graph change (reload only graph data, store is shared)
+  const handleGraphChange = useCallback(async (newGraphId: string) => {
+    setIsLoaded(false);
+    setSolveResult(null);
+    setSolveError(null);
+    setActiveGraphId(newGraphId);
+    try {
+      const graphData = await loadGraph(activeProjectId ?? undefined, newGraphId);
+      if (graphData.nodes.length > 0 || graphData.edges.length > 0) {
+        const sanitizedNodes = graphData.nodes.map((node: any) => ({
+          ...node,
+          data: stripSolveData(node.data)
+        }));
+        setNodes(sanitizedNodes);
+        setEdges(graphData.edges);
+      } else {
+        setNodes([]);
+        setEdges([]);
+      }
+    } catch (error) {
+      console.error("Error loading graph data:", error);
+    } finally {
+      setIsLoaded(true);
+    }
+  }, [activeProjectId, setActiveGraphId, setNodes, setEdges]);
 
   // Inject solve results into node and edge data
   useEffect(() => {
@@ -1032,6 +1076,11 @@ function AppContent() {
         <ProjectSelector
           activeProjectId={activeProjectId}
           onProjectChange={handleProjectChange}
+        />
+        <GraphSelector
+          activeProjectId={activeProjectId}
+          activeGraphId={activeGraphId}
+          onGraphChange={handleGraphChange}
         />
         <ModeSelector
           currentMode={appMode}

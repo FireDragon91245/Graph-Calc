@@ -1,0 +1,13 @@
+{
+  "graphs": [
+    {
+      "id": "main",
+      "name": "Iron"
+    },
+    {
+      "id": "037cb32dfeb8",
+      "name": "Oil"
+    }
+  ],
+  "activeGraphId": "037cb32dfeb8"
+}

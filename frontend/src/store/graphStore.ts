@@ -49,6 +49,8 @@ type Recipe = {
 type GraphStore = {
   activeProjectId: string | null;
   setActiveProjectId: (id: string | null) => void;
+  activeGraphId: string | null;
+  setActiveGraphId: (id: string | null) => void;
   categories: Category[];
   items: Item[];
   tags: Tag[];
@@ -102,6 +104,8 @@ const debouncedSave = (state: GraphStore) => {
 export const useGraphStore = create<GraphStore>((set, get) => ({
   activeProjectId: null,
   setActiveProjectId: (id) => set({ activeProjectId: id }),
+  activeGraphId: null,
+  setActiveGraphId: (id) => set({ activeGraphId: id }),
   categories: [
     { id: "ore", name: "Ore" },
     { id: "ingot", name: "Ingot" }

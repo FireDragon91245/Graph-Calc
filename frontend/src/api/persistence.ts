@@ -70,6 +70,18 @@ export interface ProjectsResponse {
   activeProjectId: string | null;
 }
 
+// ── Graph types ────────────────────────────────────────────────
+
+export interface GraphInfo {
+  id: string;
+  name: string;
+}
+
+export interface GraphsResponse {
+  graphs: GraphInfo[];
+  activeGraphId: string | null;
+}
+
 // ── Project API ────────────────────────────────────────────────
 
 export async function listProjects(): Promise<ProjectsResponse> {
@@ -133,22 +145,88 @@ export async function deleteProject(projectId: string): Promise<void> {
   }
 }
 
-// ── Graph / Store (project-scoped) ─────────────────────────────
+// ── Graph management API (per-project) ─────────────────────────
 
-function qs(projectId?: string): string {
-  return projectId ? `?project_id=${encodeURIComponent(projectId)}` : "";
+export async function listGraphs(projectId: string): Promise<GraphsResponse> {
+  const response = await fetch(`${API_BASE}/projects/${projectId}/graphs`);
+  if (!response.ok) {
+    throw new Error(`Failed to list graphs: ${response.statusText}`);
+  }
+  return response.json();
 }
 
-export async function loadGraph(projectId?: string): Promise<GraphData> {
-  const response = await fetch(`${API_BASE}/graph${qs(projectId)}`);
+export async function createGraph(projectId: string, name: string): Promise<GraphInfo> {
+  const response = await fetch(`${API_BASE}/projects/${projectId}/graphs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name })
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to create graph: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function activateGraph(projectId: string, graphId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/projects/${projectId}/graphs/${graphId}/activate`, {
+    method: "PUT"
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to activate graph: ${response.statusText}`);
+  }
+}
+
+export async function renameGraph(projectId: string, graphId: string, name: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/projects/${projectId}/graphs/${graphId}/rename`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name })
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to rename graph: ${response.statusText}`);
+  }
+}
+
+export async function copyGraph(projectId: string, graphId: string, name: string): Promise<GraphInfo> {
+  const response = await fetch(`${API_BASE}/projects/${projectId}/graphs/${graphId}/copy`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name })
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to copy graph: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function deleteGraph(projectId: string, graphId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/projects/${projectId}/graphs/${graphId}`, {
+    method: "DELETE"
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to delete graph: ${response.statusText}`);
+  }
+}
+
+// ── Graph / Store (project-scoped) ─────────────────────────────
+
+function qs(projectId?: string, graphId?: string): string {
+  const params: string[] = [];
+  if (projectId) params.push(`project_id=${encodeURIComponent(projectId)}`);
+  if (graphId) params.push(`graph_id=${encodeURIComponent(graphId)}`);
+  return params.length > 0 ? `?${params.join("&")}` : "";
+}
+
+export async function loadGraph(projectId?: string, graphId?: string): Promise<GraphData> {
+  const response = await fetch(`${API_BASE}/graph${qs(projectId, graphId)}`);
   if (!response.ok) {
     throw new Error(`Failed to load graph: ${response.statusText}`);
   }
   return response.json();
 }
 
-export async function saveGraph(graph: GraphData, projectId?: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/graph${qs(projectId)}`, {
+export async function saveGraph(graph: GraphData, projectId?: string, graphId?: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/graph${qs(projectId, graphId)}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"

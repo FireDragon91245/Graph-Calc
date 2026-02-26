@@ -7,7 +7,9 @@ from app.solver.solver import solve_graph
 from app.persistence import (
     load_graph, save_graph, load_store, save_store,
     list_projects, get_active_project_id, set_active_project,
-    create_project, rename_project, copy_project, delete_project
+    create_project, rename_project, copy_project, delete_project,
+    list_graphs, get_active_graph_id, set_active_graph,
+    create_graph, rename_graph, copy_graph, delete_graph
 )
 
 app = FastAPI(title="GraphCalc Solver")
@@ -91,6 +93,65 @@ def api_delete_project(project_id: str):
     return {"status": "ok"}
 
 
+# ── Graph management (per-project) ─────────────────────────────
+
+class GraphCreate(BaseModel):
+    name: str
+
+class GraphRename(BaseModel):
+    name: str
+
+class GraphCopy(BaseModel):
+    name: str
+
+
+@app.get("/projects/{project_id}/graphs")
+def api_list_graphs(project_id: str):
+    """List all graphs in a project with active graph id"""
+    return list_graphs(project_id)
+
+
+@app.post("/projects/{project_id}/graphs")
+def api_create_graph(project_id: str, body: GraphCreate):
+    """Create a new graph in a project"""
+    graph = create_graph(project_id, body.name)
+    return graph
+
+
+@app.put("/projects/{project_id}/graphs/{graph_id}/activate")
+def api_activate_graph(project_id: str, graph_id: str):
+    """Set the active graph for a project"""
+    if not set_active_graph(project_id, graph_id):
+        raise HTTPException(status_code=404, detail="Graph not found")
+    return {"status": "ok"}
+
+
+@app.put("/projects/{project_id}/graphs/{graph_id}/rename")
+def api_rename_graph(project_id: str, graph_id: str, body: GraphRename):
+    """Rename a graph"""
+    if not rename_graph(project_id, graph_id, body.name):
+        raise HTTPException(status_code=404, detail="Graph not found")
+    return {"status": "ok"}
+
+
+@app.post("/projects/{project_id}/graphs/{graph_id}/copy")
+def api_copy_graph(project_id: str, graph_id: str, body: GraphCopy):
+    """Copy a graph"""
+    try:
+        new_graph = copy_graph(project_id, graph_id, body.name)
+        return new_graph
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.delete("/projects/{project_id}/graphs/{graph_id}")
+def api_delete_graph(project_id: str, graph_id: str):
+    """Delete a graph"""
+    if not delete_graph(project_id, graph_id):
+        raise HTTPException(status_code=404, detail="Graph not found")
+    return {"status": "ok"}
+
+
 # ── Solver ──────────────────────────────────────────────────────
 
 @app.post("/solve", response_model=SolveResponse)
@@ -101,21 +162,30 @@ def solve(request: SolveRequest) -> SolveResponse:
     return solve_graph(request.graph, store_data=store_data)
 
 
-# ── Graph persistence (project-scoped) ──────────────────────────
+# ── Graph persistence (project-scoped, graph-scoped) ────────────
 
 @app.get("/graph")
-def get_graph(project_id: Optional[str] = Query(None)) -> GraphData:
-    """Load saved graph data for a project"""
+def get_graph(
+    project_id: Optional[str] = Query(None),
+    graph_id: Optional[str] = Query(None)
+) -> GraphData:
+    """Load saved graph data for a specific graph in a project"""
     pid = _resolve_project(project_id)
-    data = load_graph(pid)
+    gid = graph_id or get_active_graph_id(pid)
+    data = load_graph(pid, gid)
     return GraphData(**data)
 
 
 @app.post("/graph")
-def post_graph(graph: GraphData, project_id: Optional[str] = Query(None)):
-    """Save graph data for a project"""
+def post_graph(
+    graph: GraphData,
+    project_id: Optional[str] = Query(None),
+    graph_id: Optional[str] = Query(None)
+):
+    """Save graph data for a specific graph in a project"""
     pid = _resolve_project(project_id)
-    save_graph(pid, graph.dict())
+    gid = graph_id or get_active_graph_id(pid)
+    save_graph(pid, gid, graph.dict())
     return {"status": "ok"}
 
 

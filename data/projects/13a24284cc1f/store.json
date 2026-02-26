@@ -55,6 +55,46 @@
       "id": "modular_frame",
       "name": "Modular Frame",
       "categoryId": null
+    },
+    {
+      "id": "crude_oil",
+      "name": "Crude Oil",
+      "categoryId": null
+    },
+    {
+      "id": "heavy_oil_residue",
+      "name": "Heavy Oil Residue",
+      "categoryId": null
+    },
+    {
+      "id": "fuel",
+      "name": "Fuel",
+      "categoryId": null
+    },
+    {
+      "id": "polymer",
+      "name": "Polymer",
+      "categoryId": null
+    },
+    {
+      "id": "plastic",
+      "name": "Plastic",
+      "categoryId": null
+    },
+    {
+      "id": "rubber",
+      "name": "Rubber",
+      "categoryId": null
+    },
+    {
+      "id": "water",
+      "name": "Water",
+      "categoryId": null
+    },
+    {
+      "id": "energy",
+      "name": "Energy",
+      "categoryId": null
     }
   ],
   "tags": [],
@@ -269,6 +309,129 @@
           "id": "o1",
           "itemId": "modular_frame",
           "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "refine_crude_oil",
+      "name": "Refine Crude Oil",
+      "timeSeconds": 6.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crude_oil",
+          "amount": 6.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "fuel",
+          "amount": 4.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "polymer",
+          "amount": 3.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "refine_heavy_oil_residue",
+      "name": "Refine Heavy Oil Residue",
+      "timeSeconds": 6.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "heavy_oil_residue",
+          "amount": 6.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "fuel",
+          "amount": 4.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "refine_polymer_rubber",
+      "name": "Refine Polymer Rubber",
+      "timeSeconds": 6.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "polymer",
+          "amount": 4.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "water",
+          "amount": 4.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "rubber",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "refine_polymer_plastic",
+      "name": "Refine Polymer Plastic",
+      "timeSeconds": 6.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "polymer",
+          "amount": 6.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "water",
+          "amount": 2.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "plastic",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "burn_fuel",
+      "name": "Burn Fuel",
+      "timeSeconds": 3.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "fuel",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "energy",
+          "amount": 750.0,
           "probability": 1.0
         }
       ]
