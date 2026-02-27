@@ -291,6 +291,80 @@ def _extract_recipes_from_node(node: GraphNode, store_data: Optional[Dict] = Non
     return recipes
 
 
+def _solve_components_independently(
+    graph: Graph, store_data: Optional[Dict],
+    components: List[Set[str]], base_warnings: List[str]
+) -> SolveResponse:
+    """Solve each connected component of the graph independently.
+    
+    When a graph has multiple disconnected subgraphs, each is solved as its own
+    LP problem. This prevents infeasibility in one subgraph from blocking
+    solutions in others, and ensures each subgraph uses the correct objective
+    mode for its own constraint type.
+    """
+    from app.api.models import NodeFlowData, EdgeFlowData
+    
+    merged_machine_counts: Dict[str, float] = {}
+    merged_flows_per_second: Dict[str, float] = {}
+    merged_bottlenecks: List[str] = []
+    merged_warnings: List[str] = list(base_warnings)
+    merged_node_flows: Dict[str, NodeFlowData] = {}
+    merged_edge_flows: Dict[str, EdgeFlowData] = {}
+    any_ok = False
+    
+    for comp_idx, component in enumerate(components):
+        # Build sub-graph for this component
+        comp_nodes = [node for node in graph.nodes if node.id in component]
+        comp_edges = [edge for edge in graph.edges
+                      if edge.source in component and edge.target in component]
+        
+        if not comp_nodes:
+            continue
+        
+        sub_graph = Graph(nodes=comp_nodes, edges=comp_edges)
+        result = solve_graph(sub_graph, store_data=store_data)
+        
+        if result.status == "error":
+            # Describe the failed component for a useful warning
+            node_descriptions = []
+            for n in comp_nodes:
+                title = ""
+                if n.data:
+                    title = n.data.get("title", "") or n.data.get("recipeId", "") or ""
+                desc = f"{n.type}"
+                if title:
+                    desc += f"({title})"
+                node_descriptions.append(desc)
+            desc_str = ", ".join(node_descriptions[:6])
+            err_detail = result.warnings[0] if result.warnings else "unknown error"
+            merged_warnings.append(
+                f"Subgraph {comp_idx + 1} infeasible [{desc_str}]: {err_detail}"
+            )
+        else:
+            any_ok = True
+            # Merge machine counts (sum for same recipe names across components)
+            for k, v in result.machineCounts.items():
+                merged_machine_counts[k] = merged_machine_counts.get(k, 0) + v
+            # Merge flows per second (sum for same items)
+            for k, v in result.flowsPerSecond.items():
+                merged_flows_per_second[k] = merged_flows_per_second.get(k, 0) + v
+            merged_bottlenecks.extend(result.bottlenecks)
+            # Node and edge IDs are unique across components
+            merged_node_flows.update(result.nodeFlows)
+            merged_edge_flows.update(result.edgeFlows)
+            merged_warnings.extend(result.warnings)
+    
+    return SolveResponse(
+        status="ok" if any_ok else "error",
+        machineCounts=merged_machine_counts,
+        flowsPerSecond=merged_flows_per_second,
+        bottlenecks=merged_bottlenecks,
+        warnings=merged_warnings,
+        nodeFlows=merged_node_flows,
+        edgeFlows=merged_edge_flows,
+    )
+
+
 def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveResponse:
     """
     Solve the factory graph using LP optimization with node precedence.
@@ -371,6 +445,51 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                 edge_flow.is_input_to_recipe = True
             
             edge_flows.append(edge_flow)
+        
+        # === Find connected components ===
+        # Detect disconnected subgraphs early so we can solve them independently.
+        adjacency: Dict[str, Set[str]] = defaultdict(set)
+        all_graph_node_ids = {node.id for node in graph.nodes}
+        
+        for edge in graph.edges:
+            adjacency[edge.source].add(edge.target)
+            adjacency[edge.target].add(edge.source)
+        
+        # BFS to find connected components
+        visited_nodes: Set[str] = set()
+        components: List[Set[str]] = []
+        for node_id in all_graph_node_ids:
+            if node_id not in visited_nodes:
+                component: Set[str] = set()
+                queue = [node_id]
+                while queue:
+                    current = queue.pop(0)
+                    if current in visited_nodes:
+                        continue
+                    visited_nodes.add(current)
+                    component.add(current)
+                    for neighbor in adjacency.get(current, set()):
+                        if neighbor not in visited_nodes:
+                            queue.append(neighbor)
+                components.append(component)
+        
+        # If multiple disconnected subgraphs exist, solve each independently
+        # so that infeasibility in one subgraph doesn't block others.
+        if len(components) > 1:
+            return _solve_components_independently(graph, store_data, components, warnings)
+        
+        # --- Single connected component: solve directly ---
+        
+        # Map each node to its component index (all component 0 for single component)
+        node_to_component: Dict[str, int] = {}
+        for comp_idx, comp in enumerate(components):
+            for nid in comp:
+                node_to_component[nid] = comp_idx
+        
+        # Helper: get component index for a recipe (uses parent tag node for sub-recipes)
+        def _recipe_component(recipe: RecipeInstance) -> int:
+            original = recipe.parent_tag_node_id or recipe.node_id
+            return node_to_component.get(original, 0)
         
         # Create LP solver
         solver = pywraplp.Solver.CreateSolver("GLOP")
@@ -487,45 +606,6 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                             solver.Add(recipe_vars[source_node_id] * production_rate == total_outflow)
                             break
         
-        # === Find connected components ===
-        # Scope all flow balance constraints per connected subgraph so that
-        # disconnected nodes / separate graphs don't interfere with each other.
-        adjacency: Dict[str, Set[str]] = defaultdict(set)
-        all_graph_node_ids = {node.id for node in graph.nodes}
-        
-        for edge in graph.edges:
-            adjacency[edge.source].add(edge.target)
-            adjacency[edge.target].add(edge.source)
-        
-        # BFS to find connected components
-        visited_nodes: Set[str] = set()
-        components: List[Set[str]] = []
-        for node_id in all_graph_node_ids:
-            if node_id not in visited_nodes:
-                component: Set[str] = set()
-                queue = [node_id]
-                while queue:
-                    current = queue.pop(0)
-                    if current in visited_nodes:
-                        continue
-                    visited_nodes.add(current)
-                    component.add(current)
-                    for neighbor in adjacency.get(current, set()):
-                        if neighbor not in visited_nodes:
-                            queue.append(neighbor)
-                components.append(component)
-        
-        # Map each node to its component index
-        node_to_component: Dict[str, int] = {}
-        for comp_idx, component in enumerate(components):
-            for nid in component:
-                node_to_component[nid] = comp_idx
-        
-        # Helper: get component index for a recipe (uses parent tag node for sub-recipes)
-        def _recipe_component(recipe: RecipeInstance) -> int:
-            original = recipe.parent_tag_node_id or recipe.node_id
-            return node_to_component.get(original, 0)
-        
         # Track input limits and output demands PER COMPONENT
         # Also keep global aggregates for the objective mode decision
         comp_input_limits: Dict[int, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
@@ -563,6 +643,18 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                         if item_id not in output_demands:
                             output_demands[item_id] = 0
                         output_demands[item_id] += float(target)
+        
+        # Collect items that flow into output nodes (these are "maximize" sinks,
+        # NOT hard demands).  Output nodes receiving 0 is perfectly fine.
+        comp_output_sink_items: Dict[int, Set[str]] = defaultdict(set)
+        for node in output_nodes:
+            if node.data:
+                comp_idx = node_to_component.get(node.id, 0)
+                items_list = node.data.get("items", [])
+                for item_entry in items_list:
+                    item_id = item_entry.get("itemId")
+                    if item_id:
+                        comp_output_sink_items[comp_idx].add(item_id)
         
         # Build flow balance constraints for each item PER COMPONENT
         # Track production and consumption per (component, item) so disconnected
@@ -651,20 +743,27 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                     # Total consumption cannot exceed input limit
                     solver.Add(consumption <= c_limits[item_id])
                 
+                # Does this item flow into an output node (maximize sink)?
+                has_output_sink = item_id in comp_output_sink_items.get(comp_idx, set())
+                
                 # Flow balance constraints:
                 # Items can be intermediate (produced & consumed by recipes),
                 # demanded externally (by requesters), or both.
-                # When an item is both intermediate AND demanded, the net surplus
-                # (production - consumption) must meet the external demand.
+                # Output sinks (output nodes) are soft goals - they consume
+                # whatever surplus is available but never cause infeasibility.
+                # Requesters (demands) always have priority over output sinks.
                 has_production = item_id in c_production
                 has_consumption = item_id in c_consumption
                 has_demand = item_id in c_demands
                 
                 if has_production and has_consumption and has_demand:
                     # Intermediate item WITH external demand (e.g. requester):
-                    # Net surplus must satisfy the demand. Minimization objective
-                    # will push this to equality (produce only what's needed).
+                    # Net surplus must satisfy the demand.
                     solver.Add(production >= consumption + c_demands[item_id])
+                elif has_production and has_consumption and has_output_sink:
+                    # Intermediate item with output sink: allow surplus.
+                    # The surplus flows to the output node (maximized by objective).
+                    solver.Add(production >= consumption)
                 elif has_production and has_consumption:
                     # Pure intermediate item: strict mass balance (no waste)
                     solver.Add(production == consumption)
@@ -683,59 +782,127 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
         all_items = set(list(item_production.keys()) + list(item_consumption.keys()) + 
                        list(input_limits.keys()) + list(output_demands.keys()))
         
+        # Compute item depth (distance from raw inputs through recipe chain)
+        # Used to prioritize later-stage (more complex) output nodes over earlier ones.
+        # Deeper items get much higher weight so they consume ingredients first.
+        comp_item_depth: Dict[int, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        for comp_idx in range(len(components)):
+            # Items from input nodes start at depth 0
+            for node in input_nodes:
+                if node_to_component.get(node.id, 0) == comp_idx and node.data:
+                    for item_entry in node.data.get("items", []):
+                        iid = item_entry.get("itemId")
+                        if iid:
+                            comp_item_depth[comp_idx][iid] = 0
+            
+            # Iteratively propagate depths through recipes
+            changed = True
+            while changed:
+                changed = False
+                for recipe in recipes:
+                    if _recipe_component(recipe) != comp_idx:
+                        continue
+                    max_input_depth = -1
+                    for inp in recipe.inputs:
+                        iid = inp.get("itemId") or inp.get("refId") or inp.get("name")
+                        if iid:
+                            iid = name_to_id.get(iid, iid)
+                            if iid in comp_item_depth[comp_idx]:
+                                max_input_depth = max(max_input_depth, comp_item_depth[comp_idx][iid])
+                    if max_input_depth < 0:
+                        max_input_depth = 0
+                    new_depth = max_input_depth + 1
+                    for out in recipe.outputs:
+                        iid = out.get("itemId") or out.get("name")
+                        if iid:
+                            iid = name_to_id.get(iid, iid)
+                            if iid not in comp_item_depth[comp_idx] or comp_item_depth[comp_idx][iid] < new_depth:
+                                comp_item_depth[comp_idx][iid] = new_depth
+                                changed = True
+        
+        # Create surplus variables for output-sink items.
+        # These represent the net flow going to output nodes (production - consumption - demand).
+        # Surplus is always >= 0 (output nodes can receive 0 without causing infeasibility).
+        output_surplus_vars: List[Tuple] = []  # [(var, depth_weight), ...]
+        has_output_sinks = False
+        for comp_idx in range(len(components)):
+            c_sinks = comp_output_sink_items.get(comp_idx, set())
+            c_production = comp_item_production.get(comp_idx, {})
+            c_consumption = comp_item_consumption.get(comp_idx, {})
+            c_demands = comp_output_demands.get(comp_idx, {})
+            
+            for item_id in c_sinks:
+                if item_id in c_production:
+                    has_output_sinks = True
+                    surplus = solver.NumVar(0, solver.infinity(), f"surplus_{comp_idx}_{item_id}")
+                    prod = c_production.get(item_id, 0)
+                    demand = c_demands.get(item_id, 0)
+                    has_cons = item_id in c_consumption
+                    has_dem = demand > 0
+                    
+                    # surplus <= net production available for the output node
+                    if has_cons and has_dem:
+                        solver.Add(surplus <= prod - c_consumption[item_id] - demand)
+                    elif has_cons:
+                        solver.Add(surplus <= prod - c_consumption[item_id])
+                    elif has_dem:
+                        solver.Add(surplus <= prod - demand)
+                    else:
+                        solver.Add(surplus <= prod)
+                    
+                    # Depth-weighted priority: deeper (more complex) items get
+                    # exponentially higher weight so they always take precedence.
+                    depth = comp_item_depth.get(comp_idx, {}).get(item_id, 0)
+                    weight = 1000.0 ** max(depth, 1)
+                    output_surplus_vars.append((surplus, weight))
+        
         # Define objective based on constraint mode
         objective = solver.Objective()
         
         if has_output_demands and not has_input_constraints:
-            # Output-constrained: Minimize total machine count (minimize input usage)
+            # Output-constrained (no input limits): Minimize total machine count.
+            # Output sinks get whatever surplus arises from meeting demands.
             for recipe_node_id, var in recipe_vars.items():
                 objective.SetCoefficient(var, 1)
             objective.SetMinimization()
         
         elif has_input_constraints and not has_output_demands:
-            # Input-constrained: Maximize inputrecipe utilization, minimize everything else
-            # Force using 100% of limited inputs from Input nodes (if any) - PER COMPONENT
-            for comp_idx in range(len(components)):
-                c_limits = comp_input_limits.get(comp_idx, {})
-                c_consumption = comp_item_consumption.get(comp_idx, {})
-                for item_id, limit in c_limits.items():
-                    if item_id in c_consumption:
-                        solver.Add(c_consumption[item_id] == limit)
-            
-            # Maximize inputrecipe node utilization with high positive weight
-            # Minimize all other recipes with small negative weight to prevent unbounded solutions
-            # (recipes whose inputs come from infinite sources would otherwise go to infinity)
+            # Input-constrained: Maximize throughput within input upper bounds.
             has_inputrecipe_vars = False
             for recipe in recipes:
                 if recipe.max_machines is not None:
-                    objective.SetCoefficient(recipe_vars[recipe.node_id], 10000)  # Very high weight to maximize
+                    objective.SetCoefficient(recipe_vars[recipe.node_id], 10000)
                     has_inputrecipe_vars = True
                 else:
-                    # Small negative weight = minimize downstream recipes
-                    # This ensures recipes only run as much as needed to process inputrecipe output
-                    objective.SetCoefficient(recipe_vars[recipe.node_id], -0.001)
+                    objective.SetCoefficient(recipe_vars[recipe.node_id], 1)
             
-            # If there are no inputrecipe vars, fall back to minimizing total machines
-            if not has_inputrecipe_vars:
+            # Add depth-weighted surplus terms to prioritize deeper output sinks
+            for surplus_var, weight in output_surplus_vars:
+                objective.SetCoefficient(surplus_var, weight)
+            
+            objective.SetMaximization()
+        
+        elif has_input_constraints and has_output_demands:
+            # Both constrained: Meet demands (hard constraints already in place),
+            # then maximize output-sink surplus within input limits.
+            # Demands always have priority over output nodes.
+            if has_output_sinks:
+                # Maximize depth-weighted surplus going to output nodes.
+                # Small recipe penalty prevents unnecessary machine usage when
+                # surplus is zero (tie-breaking towards fewer machines).
+                for recipe_node_id, var in recipe_vars.items():
+                    objective.SetCoefficient(var, -0.001)
+                for surplus_var, weight in output_surplus_vars:
+                    objective.SetCoefficient(surplus_var, weight)
+                objective.SetMaximization()
+            else:
+                # No output sinks: just minimize machines to meet demands
                 for recipe_node_id, var in recipe_vars.items():
                     objective.SetCoefficient(var, 1)
                 objective.SetMinimization()
-            else:
-                objective.SetMaximization()
-        
-        elif has_input_constraints and has_output_demands:
-            # Both constrained: Meet demands while respecting input limits.
-            # Input limits are upper bounds (consumption <= limit).
-            # Demands: for intermediate items, net surplus >= demand;
-            #          for final outputs, production >= demand.
-            # Minimize total machine count - solver uses just enough input to satisfy demands.
-            for recipe_node_id, var in recipe_vars.items():
-                objective.SetCoefficient(var, 1)
-            objective.SetMinimization()
         
         else:
             # No constraints: Just balance the system
-            # Minimize total machines
             for recipe_node_id, var in recipe_vars.items():
                 objective.SetCoefficient(var, 1)
             objective.SetMinimization()
@@ -945,21 +1112,58 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                     node_flows[node.id] = node_data
         
         # Process output nodes (scoped to same connected component)
+        # Output nodes show the NET surplus available (production - internal recipe consumption - demands).
+        # When multiple output nodes consume the same item, they must SPLIT the
+        # available surplus — not each independently read the full pool.
+        # Deeper items (more processing) get priority: the deepest output node
+        # gets its fill first, then the next-deepest, etc.
+        
+        # Step 1: Group output nodes by (component, item_id) and sort by depth (deepest first)
+        from collections import defaultdict as _dd
+        output_node_groups: Dict[Tuple[int, str], List[GraphNode]] = _dd(list)
         for node in output_nodes:
             if node.data:
-                node_data = NodeFlowData()
-                items_list = node.data.get("items", [])
                 node_comp = node_to_component.get(node.id, 0)
-                comp_fps = comp_flows_per_second.get(node_comp, {})
-                
+                items_list = node.data.get("items", [])
                 for item_entry in items_list:
                     item_id = item_entry.get("itemId")
-                    if item_id and item_id in comp_fps:
-                        rate = comp_fps[item_id]
-                        if rate > 0.001:
-                            node_data.inputFlows[item_id] = round(rate, 3)
-                            node_data.totalInput += rate
-                
+                    if item_id:
+                        output_node_groups[(node_comp, item_id)].append(node)
+        
+        # Step 2: For each (component, item), distribute the surplus pool
+        # Track remaining surplus per (component, item) after each allocation
+        remaining_surplus: Dict[Tuple[int, str], float] = {}
+        for (comp_idx_key, item_id_key), nodes_list in output_node_groups.items():
+            comp_net = comp_net_production.get(comp_idx_key, {})
+            available = comp_net.get(item_id_key, 0)
+            remaining_surplus[(comp_idx_key, item_id_key)] = available
+        
+        # Sort output nodes by item depth (deepest first) for priority allocation
+        all_output_allocations: List[Tuple[GraphNode, str, int, float]] = []  # (node, item_id, depth, comp_idx)
+        for (comp_idx_key, item_id_key), nodes_list in output_node_groups.items():
+            depth = comp_item_depth.get(comp_idx_key, {}).get(item_id_key, 0)
+            for n in nodes_list:
+                all_output_allocations.append((n, item_id_key, depth, comp_idx_key))
+        # Sort by depth descending (deepest items allocated first)
+        all_output_allocations.sort(key=lambda x: -x[2])
+        
+        # Step 3: Allocate surplus to output nodes in priority order
+        output_node_flows_map: Dict[str, Dict[str, float]] = _dd(lambda: _dd(float))  # node_id -> item_id -> rate
+        for (node, item_id_alloc, depth, comp_idx_key) in all_output_allocations:
+            key = (comp_idx_key, item_id_alloc)
+            avail = remaining_surplus.get(key, 0)
+            if avail > 0.001:
+                output_node_flows_map[node.id][item_id_alloc] += avail
+                remaining_surplus[key] = 0  # This output node takes all available surplus for this item
+        
+        # Step 4: Build NodeFlowData for output nodes
+        for node in output_nodes:
+            if node.id in output_node_flows_map:
+                node_data = NodeFlowData()
+                for item_id_alloc, rate in output_node_flows_map[node.id].items():
+                    if rate > 0.001:
+                        node_data.inputFlows[item_id_alloc] = round(rate, 3)
+                        node_data.totalInput += rate
                 node_data.totalInput = round(node_data.totalInput, 3)
                 if node_data.totalInput > 0:
                     node_flows[node.id] = node_data
@@ -1203,11 +1407,13 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                 elif target_rate > 0.001:
                     rate = target_rate
                 elif source_rate > 0.001 and not target_in_node_flows and \
-                     target_node_type not in ("recipe", "recipetag", "inputrecipe", "inputrecipetag"):
+                     target_node_type not in ("recipe", "recipetag", "inputrecipe", "inputrecipetag",
+                                              "output", "requester"):
                     # Target not yet computed (e.g. mixedoutput nodes) - use source
                     rate = source_rate
                 else:
-                    # Target IS in node_flows but has 0 consumption → edge carries nothing
+                    # Target IS in node_flows but has 0 consumption, OR target is
+                    # an output/requester node with 0 allocation → edge carries nothing
                     rate = 0.0
                 
                 if rate > 0.001:

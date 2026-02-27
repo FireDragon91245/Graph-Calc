@@ -1,0 +1,147 @@
+{
+  "nodes": [
+    {
+      "id": "input-1772223763592",
+      "type": "input",
+      "position": {
+        "x": 1731.1173503312705,
+        "y": -12.945416783763761
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "iron_ore",
+            "mode": "limit",
+            "limit": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772223772162",
+      "type": "recipe",
+      "position": {
+        "x": 2116.7237679013465,
+        "y": 16.328368843283883
+      },
+      "data": {
+        "recipeId": "smelt_iron",
+        "title": "Smelt Iron",
+        "timeSeconds": 2,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Iron Ore",
+            "refId": "iron_ore",
+            "refType": "item",
+            "amountPerCycle": 1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "iron_ingot",
+            "name": "Iron Ingot",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772223780305",
+      "type": "recipe",
+      "position": {
+        "x": 2539.6794981680005,
+        "y": -87.64404217691984
+      },
+      "data": {
+        "recipeId": "construct_iron_rods",
+        "title": "Construct Iron Rods",
+        "timeSeconds": 4,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Iron Ingot",
+            "refId": "iron_ingot",
+            "refType": "item",
+            "amountPerCycle": 1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "iron_rod",
+            "name": "Iron Rod",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "output-1772223788449",
+      "type": "output",
+      "position": {
+        "x": 2535.6417346332355,
+        "y": 177.83891023389162
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "iron_ingot"
+          }
+        ]
+      }
+    },
+    {
+      "id": "requester-1772223816018",
+      "type": "requester",
+      "position": {
+        "x": 3015.1261543866012,
+        "y": -1.8415670631594736
+      },
+      "data": {
+        "requests": [
+          {
+            "id": "req1",
+            "itemId": "iron_rod",
+            "targetPerSecond": 1
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "reactflow__edge-input-1772223763592output-1-recipe-1772223772162input-i1",
+      "source": "input-1772223763592",
+      "target": "recipe-1772223772162",
+      "sourceHandle": "output-1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772223772162output-o1-recipe-1772223780305input-i1",
+      "source": "recipe-1772223772162",
+      "target": "recipe-1772223780305",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772223772162output-o1-output-1772223788449input-1",
+      "source": "recipe-1772223772162",
+      "target": "output-1772223788449",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772223780305output-o1-requester-1772223816018input-req1",
+      "source": "recipe-1772223780305",
+      "target": "requester-1772223816018",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-req1"
+    }
+  ]
+}

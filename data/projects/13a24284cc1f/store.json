@@ -95,6 +95,76 @@
       "id": "energy",
       "name": "Energy",
       "categoryId": null
+    },
+    {
+      "id": "steel_pipe",
+      "name": "Steel Pipe",
+      "categoryId": null
+    },
+    {
+      "id": "concrete",
+      "name": "Concrete",
+      "categoryId": null
+    },
+    {
+      "id": "limtestone",
+      "name": "Limtestone",
+      "categoryId": null
+    },
+    {
+      "id": "encased_steel_beam",
+      "name": "Encased Steel Beam",
+      "categoryId": null
+    },
+    {
+      "id": "heavy_modular_frame",
+      "name": "Heavy Modular Frame",
+      "categoryId": null
+    },
+    {
+      "id": "caterium_ingot",
+      "name": "Caterium Ingot",
+      "categoryId": null
+    },
+    {
+      "id": "caterium_ore",
+      "name": "Caterium Ore",
+      "categoryId": null
+    },
+    {
+      "id": "quickwire",
+      "name": "Quickwire",
+      "categoryId": null
+    },
+    {
+      "id": "motor",
+      "name": "Motor",
+      "categoryId": null
+    },
+    {
+      "id": "stator",
+      "name": "Stator",
+      "categoryId": null
+    },
+    {
+      "id": "copper_ore",
+      "name": "Copper Ore",
+      "categoryId": null
+    },
+    {
+      "id": "copper_ingot",
+      "name": "Copper Ingot",
+      "categoryId": null
+    },
+    {
+      "id": "wire",
+      "name": "Wire",
+      "categoryId": null
+    },
+    {
+      "id": "cable",
+      "name": "Cable",
+      "categoryId": null
     }
   ],
   "tags": [],
@@ -432,6 +502,258 @@
           "id": "o1",
           "itemId": "energy",
           "amount": 750.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "construct_steel_pipe",
+      "name": "Construct Steel Pipe",
+      "timeSeconds": 6.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "steel_ingot",
+          "amount": 3.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "steel_pipe",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "construct_concrete",
+      "name": "Construct Concrete",
+      "timeSeconds": 4.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "limtestone",
+          "amount": 3.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "concrete",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "fabricate_encased_steel_beam",
+      "name": "Fabricate Encased Steel Beam",
+      "timeSeconds": 10.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "steel_beam",
+          "amount": 3.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "concrete",
+          "amount": 6.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "encased_steel_beam",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "manufacture_heavy_modular_frame",
+      "name": "Manufacture Heavy Modular Frame",
+      "timeSeconds": 30.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "modular_frame",
+          "amount": 5.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "steel_pipe",
+          "amount": 20.0
+        },
+        {
+          "id": "i3",
+          "refType": "item",
+          "refId": "encased_steel_beam",
+          "amount": 5.0
+        },
+        {
+          "id": "i4",
+          "refType": "item",
+          "refId": "screws",
+          "amount": 120.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "heavy_modular_frame",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "smelt_caterium",
+      "name": "Smelt Caterium",
+      "timeSeconds": 4.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "caterium_ore",
+          "amount": 3.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "caterium_ingot",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "construct_quickwire",
+      "name": "Construct Quickwire",
+      "timeSeconds": 5.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "caterium_ingot",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "quickwire",
+          "amount": 5.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "fabricate_stator_copper",
+      "name": "Fabricate Stator Copper",
+      "timeSeconds": 12.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "steel_pipe",
+          "amount": 3.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "wire",
+          "amount": 8.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "stator",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "fabricate_stator_caterium",
+      "name": "Fabricate Stator Caterium",
+      "timeSeconds": 15.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "steel_pipe",
+          "amount": 4.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "quickwire",
+          "amount": 15.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "stator",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "fabricate_fused_wire",
+      "name": "Fabricate Fused Wire",
+      "timeSeconds": 20.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "copper_ingot",
+          "amount": 4.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "caterium_ingot",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "wire",
+          "amount": 30.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "smelt_copper",
+      "name": "Smelt Copper",
+      "timeSeconds": 2.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "copper_ore",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "copper_ingot",
+          "amount": 1.0,
           "probability": 1.0
         }
       ]

@@ -7,7 +7,31 @@
     {
       "id": "037cb32dfeb8",
       "name": "Oil"
+    },
+    {
+      "id": "6e6e6fb1b726",
+      "name": "Stahl"
+    },
+    {
+      "id": "ce538541ecc7",
+      "name": "Motor"
+    },
+    {
+      "id": "3de442bcaa14",
+      "name": "simple"
+    },
+    {
+      "id": "4ad27b144bec",
+      "name": "simpe2"
+    },
+    {
+      "id": "6dddc443941f",
+      "name": "simple3"
+    },
+    {
+      "id": "1904d33f10b7",
+      "name": "simple4"
     }
   ],
-  "activeGraphId": "037cb32dfeb8"
+  "activeGraphId": "ce538541ecc7"
 }
