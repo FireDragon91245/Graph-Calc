@@ -336,9 +336,10 @@ def _solve_components_independently(
                     desc += f"({title})"
                 node_descriptions.append(desc)
             desc_str = ", ".join(node_descriptions[:6])
-            err_detail = result.warnings[0] if result.warnings else "unknown error"
+            # Include all warnings from the failed sub-solve (mismatch details, etc.)
+            merged_warnings.extend(result.warnings)
             merged_warnings.append(
-                f"Subgraph {comp_idx + 1} infeasible [{desc_str}]: {err_detail}"
+                f"Subgraph {comp_idx + 1} infeasible [{desc_str}]"
             )
         else:
             any_ok = True
@@ -509,6 +510,92 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
         
         # Build a map of node_id -> recipe for quick lookup
         recipe_map = {recipe.node_id: recipe for recipe in recipes}
+        
+        # === Validate edge item types to detect mismatches ===
+        # Check that items provided by source nodes match what target recipe
+        # ports expect.  When an Input node provides item X but connects to a
+        # recipe port expecting item Y, the recipe cannot obtain its required
+        # input.  Recipes with any mismatched input port are constrained to 0
+        # machines so they cannot run.
+        node_by_id = {node.id: node for node in graph.nodes}
+        
+        # Build: visual node ID -> list of recipe instances
+        # Regular recipe: node_id -> [recipe]
+        # Tag sub-recipes: parent_tag_node_id -> [sub1, sub2, ...]
+        visual_to_recipes: Dict[str, List[RecipeInstance]] = defaultdict(list)
+        for recipe in recipes:
+            visual_id = recipe.parent_tag_node_id or recipe.node_id
+            visual_to_recipes[visual_id].append(recipe)
+        
+        # Incoming edges per target node: target_id -> [(source_id, srcHandle, tgtHandle)]
+        edges_by_target: Dict[str, List[Tuple[str, str, str]]] = defaultdict(list)
+        for edge in graph.edges:
+            edges_by_target[edge.target].append(
+                (edge.source, edge.sourceHandle or "output", edge.targetHandle or "input")
+            )
+        
+        mismatched_visual_nodes: Set[str] = set()  # visual node IDs with mismatched inputs
+        
+        for visual_node_id, recipe_list in visual_to_recipes.items():
+            for recipe in recipe_list:
+                for inp in recipe.inputs:
+                    if inp.get("isMixed"):
+                        continue
+                    port_id = inp.get("id")
+                    needed_item = inp.get("itemId") or inp.get("refId")
+                    if not port_id or not needed_item:
+                        continue
+                    
+                    target_handle = f"input-{port_id}"
+                    
+                    for (src_id, src_handle, tgt_handle) in edges_by_target.get(visual_node_id, []):
+                        if tgt_handle != target_handle:
+                            continue
+                        
+                        # Determine what item the source provides on this handle
+                        provided_item = None
+                        src_type = node_type_map.get(src_id)
+                        
+                        if src_type == "input":
+                            src_node = node_by_id.get(src_id)
+                            if src_node and src_node.data:
+                                entry_id = src_handle.replace("output-", "")
+                                for ie in src_node.data.get("items", []):
+                                    if str(ie.get("id")) == entry_id:
+                                        provided_item = ie.get("itemId")
+                                        break
+                        elif src_type in ("recipe", "recipetag", "inputrecipe", "inputrecipetag"):
+                            # Check all sub-recipes of the source visual node
+                            for src_recipe in visual_to_recipes.get(src_id, []):
+                                out_port_id = src_handle.replace("output-", "")
+                                for out in src_recipe.outputs:
+                                    if out.get("id") == out_port_id:
+                                        provided_item = out.get("itemId")
+                                        break
+                                if provided_item:
+                                    break
+                        
+                        if provided_item and needed_item and provided_item != needed_item:
+                            src_node_obj = node_by_id.get(src_id)
+                            if src_type == "input":
+                                src_desc = f"Input node ({provided_item})"
+                            elif src_node_obj and src_node_obj.data:
+                                src_desc = src_node_obj.data.get("title", src_id)
+                            else:
+                                src_desc = src_id
+                            warnings.append(
+                                f"Edge item mismatch: '{src_desc}' provides "
+                                f"'{provided_item}' but '{recipe.name}' expects "
+                                f"'{needed_item}' at input port '{port_id}'. "
+                                f"Recipe '{recipe.name}' is disabled."
+                            )
+                            mismatched_visual_nodes.add(visual_node_id)
+        
+        # Constrain ALL recipe instances under mismatched visual nodes to 0
+        for recipe in recipes:
+            visual_id = recipe.parent_tag_node_id or recipe.node_id
+            if visual_id in mismatched_visual_nodes:
+                solver.Add(recipe_vars[recipe.node_id] == 0)
         
         # Track mixed input connections: for each recipe with mixed inputs,
         # track which items can flow into it based on edges
@@ -912,9 +999,10 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
         
         if status != pywraplp.Solver.OPTIMAL and status != pywraplp.Solver.FEASIBLE:
             status_msg = "infeasible" if status == pywraplp.Solver.INFEASIBLE else "unbounded" if status == pywraplp.Solver.UNBOUNDED else "error"
+            warnings.append(f"No feasible solution found ({status_msg}). Check constraints - demands may exceed supply limits.")
             return SolveResponse(
                 status="error",
-                warnings=[f"No feasible solution found ({status_msg}). Check constraints - demands may exceed supply limits."]
+                warnings=warnings
             )
         
         # Extract results

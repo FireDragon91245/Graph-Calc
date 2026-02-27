@@ -11,8 +11,8 @@
         "items": [
           {
             "id": "1",
-            "itemId": "caterium_ingot",
-            "mode": "limit",
+            "itemId": "caterium_ore",
+            "mode": "infinite",
             "limit": 3
           }
         ]
@@ -374,7 +374,7 @@
           {
             "id": "1",
             "itemId": "coal",
-            "mode": "limit",
+            "mode": "infinite",
             "limit": 5
           }
         ]
