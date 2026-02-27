@@ -12,8 +12,8 @@
           {
             "id": "1",
             "itemId": "caterium_ore",
-            "mode": "infinite",
-            "limit": 3
+            "mode": "limit",
+            "limit": 6.75
           }
         ]
       }
@@ -399,18 +399,90 @@
       }
     },
     {
-      "id": "requester-1772222318718",
+      "id": "recipe-1772231622695",
+      "type": "recipe",
+      "position": {
+        "x": 3575.8892152906665,
+        "y": -513.4691874977359
+      },
+      "data": {
+        "recipeId": "fabricate_motor",
+        "title": "Fabricate Motor",
+        "timeSeconds": 12,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Rotor",
+            "refId": "rotor",
+            "refType": "item",
+            "amountPerCycle": 2
+          },
+          {
+            "id": "i2",
+            "name": "Stator",
+            "refId": "stator",
+            "refType": "item",
+            "amountPerCycle": 2
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "motor",
+            "name": "Motor",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "input-1772231646259",
+      "type": "input",
+      "position": {
+        "x": 3119.61855346779,
+        "y": -663.2144047039221
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "rotor",
+            "mode": "limit",
+            "limit": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "requester-1772231684758",
       "type": "requester",
       "position": {
-        "x": 3365.849961976039,
-        "y": -347.0710502436065
+        "x": 4114.470790695923,
+        "y": -520.362609493952
       },
       "data": {
         "requests": [
           {
             "id": "req1",
-            "itemId": "stator",
-            "targetPerSecond": 1.5
+            "itemId": "motor",
+            "targetPerSecond": 0.5
+          }
+        ]
+      }
+    },
+    {
+      "id": "output-1772236561398",
+      "type": "output",
+      "position": {
+        "x": 3553.115084047448,
+        "y": -290.776037288253
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "stator"
           }
         ]
       }
@@ -509,11 +581,32 @@
       "targetHandle": "input-i1"
     },
     {
-      "id": "reactflow__edge-recipe-1772221735047output-o1-requester-1772222318718input-req1",
+      "id": "reactflow__edge-recipe-1772221735047output-o1-recipe-1772231622695input-i2",
       "source": "recipe-1772221735047",
-      "target": "requester-1772222318718",
+      "target": "recipe-1772231622695",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i2"
+    },
+    {
+      "id": "reactflow__edge-input-1772231646259output-1-recipe-1772231622695input-i1",
+      "source": "input-1772231646259",
+      "target": "recipe-1772231622695",
+      "sourceHandle": "output-1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772231622695output-o1-requester-1772231684758input-req1",
+      "source": "recipe-1772231622695",
+      "target": "requester-1772231684758",
       "sourceHandle": "output-o1",
       "targetHandle": "input-req1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772221735047output-o1-output-1772236561398input-1",
+      "source": "recipe-1772221735047",
+      "target": "output-1772236561398",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-1"
     }
   ]
 }

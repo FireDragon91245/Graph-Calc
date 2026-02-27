@@ -757,6 +757,33 @@
           "probability": 1.0
         }
       ]
+    },
+    {
+      "id": "fabricate_motor",
+      "name": "Fabricate Motor",
+      "timeSeconds": 12.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "rotor",
+          "amount": 2.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "stator",
+          "amount": 2.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "motor",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
     }
   ]
 }
