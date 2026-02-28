@@ -56,6 +56,7 @@ export type SolveResponse = {
   warnings: string[];
   nodeFlows: Record<string, NodeFlowData>;  // node_id -> flow data
   edgeFlows: Record<string, EdgeFlowData>;  // edge_id -> flow data
+  problemEdgeIds: string[];  // edge IDs with mismatches or zero flow
 };
 
 export async function solveGraph(payload: SolveRequest): Promise<SolveResponse> {

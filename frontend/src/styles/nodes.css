@@ -300,6 +300,25 @@
   margin-bottom: 8px;
   font-size: 12px;
 }
+
+.solve-warnings {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.solve-warning-item {
+  color: #f59e0b;
+  font-size: 11px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.12);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.solve-warning-item:last-child {
+  border-bottom: none;
+}
+
 /* Solve Data Display */
 .node-badge {
   background: rgba(110, 168, 254, 0.14);

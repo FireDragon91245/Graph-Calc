@@ -310,6 +310,7 @@ def _solve_components_independently(
     merged_warnings: List[str] = list(base_warnings)
     merged_node_flows: Dict[str, NodeFlowData] = {}
     merged_edge_flows: Dict[str, EdgeFlowData] = {}
+    merged_problem_edge_ids: List[str] = []
     any_ok = False
     
     for comp_idx, component in enumerate(components):
@@ -341,6 +342,11 @@ def _solve_components_independently(
             merged_warnings.append(
                 f"Subgraph {comp_idx + 1} infeasible [{desc_str}]"
             )
+            # Flag all edges in the infeasible component as problem edges
+            merged_problem_edge_ids.extend(result.problemEdgeIds)
+            for e in comp_edges:
+                if e.id not in result.problemEdgeIds:
+                    merged_problem_edge_ids.append(e.id)
         else:
             any_ok = True
             # Merge machine counts (sum for same recipe names across components)
@@ -354,6 +360,7 @@ def _solve_components_independently(
             merged_node_flows.update(result.nodeFlows)
             merged_edge_flows.update(result.edgeFlows)
             merged_warnings.extend(result.warnings)
+            merged_problem_edge_ids.extend(result.problemEdgeIds)
     
     return SolveResponse(
         status="ok" if any_ok else "error",
@@ -363,6 +370,7 @@ def _solve_components_independently(
         warnings=merged_warnings,
         nodeFlows=merged_node_flows,
         edgeFlows=merged_edge_flows,
+        problemEdgeIds=merged_problem_edge_ids,
     )
 
 
@@ -387,6 +395,7 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
     Each sub-recipe gets its own machine-count variable.
     """
     warnings: List[str] = []
+    problem_edge_ids: List[str] = []
     name_to_id = _build_name_to_id_map(store_data)
 
     try:
@@ -710,6 +719,7 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                     f"{src_items} but '{tgt_desc}' expects "
                     f"{tgt_specific}. Connected recipes disabled."
                 )
+                problem_edge_ids.append(edge.id)
 
             # Determine which items this edge should carry:
             # Intersect source items with target-accepted items when known.
@@ -1014,7 +1024,8 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
             warnings.append(
                 f"No feasible solution found ({status_msg}). "
                 f"Check constraints - demands may exceed supply limits.")
-            return SolveResponse(status="error", warnings=warnings)
+            return SolveResponse(status="error", warnings=warnings,
+                                 problemEdgeIds=problem_edge_ids)
 
         # ───────────────────────────────────────────────────────────────
         # Step 14 – Extract results
@@ -1257,6 +1268,22 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                         f"Demand for {item_id} ({target_val}/s) "
                         f"not fully met (delivering {round(total, 3)}/s)")
 
+        # Detect edges that connect recipe/tag nodes but carry zero flow
+        _recipe_types_set = {"recipe", "recipetag", "inputrecipe",
+                             "inputrecipetag"}
+        for edge in graph.edges:
+            if edge.id in problem_edge_ids:
+                continue  # already flagged
+            src_t = node_type_map.get(edge.source)
+            tgt_t = node_type_map.get(edge.target)
+            # Only flag edges between meaningful node types
+            if (src_t in _recipe_types_set or src_t == "input") and \
+               (tgt_t in _recipe_types_set or tgt_t in ("output", "requester",
+                                                         "mixedoutput")):
+                ef = edge_flows_result.get(edge.id)
+                if not ef or ef.totalFlow < 0.001:
+                    problem_edge_ids.append(edge.id)
+
         return SolveResponse(
             status="ok",
             machineCounts=machine_counts,
@@ -1265,6 +1292,7 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
             warnings=warnings,
             nodeFlows=node_flows,
             edgeFlows=edge_flows_result,
+            problemEdgeIds=problem_edge_ids,
         )
 
     except Exception as e:

@@ -2,6 +2,10 @@ import { EdgeLabelRenderer, EdgeProps, getBezierPath } from "reactflow";
 import { useState } from "react";
 import type { EdgeFlowData } from "../api/solve";
 
+type EdgeData = EdgeFlowData & {
+  isProblem?: boolean;
+};
+
 export default function EdgeWithTooltip({
   id,
   sourceX,
@@ -14,7 +18,7 @@ export default function EdgeWithTooltip({
   markerEnd,
   data,
   selected,
-}: EdgeProps<EdgeFlowData>) {
+}: EdgeProps<EdgeData>) {
   const [isHovered, setIsHovered] = useState(false);
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -26,10 +30,13 @@ export default function EdgeWithTooltip({
   });
 
   const hasFlowData = data && data.totalFlow > 0;
+  const isProblem = data?.isProblem === true;
 
   // Determine stroke color based on state
   let strokeColor = "#b1b1b7"; // default
-  if (selected) {
+  if (isProblem) {
+    strokeColor = "#ef4444"; // red for problem edges
+  } else if (selected) {
     strokeColor = "#3b82f6"; // blue when selected
   } else if (hasFlowData) {
     strokeColor = "#10b981"; // green when has flow data
@@ -43,7 +50,7 @@ export default function EdgeWithTooltip({
         id={id}
         style={{
           ...style,
-          strokeWidth: hasFlowData ? 2 : 1,
+          strokeWidth: isProblem ? 2.5 : hasFlowData ? 2 : 1,
           stroke: strokeColor,
         }}
         className="react-flow__edge-path"
@@ -52,6 +59,33 @@ export default function EdgeWithTooltip({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       />
+      {isProblem && !hasFlowData && (
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              position: "absolute",
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+              fontSize: 11,
+              fontWeight: 600,
+              pointerEvents: "none",
+              zIndex: 1000,
+            }}
+          >
+            <div
+              style={{
+                background: "rgba(16, 20, 28, 0.95)",
+                padding: "4px 8px",
+                borderRadius: "6px",
+                color: "#ef4444",
+                border: "1px solid rgba(239, 68, 68, 0.4)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              No flow
+            </div>
+          </div>
+        </EdgeLabelRenderer>
+      )}
       {hasFlowData && (
         <EdgeLabelRenderer>
           <div

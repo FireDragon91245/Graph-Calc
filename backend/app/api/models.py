@@ -79,6 +79,7 @@ class SolveResponse(BaseModel):
     warnings: List[str] = []
     nodeFlows: Dict[str, NodeFlowData] = {}  # node_id -> flow data
     edgeFlows: Dict[str, EdgeFlowData] = {}  # edge_id -> flow data
+    problemEdgeIds: List[str] = []  # edge IDs with mismatches or infeasibility
 
 
 # Persistence Models

@@ -345,6 +345,8 @@ function AppContent() {
   useEffect(() => {
     if (!solveResult) return;
 
+    const problemEdgeSet = new Set(solveResult.problemEdgeIds ?? []);
+
     // Update nodes with their flow data
     setNodes((currentNodes) =>
       currentNodes.map((node) => {
@@ -362,15 +364,19 @@ function AppContent() {
       })
     );
 
-    // Update edges with their flow data
+    // Update edges with their flow data and problem status
     setEdges((currentEdges) =>
       currentEdges.map((edge) => {
         const flowData = solveResult.edgeFlows[edge.id];
-        if (flowData) {
+        const isProblem = problemEdgeSet.has(edge.id);
+        if (flowData || isProblem) {
           return {
             ...edge,
-            data: flowData,
-            label: flowData.totalFlow > 0 ? `${flowData.totalFlow.toFixed(2)}/s` : undefined
+            data: {
+              ...(flowData ?? { flows: {}, totalFlow: 0 }),
+              isProblem,
+            },
+            label: flowData && flowData.totalFlow > 0 ? `${flowData.totalFlow.toFixed(2)}/s` : undefined
           };
         }
         return edge;
@@ -1057,6 +1063,22 @@ function AppContent() {
   const handleSolve = useCallback(async () => {
     setIsSolving(true);
     setSolveError(null);
+    setSolveResult(null);
+
+    // Clear previous solve data from nodes and edges immediately
+    setNodes((currentNodes) =>
+      currentNodes.map((node) => ({
+        ...node,
+        data: stripSolveData(node.data) as Record<string, unknown>,
+      }))
+    );
+    setEdges((currentEdges) =>
+      currentEdges.map((edge) => ({
+        ...edge,
+        data: undefined,
+        label: undefined,
+      }))
+    );
 
     try {
       const result = await solveGraph(graphPayload);
@@ -1067,7 +1089,7 @@ function AppContent() {
     } finally {
       setIsSolving(false);
     }
-  }, [graphPayload]);
+  }, [graphPayload, setNodes, setEdges]);
 
   return (
     <div className="app-root">
@@ -1136,7 +1158,36 @@ function AppContent() {
               <div className="panel-title">Live Stats</div>
               <div className="panel-row">Nodes: {nodes.length}</div>
               <div className="panel-row">Edges: {edges.length}</div>
-              {solveError ? <div className="panel-error">{solveError}</div> : null}
+              {solveResult && solveResult.status === "error" && (
+                <div className="panel-error" style={{ marginTop: 8 }}>
+                  Solve failed
+                </div>
+              )}
+              {solveResult && solveResult.status === "ok" && (
+                <div className="panel-row" style={{ color: "#10b981", marginTop: 4 }}>
+                  Solved ({Object.keys(solveResult.machineCounts).length} recipes)
+                </div>
+              )}
+              {solveError && <div className="panel-error">{solveError}</div>}
+              {solveResult && solveResult.warnings && solveResult.warnings.length > 0 && (
+                <div className="solve-warnings" style={{ marginTop: 8 }}>
+                  <div className="panel-subtitle" style={{ color: "#f59e0b" }}>
+                    Warnings ({solveResult.warnings.length})
+                  </div>
+                  {solveResult.warnings.map((w, i) => (
+                    <div key={i} className="solve-warning-item">
+                      {w}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {solveResult && solveResult.problemEdgeIds && solveResult.problemEdgeIds.length > 0 && (
+                <div style={{ marginTop: 4 }}>
+                  <div className="panel-muted">
+                    {solveResult.problemEdgeIds.length} problem edge{solveResult.problemEdgeIds.length !== 1 ? "s" : ""} highlighted
+                  </div>
+                </div>
+              )}
             </Panel>
             {menu && (
               <ContextMenu
