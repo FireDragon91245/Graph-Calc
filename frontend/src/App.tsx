@@ -162,6 +162,19 @@ function AppContent() {
   const loadStoreData = useGraphStore((state) => state.loadStoreData);
   const reactFlowInstance = useReactFlow();
 
+  // Fit view whenever a graph finishes loading
+  const prevIsLoadedRef = useRef(false);
+  useEffect(() => {
+    if (isLoaded && !prevIsLoadedRef.current) {
+      // Small delay to let ReactFlow render the nodes first
+      const timer = setTimeout(() => {
+        reactFlowInstance.fitView({ padding: 0.15, duration: 200 });
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+    prevIsLoadedRef.current = isLoaded;
+  }, [isLoaded, reactFlowInstance]);
+
   // Keyboard shortcut for command palette (Ctrl+I)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1147,12 +1160,17 @@ function AppContent() {
             deleteKeyCode={["Backspace", "Delete"]}
             elementsSelectable
             nodesDraggable
-            fitView
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
           >
             <Background gap={20} size={1} color="#1f2a3a" />
-            <MiniMap pannable zoomable />
+            <MiniMap
+              pannable
+              zoomable
+              nodeColor="#2a3444"
+              nodeStrokeColor="#4a5568"
+              maskColor="rgba(10, 14, 20, 0.7)"
+            />
             <Controls showInteractive={false} />
             <Panel position="top-right" className="panel">
               <div className="panel-title">Live Stats</div>

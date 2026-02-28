@@ -1,8 +1,18 @@
 /* React Flow Overrides */
 
 .react-flow__minimap {
-  background: rgba(16, 20, 28, 0.85);
+  background: rgba(16, 20, 28, 0.92) !important;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+
+.react-flow__minimap-mask {
+  fill: rgba(10, 14, 20, 0.7);
+}
+
+.react-flow__minimap-node {
+  fill: #2a3444;
+  stroke: #4a5568;
 }
 
 /* Fix for default input/output node styles creating white boxes */
