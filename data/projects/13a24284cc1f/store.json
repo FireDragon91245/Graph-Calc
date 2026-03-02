@@ -165,6 +165,31 @@
       "id": "cable",
       "name": "Cable",
       "categoryId": null
+    },
+    {
+      "id": "platine",
+      "name": "Platine",
+      "categoryId": null
+    },
+    {
+      "id": "computer",
+      "name": "Computer",
+      "categoryId": null
+    },
+    {
+      "id": "quarz",
+      "name": "Quarz",
+      "categoryId": null
+    },
+    {
+      "id": "quarzosillator",
+      "name": "Quarzosillator",
+      "categoryId": null
+    },
+    {
+      "id": "quartz_crystals",
+      "name": "Quartz Crystals",
+      "categoryId": null
     }
   ],
   "tags": [],
@@ -781,6 +806,270 @@
           "id": "o1",
           "itemId": "motor",
           "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "caterium_platine",
+      "name": "Caterium Platine",
+      "timeSeconds": 48.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "plastic",
+          "amount": 10.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "quickwire",
+          "amount": 30.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "platine",
+          "amount": 7.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "construct_quarz_crystals",
+      "name": "Construct Quarz Crystals",
+      "timeSeconds": 8.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "quarz",
+          "amount": 5.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "quartz_crystals",
+          "amount": 3.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "manufacture_quarz_osillator",
+      "name": "Manufacture Quarz Osillator",
+      "timeSeconds": 120.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "quartz_crystals",
+          "amount": 36.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "cable",
+          "amount": 28.0
+        },
+        {
+          "id": "i3",
+          "refType": "item",
+          "refId": "reinforced_plate",
+          "amount": 5.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "quarzosillator",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "quarz_computer",
+      "name": "Quarz Computer",
+      "timeSeconds": 36.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "platine",
+          "amount": 3.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "quarzosillator",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "computer",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "manufacture_computer",
+      "name": "Manufacture Computer",
+      "timeSeconds": 24.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "platine",
+          "amount": 4.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "cable",
+          "amount": 8.0
+        },
+        {
+          "id": "i3",
+          "refType": "item",
+          "refId": "plastic",
+          "amount": 16.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "computer",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "construct_cable",
+      "name": "Construct Cable",
+      "timeSeconds": 2.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "wire",
+          "amount": 2.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "cable",
+          "amount": 1.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "construct_wire",
+      "name": "Construct Wire",
+      "timeSeconds": 4.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "copper_ingot",
+          "amount": 1.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "wire",
+          "amount": 2.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "alloy_quartz_crystals",
+      "name": "Alloy Quartz Crystals",
+      "timeSeconds": 20.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "quarz",
+          "amount": 25.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "coal",
+          "amount": 12.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "quartz_crystals",
+          "amount": 18.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "refine_pure_crystals",
+      "name": "Refine Pure Crystals",
+      "timeSeconds": 8.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "quarz",
+          "amount": 9.0
+        },
+        {
+          "id": "i2",
+          "refType": "item",
+          "refId": "water",
+          "amount": 5.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "quartz_crystals",
+          "amount": 7.0,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "id": "refine_polymer",
+      "name": "Refine Polymer",
+      "timeSeconds": 6.0,
+      "inputs": [
+        {
+          "id": "i1",
+          "refType": "item",
+          "refId": "crude_oil",
+          "amount": 6.0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "o1",
+          "itemId": "polymer",
+          "amount": 13.0,
+          "probability": 1.0
+        },
+        {
+          "id": "o2",
+          "itemId": "heavy_oil_residue",
+          "amount": 2.0,
           "probability": 1.0
         }
       ]

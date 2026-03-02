@@ -1,0 +1,954 @@
+{
+  "nodes": [
+    {
+      "id": "recipe-1772305485133",
+      "type": "recipe",
+      "position": {
+        "x": 2264.0123478878027,
+        "y": -52.67597846434061
+      },
+      "data": {
+        "recipeId": "quarz_computer",
+        "title": "Quarz Computer",
+        "timeSeconds": 36,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Platine",
+            "refId": "platine",
+            "refType": "item",
+            "amountPerCycle": 3
+          },
+          {
+            "id": "i2",
+            "name": "Quarzosillator",
+            "refId": "quarzosillator",
+            "refType": "item",
+            "amountPerCycle": 1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "computer",
+            "name": "Computer",
+            "amountPerCycle": 2,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772305490973",
+      "type": "recipe",
+      "position": {
+        "x": 1772.0125222638037,
+        "y": -199.97954043639467
+      },
+      "data": {
+        "recipeId": "caterium_platine",
+        "title": "Caterium Platine",
+        "timeSeconds": 48,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Plastic",
+            "refId": "plastic",
+            "refType": "item",
+            "amountPerCycle": 10
+          },
+          {
+            "id": "i2",
+            "name": "Quickwire",
+            "refId": "quickwire",
+            "refType": "item",
+            "amountPerCycle": 30
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "platine",
+            "name": "Platine",
+            "amountPerCycle": 7,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "input-1772305501810",
+      "type": "input",
+      "position": {
+        "x": 1249.7418738430022,
+        "y": -339.63461835081955
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "plastic",
+            "mode": "infinite"
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772305513246",
+      "type": "recipe",
+      "position": {
+        "x": 1215.0057697243662,
+        "y": -134.00042971366486
+      },
+      "data": {
+        "recipeId": "construct_quickwire",
+        "title": "Construct Quickwire",
+        "timeSeconds": 5,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Caterium Ingot",
+            "refId": "caterium_ingot",
+            "refType": "item",
+            "amountPerCycle": 1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "quickwire",
+            "name": "Quickwire",
+            "amountPerCycle": 5,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772305521256",
+      "type": "recipe",
+      "position": {
+        "x": 546.2871893143267,
+        "y": -206.92561326507322
+      },
+      "data": {
+        "recipeId": "smelt_caterium",
+        "title": "Smelt Caterium",
+        "timeSeconds": 4,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Caterium Ore",
+            "refId": "caterium_ore",
+            "refType": "item",
+            "amountPerCycle": 3
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "caterium_ingot",
+            "name": "Caterium Ingot",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "input-1772305525824",
+      "type": "input",
+      "position": {
+        "x": 88.41910819580471,
+        "y": -266.75768839211287
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "caterium_ore",
+            "mode": "limit",
+            "limit": 8
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772305574749",
+      "type": "recipe",
+      "position": {
+        "x": 1428.0004553333588,
+        "y": 82.65080381838962
+      },
+      "data": {
+        "recipeId": "manufacture_quarz_osillator",
+        "title": "Manufacture Quarz Osillator",
+        "timeSeconds": 120,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Quartz Crystals",
+            "refId": "quartz_crystals",
+            "refType": "item",
+            "amountPerCycle": 36
+          },
+          {
+            "id": "i2",
+            "name": "Cable",
+            "refId": "cable",
+            "refType": "item",
+            "amountPerCycle": 28
+          },
+          {
+            "id": "i3",
+            "name": "Reinforced Plate",
+            "refId": "reinforced_plate",
+            "refType": "item",
+            "amountPerCycle": 5
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "quarzosillator",
+            "name": "Quarzosillator",
+            "amountPerCycle": 2,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "input-1772306761121",
+      "type": "input",
+      "position": {
+        "x": -208.70886142575313,
+        "y": -93.62812746350104
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "quarz",
+            "mode": "limit",
+            "limit": 16
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772306855537",
+      "type": "recipe",
+      "position": {
+        "x": 788.3669988295276,
+        "y": 149.17380271253825
+      },
+      "data": {
+        "recipeId": "construct_cable",
+        "title": "Construct Cable",
+        "timeSeconds": 2,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Wire",
+            "refId": "wire",
+            "refType": "item",
+            "amountPerCycle": 2
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "cable",
+            "name": "Cable",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "input-1772306930135",
+      "type": "input",
+      "position": {
+        "x": 836.8935356676591,
+        "y": 459.9359649788328
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "reinforced_plate",
+            "mode": "infinite"
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772307018406",
+      "type": "recipe",
+      "position": {
+        "x": 73.52229459692865,
+        "y": 288.05634465714894
+      },
+      "data": {
+        "recipeId": "construct_wire",
+        "title": "Construct Wire",
+        "timeSeconds": 4,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Copper Ingot",
+            "refId": "copper_ingot",
+            "refType": "item",
+            "amountPerCycle": 1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "wire",
+            "name": "Wire",
+            "amountPerCycle": 2,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772307026695",
+      "type": "recipe",
+      "position": {
+        "x": -443.02624956259467,
+        "y": 253.10419028961087
+      },
+      "data": {
+        "recipeId": "smelt_copper",
+        "title": "Smelt Copper",
+        "timeSeconds": 2,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Copper Ore",
+            "refId": "copper_ore",
+            "refType": "item",
+            "amountPerCycle": 1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "copper_ingot",
+            "name": "Copper Ingot",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "input-1772307032225",
+      "type": "input",
+      "position": {
+        "x": -855.3076684286358,
+        "y": 220.71377968232696
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "copper_ore",
+            "mode": "limit",
+            "limit": 12.5
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772307387589",
+      "type": "recipe",
+      "position": {
+        "x": 2108.2795293735235,
+        "y": 805.5181441354334
+      },
+      "data": {
+        "recipeId": "manufacture_computer",
+        "title": "Manufacture Computer",
+        "timeSeconds": 24,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Platine",
+            "refId": "platine",
+            "refType": "item",
+            "amountPerCycle": 4
+          },
+          {
+            "id": "i2",
+            "name": "Cable",
+            "refId": "cable",
+            "refType": "item",
+            "amountPerCycle": 8
+          },
+          {
+            "id": "i3",
+            "name": "Plastic",
+            "refId": "plastic",
+            "refType": "item",
+            "amountPerCycle": 16
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "computer",
+            "name": "Computer",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772307394059",
+      "type": "recipe",
+      "position": {
+        "x": 1568.021805462502,
+        "y": 776.005070571835
+      },
+      "data": {
+        "recipeId": "caterium_platine",
+        "title": "Caterium Platine",
+        "timeSeconds": 48,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Plastic",
+            "refId": "plastic",
+            "refType": "item",
+            "amountPerCycle": 10
+          },
+          {
+            "id": "i2",
+            "name": "Quickwire",
+            "refId": "quickwire",
+            "refType": "item",
+            "amountPerCycle": 30
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "platine",
+            "name": "Platine",
+            "amountPerCycle": 7,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772307399761",
+      "type": "recipe",
+      "position": {
+        "x": 908.2447074439901,
+        "y": 1030.3595649181432
+      },
+      "data": {
+        "recipeId": "construct_cable",
+        "title": "Construct Cable",
+        "timeSeconds": 2,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Wire",
+            "refId": "wire",
+            "refType": "item",
+            "amountPerCycle": 2
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "cable",
+            "name": "Cable",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "input-1772307407503",
+      "type": "input",
+      "position": {
+        "x": 1042.535770006219,
+        "y": 1248.5123555548237
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "plastic",
+            "mode": "infinite"
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772307428934",
+      "type": "recipe",
+      "position": {
+        "x": 422.78077501061557,
+        "y": 1075.1284469329194
+      },
+      "data": {
+        "recipeId": "construct_wire",
+        "title": "Construct Wire",
+        "timeSeconds": 4,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Copper Ingot",
+            "refId": "copper_ingot",
+            "refType": "item",
+            "amountPerCycle": 1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "wire",
+            "name": "Wire",
+            "amountPerCycle": 2,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772307436079",
+      "type": "recipe",
+      "position": {
+        "x": -44.717972785684424,
+        "y": 1080.582598990543
+      },
+      "data": {
+        "recipeId": "smelt_copper",
+        "title": "Smelt Copper",
+        "timeSeconds": 2,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Copper Ore",
+            "refId": "copper_ore",
+            "refType": "item",
+            "amountPerCycle": 1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "copper_ingot",
+            "name": "Copper Ingot",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "input-1772307444544",
+      "type": "input",
+      "position": {
+        "x": -420.2753001820454,
+        "y": 1076.6867760922403
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "copper_ore",
+            "mode": "limit",
+            "limit": 7.5
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772307458991",
+      "type": "recipe",
+      "position": {
+        "x": 691.8914278677696,
+        "y": 845.6644466775646
+      },
+      "data": {
+        "recipeId": "construct_quickwire",
+        "title": "Construct Quickwire",
+        "timeSeconds": 5,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Caterium Ingot",
+            "refId": "caterium_ingot",
+            "refType": "item",
+            "amountPerCycle": 1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "quickwire",
+            "name": "Quickwire",
+            "amountPerCycle": 5,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772307464113",
+      "type": "recipe",
+      "position": {
+        "x": 247.76761746128454,
+        "y": 848.0019404165461
+      },
+      "data": {
+        "recipeId": "smelt_caterium",
+        "title": "Smelt Caterium",
+        "timeSeconds": 4,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Caterium Ore",
+            "refId": "caterium_ore",
+            "refType": "item",
+            "amountPerCycle": 3
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "caterium_ingot",
+            "name": "Caterium Ingot",
+            "amountPerCycle": 1,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "input-1772307469975",
+      "type": "input",
+      "position": {
+        "x": -213.49781369773154,
+        "y": 829.301990504694
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "caterium_ore",
+            "mode": "limit",
+            "limit": 8
+          }
+        ]
+      }
+    },
+    {
+      "id": "output-1772307497616",
+      "type": "output",
+      "position": {
+        "x": 2694.3813750520576,
+        "y": 753.4786523819787
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "computer"
+          }
+        ]
+      }
+    },
+    {
+      "id": "output-1772308093292",
+      "type": "output",
+      "position": {
+        "x": 2125.115578321934,
+        "y": 180.02962633275365
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "quarzosillator"
+          }
+        ]
+      }
+    },
+    {
+      "id": "requester-1772308103526",
+      "type": "requester",
+      "position": {
+        "x": 2850.083817540542,
+        "y": -53.08170804582639
+      },
+      "data": {
+        "requests": [
+          {
+            "id": "req1",
+            "itemId": "computer",
+            "targetPerSecond": 1.2
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772311443579",
+      "type": "recipe",
+      "position": {
+        "x": 414.917366074041,
+        "y": -52.378833197429486
+      },
+      "data": {
+        "recipeId": "refine_pure_crystals",
+        "title": "Refine Pure Crystals",
+        "timeSeconds": 8,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Quarz",
+            "refId": "quarz",
+            "refType": "item",
+            "amountPerCycle": 9
+          },
+          {
+            "id": "i2",
+            "name": "Water",
+            "refId": "water",
+            "refType": "item",
+            "amountPerCycle": 5
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "quartz_crystals",
+            "name": "Quartz Crystals",
+            "amountPerCycle": 7,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "input-1772311449697",
+      "type": "input",
+      "position": {
+        "x": -156.111369827614,
+        "y": 88.65244354512086
+      },
+      "data": {
+        "items": [
+          {
+            "id": "1",
+            "itemId": "water",
+            "mode": "infinite"
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "reactflow__edge-recipe-1772305490973output-o1-recipe-1772305485133input-i1",
+      "source": "recipe-1772305490973",
+      "target": "recipe-1772305485133",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-input-1772305501810output-1-recipe-1772305490973input-i1",
+      "source": "input-1772305501810",
+      "target": "recipe-1772305490973",
+      "sourceHandle": "output-1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772305513246output-o1-recipe-1772305490973input-i2",
+      "source": "recipe-1772305513246",
+      "target": "recipe-1772305490973",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i2"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772305521256output-o1-recipe-1772305513246input-i1",
+      "source": "recipe-1772305521256",
+      "target": "recipe-1772305513246",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-input-1772305525824output-1-recipe-1772305521256input-i1",
+      "source": "input-1772305525824",
+      "target": "recipe-1772305521256",
+      "sourceHandle": "output-1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772305574749output-o1-recipe-1772305485133input-i2",
+      "source": "recipe-1772305574749",
+      "target": "recipe-1772305485133",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i2"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772306855537output-o1-recipe-1772305574749input-i2",
+      "source": "recipe-1772306855537",
+      "target": "recipe-1772305574749",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i2"
+    },
+    {
+      "id": "reactflow__edge-input-1772306930135output-1-recipe-1772305574749input-i3",
+      "source": "input-1772306930135",
+      "target": "recipe-1772305574749",
+      "sourceHandle": "output-1",
+      "targetHandle": "input-i3"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772307018406output-o1-recipe-1772306855537input-i1",
+      "source": "recipe-1772307018406",
+      "target": "recipe-1772306855537",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772307026695output-o1-recipe-1772307018406input-i1",
+      "source": "recipe-1772307026695",
+      "target": "recipe-1772307018406",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-input-1772307032225output-1-recipe-1772307026695input-i1",
+      "source": "input-1772307032225",
+      "target": "recipe-1772307026695",
+      "sourceHandle": "output-1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772307394059output-o1-recipe-1772307387589input-i1",
+      "source": "recipe-1772307394059",
+      "target": "recipe-1772307387589",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772307399761output-o1-recipe-1772307387589input-i2",
+      "source": "recipe-1772307399761",
+      "target": "recipe-1772307387589",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i2"
+    },
+    {
+      "id": "reactflow__edge-input-1772307407503output-1-recipe-1772307387589input-i3",
+      "source": "input-1772307407503",
+      "target": "recipe-1772307387589",
+      "sourceHandle": "output-1",
+      "targetHandle": "input-i3"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772307428934output-o1-recipe-1772307399761input-i1",
+      "source": "recipe-1772307428934",
+      "target": "recipe-1772307399761",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772307436079output-o1-recipe-1772307428934input-i1",
+      "source": "recipe-1772307436079",
+      "target": "recipe-1772307428934",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-input-1772307444544output-1-recipe-1772307436079input-i1",
+      "source": "input-1772307444544",
+      "target": "recipe-1772307436079",
+      "sourceHandle": "output-1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-input-1772307469975output-1-recipe-1772307464113input-i1",
+      "source": "input-1772307469975",
+      "target": "recipe-1772307464113",
+      "sourceHandle": "output-1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772307464113output-o1-recipe-1772307458991input-i1",
+      "source": "recipe-1772307464113",
+      "target": "recipe-1772307458991",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772307458991output-o1-recipe-1772307394059input-i2",
+      "source": "recipe-1772307458991",
+      "target": "recipe-1772307394059",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i2"
+    },
+    {
+      "id": "reactflow__edge-input-1772307407503output-1-recipe-1772307394059input-i1",
+      "source": "input-1772307407503",
+      "target": "recipe-1772307394059",
+      "sourceHandle": "output-1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772307387589output-o1-output-1772307497616input-1",
+      "source": "recipe-1772307387589",
+      "target": "output-1772307497616",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772305574749output-o1-output-1772308093292input-1",
+      "source": "recipe-1772305574749",
+      "target": "output-1772308093292",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772305485133output-o1-requester-1772308103526input-req1",
+      "source": "recipe-1772305485133",
+      "target": "requester-1772308103526",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-req1"
+    },
+    {
+      "id": "reactflow__edge-input-1772306761121output-1-recipe-1772311443579input-i1",
+      "source": "input-1772306761121",
+      "target": "recipe-1772311443579",
+      "sourceHandle": "output-1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-input-1772311449697output-1-recipe-1772311443579input-i2",
+      "source": "input-1772311449697",
+      "target": "recipe-1772311443579",
+      "sourceHandle": "output-1",
+      "targetHandle": "input-i2"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772311443579output-o1-recipe-1772305574749input-i1",
+      "source": "recipe-1772311443579",
+      "target": "recipe-1772305574749",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    }
+  ]
+}
