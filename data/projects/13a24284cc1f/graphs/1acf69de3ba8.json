@@ -118,8 +118,8 @@
       "id": "input-1772481147851",
       "type": "input",
       "position": {
-        "x": -45.73924265240055,
-        "y": 251.34252048129758
+        "x": -336.6778904779415,
+        "y": 304.599086523939
       },
       "data": {
         "items": [
@@ -135,14 +135,14 @@
       "id": "output-1772481182708",
       "type": "output",
       "position": {
-        "x": 488.5615120372993,
-        "y": 348.7994381265739
+        "x": 1329.818008970135,
+        "y": 385.29004819282807
       },
       "data": {
         "items": [
           {
-            "id": "1",
-            "itemId": "heavy_oil_residue"
+            "id": "1772490377458",
+            "itemId": "energy"
           }
         ]
       }
@@ -197,6 +197,68 @@
           }
         ]
       }
+    },
+    {
+      "id": "recipe-1772490355882",
+      "type": "recipe",
+      "position": {
+        "x": 372.26623368042215,
+        "y": 452.6704566297589
+      },
+      "data": {
+        "recipeId": "refine_heavy_oil_residue",
+        "title": "Refine Heavy Oil Residue",
+        "timeSeconds": 6,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Heavy Oil Residue",
+            "refId": "heavy_oil_residue",
+            "refType": "item",
+            "amountPerCycle": 6
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "fuel",
+            "name": "Fuel",
+            "amountPerCycle": 4,
+            "probability": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "recipe-1772490369613",
+      "type": "recipe",
+      "position": {
+        "x": 883.1347746079823,
+        "y": 286.9833622748745
+      },
+      "data": {
+        "recipeId": "burn_fuel",
+        "title": "Burn Fuel",
+        "timeSeconds": 3,
+        "inputs": [
+          {
+            "id": "i1",
+            "name": "Fuel",
+            "refId": "fuel",
+            "refType": "item",
+            "amountPerCycle": 1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "o1",
+            "itemId": "energy",
+            "name": "Energy",
+            "amountPerCycle": 750,
+            "probability": 1
+          }
+        ]
+      }
     }
   ],
   "edges": [
@@ -229,13 +291,6 @@
       "targetHandle": "input-i2"
     },
     {
-      "id": "reactflow__edge-recipe-1772481118759output-o2-output-1772481182708input-1",
-      "source": "recipe-1772481118759",
-      "target": "output-1772481182708",
-      "sourceHandle": "output-o2",
-      "targetHandle": "input-1"
-    },
-    {
       "id": "reactflow__edge-recipe-1772481137570output-o1-requester-1772481193086input-req1",
       "source": "recipe-1772481137570",
       "target": "requester-1772481193086",
@@ -255,6 +310,27 @@
       "target": "recipe-1772481118759",
       "sourceHandle": "output-1",
       "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772481118759output-o2-recipe-1772490355882input-i1",
+      "source": "recipe-1772481118759",
+      "target": "recipe-1772490355882",
+      "sourceHandle": "output-o2",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772490355882output-o1-recipe-1772490369613input-i1",
+      "source": "recipe-1772490355882",
+      "target": "recipe-1772490369613",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-i1"
+    },
+    {
+      "id": "reactflow__edge-recipe-1772490369613output-o1-output-1772481182708input-1772490377458",
+      "source": "recipe-1772490369613",
+      "target": "output-1772481182708",
+      "sourceHandle": "output-o1",
+      "targetHandle": "input-1772490377458"
     }
   ]
 }
