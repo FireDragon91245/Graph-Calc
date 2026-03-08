@@ -37,10 +37,10 @@ export default function EdgeWithTooltip({
 
   // Determine stroke color based on state
   let strokeColor = "#b1b1b7"; // default
-  if (isProblem) {
-    strokeColor = "#ef4444"; // red for problem edges
-  } else if (selected) {
+  if (selected) {
     strokeColor = "#3b82f6"; // blue when selected
+  } else if (isProblem) {
+    strokeColor = "#ef4444"; // red for problem edges
   } else if (hasFlowData) {
     strokeColor = "#10b981"; // green when has flow data
   } else if (style.stroke) {
@@ -50,17 +50,26 @@ export default function EdgeWithTooltip({
   return (
     <>
       <path
+        d={edgePath}
+        fill="none"
+        strokeOpacity={0}
+        stroke="transparent"
+        strokeWidth={20}
+        className="react-flow__edge-interaction"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      />
+      <path
         id={id}
         style={{
           ...style,
           strokeWidth: isProblem ? 2.5 : hasFlowData ? 2 : 1,
           stroke: strokeColor,
+          pointerEvents: "none",
         }}
         className="react-flow__edge-path"
         d={edgePath}
         markerEnd={markerEnd}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       />
       {isProblem && !hasFlowData && (
         <EdgeLabelRenderer>
