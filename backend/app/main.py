@@ -1,26 +1,59 @@
-from fastapi import FastAPI, HTTPException, Query
+import os
+from typing import Optional
+
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
 from app.api.models import SolveRequest, SolveResponse, GraphData, StoreData
+from app.auth import (
+    JWT_TTL_SECONDS,
+    create_session_token,
+    create_user_record,
+    decode_session_token,
+    verify_password,
+)
 from app.solver.solver import solve_graph
 from app.persistence import (
     load_graph, save_graph, load_store, save_store,
     list_projects, get_active_project_id, set_active_project,
     create_project, rename_project, copy_project, delete_project,
     list_graphs, get_active_graph_id, set_active_graph,
-    create_graph, rename_graph, copy_graph, delete_graph
+    create_graph, rename_graph, copy_graph, delete_graph,
+    load_users, save_users,
 )
 
 app = FastAPI(title="GraphCalc Solver")
 
+SESSION_COOKIE_NAME = "graphcalc_session"
+FRONTEND_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "FRONTEND_ORIGINS",
+        "https://localhost:5173,https://127.0.0.1:5173",
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=FRONTEND_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    response = await call_next(request)
+    print(
+        "[http]"
+        f" method={request.method}"
+        f" path={request.url.path}"
+        f" status={response.status_code}"
+        f" origin={request.headers.get('origin', '-') }"
+    )
+    return response
 
 
 # ── Helper ──────────────────────────────────────────────────────
@@ -30,6 +63,51 @@ def _resolve_project(project_id: Optional[str]) -> str:
     if project_id:
         return project_id
     return get_active_project_id()
+
+
+def _set_session_cookie(response: Response, token: str):
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=JWT_TTL_SECONDS,
+        path="/",
+    )
+
+
+def _clear_session_cookie(response: Response):
+    response.delete_cookie(
+        key=SESSION_COOKIE_NAME,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        path="/",
+    )
+
+
+def _get_current_session(request: Request) -> dict:
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    if not token:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    payload = decode_session_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid session")
+
+    users = load_users()
+    user = next(
+        (
+            entry for entry in users
+            if entry.get("id") == payload["userId"] and entry.get("username") == payload["username"]
+        ),
+        None,
+    )
+    if not user:
+        raise HTTPException(status_code=401, detail="Session user not found")
+
+    return {"id": user["id"], "username": user["username"]}
 
 
 # ── Project management ──────────────────────────────────────────
@@ -42,6 +120,75 @@ class ProjectRename(BaseModel):
 
 class ProjectCopy(BaseModel):
     name: str
+
+
+class AuthCredentials(BaseModel):
+    username: str
+    password: str
+
+
+class SessionResponse(BaseModel):
+    authenticated: bool
+    user: Optional[dict] = None
+
+
+@app.post("/register")
+def api_register(body: AuthCredentials, response: Response):
+    username = body.username.strip()
+    password = body.password
+
+    if not username:
+        raise HTTPException(status_code=400, detail="Username is required")
+    if len(password) <= 8:
+        raise HTTPException(status_code=400, detail="Password must be longer than 8 characters")
+
+    users = load_users()
+    if any(entry.get("username") == username for entry in users):
+        raise HTTPException(status_code=409, detail="Username already exists")
+
+    user = create_user_record(username, password)
+    users.append(user)
+    save_users(users)
+
+    token = create_session_token(user)
+    _set_session_cookie(response, token)
+    return {
+        "token": token,
+        "user": {"id": user["id"], "username": user["username"]},
+    }
+
+
+@app.post("/authenticate")
+def api_authenticate(body: AuthCredentials, response: Response):
+    username = body.username.strip()
+    password = body.password
+
+    users = load_users()
+    user = next((entry for entry in users if entry.get("username") == username), None)
+    if not user or not verify_password(password, user):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    token = create_session_token(user)
+    _set_session_cookie(response, token)
+    return {
+        "token": token,
+        "user": {"id": user["id"], "username": user["username"]},
+    }
+
+
+@app.get("/session", response_model=SessionResponse)
+def api_session(request: Request):
+    try:
+        user = _get_current_session(request)
+        return {"authenticated": True, "user": user}
+    except HTTPException:
+        return {"authenticated": False, "user": None}
+
+
+@app.post("/logout")
+def api_logout(response: Response):
+    _clear_session_cookie(response)
+    return {"status": "ok"}
 
 
 @app.get("/projects")

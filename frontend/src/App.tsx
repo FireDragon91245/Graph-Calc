@@ -16,6 +16,7 @@ import ReactFlow, {
 } from "reactflow";
 import { solveGraph, SolveResponse } from "./api/solve";
 import { loadGraph, saveGraph, loadStore, saveStore, listProjects, listGraphs } from "./api/persistence";
+import { authenticateUser, AuthUser, getSession, logoutUser, registerUser } from "./api/auth";
 import ContextMenu from "./editor/ContextMenu";
 import CommandPalette, { CommandAction } from "./editor/CommandPalette";
 import { useGraphStore } from "./store/graphStore";
@@ -38,6 +39,7 @@ import RecipeGenerator from "./components/RecipeGenerator";
 import ItemGenerator from "./components/ItemGenerator";
 import ProjectSelector from "./components/ProjectSelector";
 import GraphSelector from "./components/GraphSelector";
+import AuthDialog, { AuthDialogMode } from "./components/AuthDialog";
 import { NodeType } from "./components/NodeTypeSelector";
 import EdgeWithTooltip from "./edges/EdgeWithTooltip";
 
@@ -150,6 +152,10 @@ function AppContent() {
   const [pendingNodePosition, setPendingNodePosition] = useState<{ x: number; y: number } | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
+  const [authDialogMode, setAuthDialogMode] = useState<AuthDialogMode>("login");
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   
   const activeProjectId = useGraphStore((state) => state.activeProjectId);
   const setActiveProjectId = useGraphStore((state) => state.setActiveProjectId);
@@ -191,6 +197,34 @@ function AppContent() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [appMode]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadSession = async () => {
+      try {
+        const session = await getSession();
+        if (!ignore) {
+          setAuthUser(session.authenticated ? session.user : null);
+        }
+      } catch (error) {
+        console.error("Error loading session:", error);
+        if (!ignore) {
+          setAuthUser(null);
+        }
+      } finally {
+        if (!ignore) {
+          setIsAuthChecking(false);
+        }
+      }
+    };
+
+    loadSession();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   // Load data on mount
   useEffect(() => {
@@ -1104,6 +1138,29 @@ function AppContent() {
     }
   }, [graphPayload, setNodes, setEdges]);
 
+  const openAuthDialog = useCallback((mode: AuthDialogMode = "login") => {
+    setAuthDialogMode(mode);
+    setIsAuthDialogOpen(true);
+  }, []);
+
+  const handleLogin = useCallback(async (username: string, password: string) => {
+    const result = await authenticateUser(username, password);
+    setAuthUser(result.user);
+    setIsAuthDialogOpen(false);
+  }, []);
+
+  const handleRegister = useCallback(async (username: string, password: string) => {
+    const result = await registerUser(username, password);
+    setAuthUser(result.user);
+    setIsAuthDialogOpen(false);
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    await logoutUser();
+    setAuthUser(null);
+    setIsAuthDialogOpen(false);
+  }, []);
+
   return (
     <div className="app-root">
       <div className="top-bar">
@@ -1123,21 +1180,41 @@ function AppContent() {
           configSubMode={configSubMode}
           onConfigSubModeChange={setConfigSubMode}
         />
-        {appMode === "edit" && (
-          <>
-            <input 
-              className="search" 
-              placeholder="Quick Actions (Ctrl+I)" 
-              readOnly
-              onClick={() => setIsCommandPaletteOpen(true)}
-              style={{ cursor: "pointer" }}
-            />
+        {appMode === "edit" ? (
+          <input 
+            className="search" 
+            placeholder="Quick Actions (Ctrl+I)" 
+            readOnly
+            onClick={() => setIsCommandPaletteOpen(true)}
+            style={{ cursor: "pointer" }}
+          />
+        ) : (
+          <div className="top-bar-spacer" />
+        )}
+        <div className="top-bar-actions">
+          {appMode === "edit" && (
             <button className="primary" onClick={handleSolve} disabled={isSolving}>
               {isSolving ? "Solving..." : "Solve"}
             </button>
-          </>
-        )}
+          )}
+          <button
+            className="secondary auth-button"
+            onClick={() => openAuthDialog("login")}
+            disabled={isAuthChecking}
+          >
+            {isAuthChecking ? "Checking..." : authUser ? authUser.username : "Login"}
+          </button>
+        </div>
       </div>
+      <AuthDialog
+        isOpen={isAuthDialogOpen}
+        initialMode={authDialogMode}
+        currentUser={authUser}
+        onClose={() => setIsAuthDialogOpen(false)}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+        onLogout={handleLogout}
+      />
       
       {appMode === "edit" ? (
         <div className="layout">

@@ -1,3 +1,5 @@
+import { apiFetch, getErrorMessage } from "./client";
+
 export type GraphNode = {
   id: string;
   type: "recipe" | "recipetag" | "input" | "inputrecipe" | "inputrecipetag" | "output" | "requester" | "mixedoutput";
@@ -60,15 +62,13 @@ export type SolveResponse = {
 };
 
 export async function solveGraph(payload: SolveRequest): Promise<SolveResponse> {
-  const baseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-  const res = await fetch(`${baseUrl}/solve`, {
+  const res = await apiFetch("/solve", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
 
   if (!res.ok) {
-    throw new Error(`Solve failed: ${res.status}`);
+    throw new Error(await getErrorMessage(res, `Solve failed: ${res.status}`));
   }
 
   return res.json() as Promise<SolveResponse>;

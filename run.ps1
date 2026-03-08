@@ -1,1 +1,3 @@
-npm --prefix C:\Users\Rick\Desktop\test\graphcalc\frontend run dev
+& "$PSScriptRoot\scripts\generate-dev-cert.ps1"
+Remove-Item Env:VITE_API_URL -ErrorAction SilentlyContinue
+npm --prefix "$PSScriptRoot\frontend" run dev

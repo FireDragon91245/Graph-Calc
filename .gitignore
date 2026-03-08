@@ -2,3 +2,6 @@ node_modules
 dist
 venv
 __pycache__
+certs/*.pem
+data/users.json
+data/jwt_secret.json

@@ -8,6 +8,7 @@ from typing import Any, Dict, List
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 PROJECTS_DIR = DATA_DIR / "projects"
 META_FILE = DATA_DIR / "projects_meta.json"
+USERS_FILE = DATA_DIR / "users.json"
 
 
 def ensure_data_dir():
@@ -399,3 +400,15 @@ def save_store(project_id: str, data: Dict[str, Any]):
     """Save store data for a project"""
     d = _ensure_project_dir(project_id)
     save_json_file(d / "store.json", data)
+
+
+def load_users() -> List[Dict[str, Any]]:
+    """Load registered users."""
+    default = {"users": []}
+    data = load_json_file(USERS_FILE, default)
+    return data.get("users", [])
+
+
+def save_users(users: List[Dict[str, Any]]):
+    """Save registered users."""
+    save_json_file(USERS_FILE, {"users": users})
