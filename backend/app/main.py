@@ -26,6 +26,7 @@ from app.auth import (
 )
 from app.solver.solver import solve_graph
 from app.persistence import (
+    initialize_persistence,
     load_graph, save_graph, load_store, save_store,
     list_projects, get_active_project_id, set_active_project,
     create_project, rename_project, copy_project, delete_project,
@@ -54,6 +55,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+
+@app.on_event("startup")
+def startup_event():
+    initialize_persistence()
 
 
 @app.middleware("http")

@@ -4,12 +4,10 @@ import hmac
 import json
 import secrets
 import time
-from pathlib import Path
 from typing import Any, Dict, Optional
 
-from app.persistence import DATA_DIR, _generate_id, load_json_file, save_json_file
+from app.persistence import _generate_id, get_jwt_secret
 
-JWT_SECRET_FILE = DATA_DIR / "jwt_secret.json"
 JWT_ALGORITHM = "HS256"
 JWT_TTL_SECONDS = 60 * 60 * 24 * 7
 PASSWORD_HASH_ITERATIONS = 200_000
@@ -26,14 +24,7 @@ def _b64url_decode(data: str) -> bytes:
 
 
 def _load_secret() -> str:
-    data = load_json_file(JWT_SECRET_FILE, None)
-    if data and isinstance(data.get("secret"), str) and data["secret"]:
-        return data["secret"]
-
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    secret = secrets.token_urlsafe(48)
-    save_json_file(JWT_SECRET_FILE, {"secret": secret})
-    return secret
+    return get_jwt_secret(lambda: secrets.token_urlsafe(48))
 
 
 def hash_password(password: str, salt: Optional[str] = None) -> Dict[str, Any]:
