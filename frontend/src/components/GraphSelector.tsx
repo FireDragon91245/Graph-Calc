@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   GraphInfo,
   listGraphs,
@@ -32,19 +32,25 @@ export default function GraphSelector({
 
   const activeGraph = graphs.find((g) => g.id === activeGraphId);
 
-  const refresh = async () => {
-    if (!activeProjectId) return;
+  const refresh = useCallback(async () => {
+    if (!activeProjectId) {
+      setGraphs([]);
+      return null;
+    }
+
     try {
       const res = await listGraphs(activeProjectId);
       setGraphs(res.graphs);
+      return res;
     } catch (e) {
       console.error("Failed to load graphs", e);
+      return null;
     }
-  };
+  }, [activeProjectId]);
 
   useEffect(() => {
-    refresh();
-  }, [activeProjectId]);
+    void refresh();
+  }, [refresh]);
 
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
@@ -74,19 +80,24 @@ export default function GraphSelector({
     }
   }, [editingId, showNew]);
 
-  const handleSwitch = async (id: string) => {
+  const handleSwitch = (id: string) => {
     if (!activeProjectId) return;
     if (id === activeGraphId) {
       setIsOpen(false);
       return;
     }
-    try {
-      await activateGraph(activeProjectId, id);
-      onGraphChange(id);
-      setIsOpen(false);
-    } catch (e) {
+
+    const previousGraphId = activeGraphId;
+    setIsOpen(false);
+    onGraphChange(id);
+
+    void activateGraph(activeProjectId, id).catch((e) => {
       console.error("Failed to switch graph", e);
-    }
+      if (previousGraphId && previousGraphId !== id) {
+        onGraphChange(previousGraphId);
+      }
+      void refresh();
+    });
   };
 
   const handleCreate = async () => {
@@ -95,31 +106,47 @@ export default function GraphSelector({
     if (!name) return;
     try {
       const g = await createGraph(activeProjectId, name);
+      const previousGraphId = activeGraphId;
+
+      setGraphs((current) => [...current, g]);
       setNewName("");
       setShowNew(false);
-      await refresh();
-      await activateGraph(activeProjectId, g.id);
-      onGraphChange(g.id);
       setIsOpen(false);
+      onGraphChange(g.id);
+
+      void activateGraph(activeProjectId, g.id)
+        .catch((e) => {
+          console.error("Failed to activate new graph", e);
+          if (previousGraphId) {
+            onGraphChange(previousGraphId);
+          }
+          void refresh();
+        })
+        .finally(() => {
+          void refresh();
+        });
     } catch (e) {
       console.error("Failed to create graph", e);
     }
   };
 
-  const handleRename = async (id: string) => {
+  const handleRename = (id: string) => {
     if (!activeProjectId) return;
     const name = editName.trim();
     if (!name) {
       setEditingId(null);
       return;
     }
-    try {
-      await apiRenameGraph(activeProjectId, id, name);
-      setEditingId(null);
-      await refresh();
-    } catch (e) {
+
+    const previousGraphs = graphs;
+    setGraphs((current) => current.map((graph) => (graph.id === id ? { ...graph, name } : graph)));
+    setEditingId(null);
+
+    void apiRenameGraph(activeProjectId, id, name).catch((e) => {
       console.error("Failed to rename graph", e);
-    }
+      setGraphs(previousGraphs);
+      void refresh();
+    });
   };
 
   const handleCopy = async (id: string) => {
@@ -128,33 +155,63 @@ export default function GraphSelector({
     if (!source) return;
     try {
       const newG = await apiCopyGraph(activeProjectId, id, `${source.name} (copy)`);
+      const previousGraphId = activeGraphId;
+
+      setGraphs((current) => [...current, newG]);
       setContextMenu(null);
-      await refresh();
-      await activateGraph(activeProjectId, newG.id);
+      setIsOpen(false);
       onGraphChange(newG.id);
+
+      void activateGraph(activeProjectId, newG.id)
+        .catch((e) => {
+          console.error("Failed to activate copied graph", e);
+          if (previousGraphId) {
+            onGraphChange(previousGraphId);
+          }
+          void refresh();
+        })
+        .finally(() => {
+          void refresh();
+        });
     } catch (e) {
       console.error("Failed to copy graph", e);
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!activeProjectId) return;
     if (graphs.length <= 1) {
       alert("Cannot delete the last graph.");
       return;
     }
     if (!confirm("Delete this graph? This cannot be undone.")) return;
-    try {
-      await apiDeleteGraph(activeProjectId, id);
-      setContextMenu(null);
-      const res = await listGraphs(activeProjectId);
-      setGraphs(res.graphs);
-      if (id === activeGraphId && res.activeGraphId) {
-        onGraphChange(res.activeGraphId);
-      }
-    } catch (e) {
-      console.error("Failed to delete graph", e);
+
+    const previousGraphs = graphs;
+    const remainingGraphs = graphs.filter((graph) => graph.id !== id);
+    const fallbackGraphId = id === activeGraphId ? remainingGraphs[0]?.id ?? null : activeGraphId;
+
+    setGraphs(remainingGraphs);
+    setContextMenu(null);
+
+    if (id === activeGraphId && fallbackGraphId) {
+      onGraphChange(fallbackGraphId);
     }
+
+    void apiDeleteGraph(activeProjectId, id)
+      .then(async () => {
+        const res = await refresh();
+        if (id === activeGraphId && res?.activeGraphId && res.activeGraphId !== fallbackGraphId) {
+          onGraphChange(res.activeGraphId);
+        }
+      })
+      .catch((e) => {
+        console.error("Failed to delete graph", e);
+        setGraphs(previousGraphs);
+        if (id === activeGraphId && activeGraphId) {
+          onGraphChange(activeGraphId);
+        }
+        void refresh();
+      });
   };
 
   const handleContextMenu = (e: React.MouseEvent, id: string) => {

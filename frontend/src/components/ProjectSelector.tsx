@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Project,
   listProjects,
@@ -30,18 +30,20 @@ export default function ProjectSelector({
 
   const activeProject = projects.find((p) => p.id === activeProjectId);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     try {
       const res = await listProjects();
       setProjects(res.projects);
+      return res;
     } catch (e) {
       console.error("Failed to load projects", e);
+      return null;
     }
-  };
+  }, []);
 
   useEffect(() => {
-    refresh();
-  }, []);
+    void refresh();
+  }, [refresh]);
 
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
@@ -71,18 +73,23 @@ export default function ProjectSelector({
     }
   }, [editingId, showNew]);
 
-  const handleSwitch = async (id: string) => {
+  const handleSwitch = (id: string) => {
     if (id === activeProjectId) {
       setIsOpen(false);
       return;
     }
-    try {
-      await activateProject(id);
-      onProjectChange(id);
-      setIsOpen(false);
-    } catch (e) {
+
+    const previousProjectId = activeProjectId;
+    setIsOpen(false);
+    onProjectChange(id);
+
+    void activateProject(id).catch((e) => {
       console.error("Failed to switch project", e);
-    }
+      if (previousProjectId && previousProjectId !== id) {
+        onProjectChange(previousProjectId);
+      }
+      void refresh();
+    });
   };
 
   const handleCreate = async () => {
@@ -90,31 +97,46 @@ export default function ProjectSelector({
     if (!name) return;
     try {
       const proj = await createProject(name);
+      const previousProjectId = activeProjectId;
+
+      setProjects((current) => [...current, proj]);
       setNewName("");
       setShowNew(false);
-      await refresh();
-      // Switch to new project
-      await activateProject(proj.id);
-      onProjectChange(proj.id);
       setIsOpen(false);
+      onProjectChange(proj.id);
+
+      void activateProject(proj.id)
+        .catch((e) => {
+          console.error("Failed to activate new project", e);
+          if (previousProjectId) {
+            onProjectChange(previousProjectId);
+          }
+          void refresh();
+        })
+        .finally(() => {
+          void refresh();
+        });
     } catch (e) {
       console.error("Failed to create project", e);
     }
   };
 
-  const handleRename = async (id: string) => {
+  const handleRename = (id: string) => {
     const name = editName.trim();
     if (!name) {
       setEditingId(null);
       return;
     }
-    try {
-      await apiRenameProject(id, name);
-      setEditingId(null);
-      await refresh();
-    } catch (e) {
+
+    const previousProjects = projects;
+    setProjects((current) => current.map((project) => (project.id === id ? { ...project, name } : project)));
+    setEditingId(null);
+
+    void apiRenameProject(id, name).catch((e) => {
       console.error("Failed to rename project", e);
-    }
+      setProjects(previousProjects);
+      void refresh();
+    });
   };
 
   const handleCopy = async (id: string) => {
@@ -122,33 +144,62 @@ export default function ProjectSelector({
     if (!source) return;
     try {
       const newProj = await apiCopyProject(id, `${source.name} (copy)`);
+      const previousProjectId = activeProjectId;
+
+      setProjects((current) => [...current, newProj]);
       setContextMenu(null);
-      await refresh();
-      // Switch to copy
-      await activateProject(newProj.id);
+      setIsOpen(false);
       onProjectChange(newProj.id);
+
+      void activateProject(newProj.id)
+        .catch((e) => {
+          console.error("Failed to activate copied project", e);
+          if (previousProjectId) {
+            onProjectChange(previousProjectId);
+          }
+          void refresh();
+        })
+        .finally(() => {
+          void refresh();
+        });
     } catch (e) {
       console.error("Failed to copy project", e);
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (projects.length <= 1) {
       alert("Cannot delete the last project.");
       return;
     }
     if (!confirm("Delete this project? This cannot be undone.")) return;
-    try {
-      await apiDeleteProject(id);
-      setContextMenu(null);
-      const res = await listProjects();
-      setProjects(res.projects);
-      if (id === activeProjectId && res.activeProjectId) {
-        onProjectChange(res.activeProjectId);
-      }
-    } catch (e) {
-      console.error("Failed to delete project", e);
+
+    const previousProjects = projects;
+    const remainingProjects = projects.filter((project) => project.id !== id);
+    const fallbackProjectId = id === activeProjectId ? remainingProjects[0]?.id ?? null : activeProjectId;
+
+    setProjects(remainingProjects);
+    setContextMenu(null);
+
+    if (id === activeProjectId && fallbackProjectId) {
+      onProjectChange(fallbackProjectId);
     }
+
+    void apiDeleteProject(id)
+      .then(async () => {
+        const res = await refresh();
+        if (id === activeProjectId && res?.activeProjectId && res.activeProjectId !== fallbackProjectId) {
+          onProjectChange(res.activeProjectId);
+        }
+      })
+      .catch((e) => {
+        console.error("Failed to delete project", e);
+        setProjects(previousProjects);
+        if (id === activeProjectId && activeProjectId) {
+          onProjectChange(activeProjectId);
+        }
+        void refresh();
+      });
   };
 
   const handleContextMenu = (e: React.MouseEvent, id: string) => {

@@ -82,6 +82,30 @@ const slugify = (value: string) =>
 
 // Debounced save function
 let saveTimeout: number | null = null;
+let storeSaveInFlight = false;
+let pendingStoreSave: { data: StoreData; projectId?: string } | null = null;
+
+const flushStoreSave = () => {
+  if (storeSaveInFlight || !pendingStoreSave) {
+    return;
+  }
+
+  const saveJob = pendingStoreSave;
+  pendingStoreSave = null;
+  storeSaveInFlight = true;
+
+  saveStore(saveJob.data, saveJob.projectId)
+    .catch((err) => {
+      console.error("Failed to auto-save store:", err);
+    })
+    .finally(() => {
+      storeSaveInFlight = false;
+      if (pendingStoreSave) {
+        flushStoreSave();
+      }
+    });
+};
+
 const debouncedSave = (state: GraphStore) => {
   if (saveTimeout) {
     clearTimeout(saveTimeout);
@@ -95,9 +119,8 @@ const debouncedSave = (state: GraphStore) => {
       recipes: state.recipes
     };
     const projectId = state.activeProjectId ?? undefined;
-    saveStore(dataToSave, projectId).catch((err) => {
-      console.error("Failed to auto-save store:", err);
-    });
+    pendingStoreSave = { data: dataToSave, projectId };
+    flushStoreSave();
   }, 300); // 300ms debounce
 };
 
