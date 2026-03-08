@@ -30,10 +30,29 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
   const tags = useGraphStore((state) => state.tags);
   const [showDetails, setShowDetails] = useState(false);
   const hasSolveData = Boolean(data.solveData);
-  const itemIdByName = useMemo(() => new Map(items.map((item) => [item.name, item.id])), [items]);
+  const itemNameById = useMemo(() => new Map(items.map((item) => [item.id, item.name])), [items]);
+  const tagNameById = useMemo(() => new Map(tags.map((tag) => [tag.id, tag.name])), [tags]);
 
-  const resolveInputId = (port: Port) => port.refId ?? port.fixedRefId ?? itemIdByName.get(port.name) ?? port.name;
-  const resolveOutputId = (port: Port) => port.itemId ?? port.fixedRefId ?? itemIdByName.get(port.name) ?? port.name;
+  const resolveInputId = (port: Port) => port.refId ?? port.fixedRefId ?? port.name;
+  const resolveOutputId = (port: Port) => port.itemId ?? port.fixedRefId ?? port.name;
+  const recipeTitle = recipes.find((recipe) => recipe.id === data.recipeId)?.name ?? data.title;
+  const getInputLabel = (port: Port) => {
+    const referencedId = port.refId ?? port.fixedRefId;
+    if (!referencedId) {
+      return port.name;
+    }
+    if (port.refType === "tag") {
+      return tagNameById.get(referencedId) ?? port.name;
+    }
+    if (port.refType === "item") {
+      return itemNameById.get(referencedId) ?? port.name;
+    }
+    return itemNameById.get(referencedId) ?? tagNameById.get(referencedId) ?? port.name;
+  };
+  const getOutputLabel = (port: Port) => {
+    const referencedId = port.itemId ?? port.fixedRefId;
+    return referencedId ? itemNameById.get(referencedId) ?? port.name : port.name;
+  };
 
   const handleRecipeChange = (newRecipeId: string) => {
     const recipe = recipes.find((r) => r.id === newRecipeId);
@@ -136,7 +155,7 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
                     className="handle"
                     isConnectableStart={true}
                   />
-                  <span className="port-name">{input.name}</span>
+                  <span className="port-name">{getInputLabel(input)}</span>
                   <span className="port-amount">{input.amountPerCycle}</span>
                   {hasSolveData && (
                     <span className="port-rate" title="Actual flow rate">
@@ -159,7 +178,7 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
                     </span>
                   )}
                   <span className="port-amount">{output.amountPerCycle}</span>
-                  <span className="port-name">{output.name}</span>
+                  <span className="port-name">{getOutputLabel(output)}</span>
                   {output.probability !== undefined && output.probability < 1 ? (
                     <span className="prob">{Math.round(output.probability * 100)}%</span>
                   ) : null}
@@ -178,7 +197,7 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
           <div className="node-detail-panel">
             <div className="node-detail-title">Recipe Details</div>
             <div className="node-detail-row">
-              <span>{data.title}</span>
+              <span>{recipeTitle}</span>
               <span>{data.timeSeconds}s</span>
             </div>
             <div className="node-detail-row">
@@ -194,7 +213,7 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
               return (
                 <div key={`in-${input.id}`} className="node-detail-item">
                   <div className="node-detail-row">
-                    <span className="flow-name">IN • {input.name}</span>
+                    <span className="flow-name">IN • {getInputLabel(input)}</span>
                     <span>{actualRate.toFixed(2)}/s</span>
                   </div>
                   <div className="node-detail-subrow">
@@ -215,7 +234,7 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
               return (
                 <div key={`out-${output.id}`} className="node-detail-item">
                   <div className="node-detail-row">
-                    <span className="flow-name">OUT • {output.name}</span>
+                    <span className="flow-name">OUT • {getOutputLabel(output)}</span>
                     <span>{actualRate.toFixed(2)}/s</span>
                   </div>
                   <div className="node-detail-subrow">

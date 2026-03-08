@@ -1,6 +1,7 @@
 import { EdgeLabelRenderer, EdgeProps, getBezierPath } from "reactflow";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { EdgeFlowData } from "../api/solve";
+import { useGraphStore } from "../store/graphStore";
 
 type EdgeData = EdgeFlowData & {
   isProblem?: boolean;
@@ -20,6 +21,8 @@ export default function EdgeWithTooltip({
   selected,
 }: EdgeProps<EdgeData>) {
   const [isHovered, setIsHovered] = useState(false);
+  const items = useGraphStore((state) => state.items);
+  const itemNameById = useMemo(() => new Map(items.map((item) => [item.id, item.name])), [items]);
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
@@ -155,7 +158,7 @@ export default function EdgeWithTooltip({
                       gap: "16px",
                     }}
                   >
-                    <span style={{ color: "#e5e7eb" }}>{itemId}</span>
+                    <span style={{ color: "#e5e7eb" }}>{itemNameById.get(itemId) ?? itemId}</span>
                     <span style={{ color: "#10b981", fontWeight: 600 }}>
                       {rate.toFixed(2)}/s
                     </span>

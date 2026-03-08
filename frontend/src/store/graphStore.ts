@@ -160,15 +160,9 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
     }),
   renameCategory: (categoryId, newName) =>
     set((state) => {
-      const newCategoryId = slugify(newName);
       const newState = {
         categories: state.categories.map((c) =>
-          c.id === categoryId ? { id: newCategoryId, name: newName } : c
-        ),
-        items: state.items.map((item) =>
-          item.categoryId === categoryId
-            ? { ...item, categoryId: newCategoryId }
-            : item
+          c.id === categoryId ? { ...c, name: newName } : c
         )
       };
       debouncedSave({ ...state, ...newState });
@@ -230,7 +224,6 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
     }),
   renameItem: (itemId, newName) =>
     set((state) => {
-      const newItemId = slugify(newName);
       // Check if new name conflicts with another item
       const existingByName = state.items.find(
         (i) => i.name === newName && i.id !== itemId
@@ -242,26 +235,8 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       
       const newState = {
         items: state.items.map((item) =>
-          item.id === itemId ? { ...item, id: newItemId, name: newName } : item
-        ),
-        // Update references in tags
-        tags: state.tags.map((tag) => ({
-          ...tag,
-          memberItemIds: tag.memberItemIds.map((id) => (id === itemId ? newItemId : id))
-        })),
-        // Update references in recipe outputs
-        recipes: state.recipes.map((recipe) => ({
-          ...recipe,
-          outputs: recipe.outputs.map((output) =>
-            output.itemId === itemId ? { ...output, itemId: newItemId } : output
-          ),
-          // Update item inputs
-          inputs: recipe.inputs.map((input) =>
-            input.refType === "item" && input.refId === itemId
-              ? { ...input, refId: newItemId }
-              : input
-          )
-        }))
+          item.id === itemId ? { ...item, name: newName } : item
+        )
       };
       debouncedSave({ ...state, ...newState });
       return newState;
@@ -315,29 +290,20 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
     }),
   renameTag: (tagId, newName) =>
     set((state) => {
-      const newTagId = newName.startsWith("@") ? newName : `@${newName}`;
+      const formattedName = newName.startsWith("@") ? newName : `@${newName}`;
       // Check if new name conflicts
       const existingByName = state.tags.find(
-        (t) => t.id === newTagId && t.id !== tagId
+        (t) => t.name === formattedName && t.id !== tagId
       );
       if (existingByName) {
-        alert(`Tag "${newTagId}" already exists!`);
+        alert(`Tag "${formattedName}" already exists!`);
         return state;
       }
       
       const newState = {
         tags: state.tags.map((tag) =>
-          tag.id === tagId ? { ...tag, id: newTagId, name: newTagId } : tag
-        ),
-        // Update recipe inputs that reference this tag
-        recipes: state.recipes.map((recipe) => ({
-          ...recipe,
-          inputs: recipe.inputs.map((input) =>
-            input.refType === "tag" && input.refId === tagId
-              ? { ...input, refId: newTagId }
-              : input
-          )
-        }))
+          tag.id === tagId ? { ...tag, name: formattedName } : tag
+        )
       };
       debouncedSave({ ...state, ...newState });
       return newState;
@@ -384,19 +350,19 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
     }),
   renameRecipeTag: (recipeTagId, newName) =>
     set((state) => {
-      const newRecipeTagId = newName.startsWith("@") ? newName : `@${newName}`;
+      const formattedName = newName.startsWith("@") ? newName : `@${newName}`;
       // Check if new name conflicts
       const existingByName = state.recipeTags.find(
-        (rt) => rt.id === newRecipeTagId && rt.id !== recipeTagId
+        (rt) => rt.name === formattedName && rt.id !== recipeTagId
       );
       if (existingByName) {
-        alert(`Recipe Tag "${newRecipeTagId}" already exists!`);
+        alert(`Recipe Tag "${formattedName}" already exists!`);
         return state;
       }
       
       const newState = {
         recipeTags: state.recipeTags.map((rt) =>
-          rt.id === recipeTagId ? { ...rt, id: newRecipeTagId, name: newRecipeTagId } : rt
+          rt.id === recipeTagId ? { ...rt, name: formattedName } : rt
         )
       };
       debouncedSave({ ...state, ...newState });
@@ -453,7 +419,6 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
     }),
   renameRecipe: (recipeId, newName) =>
     set((state) => {
-      const newRecipeId = slugify(newName);
       // Check if new name conflicts
       const existingByName = state.recipes.find(
         (r) => r.name === newName && r.id !== recipeId
@@ -465,13 +430,8 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       
       const newState = {
         recipes: state.recipes.map((recipe) =>
-          recipe.id === recipeId ? { ...recipe, id: newRecipeId, name: newName } : recipe
-        ),
-        // Update references in recipe tags
-        recipeTags: state.recipeTags.map((rt) => ({
-          ...rt,
-          memberRecipeIds: rt.memberRecipeIds.map((id) => (id === recipeId ? newRecipeId : id))
-        }))
+          recipe.id === recipeId ? { ...recipe, name: newName } : recipe
+        )
       };
       debouncedSave({ ...state, ...newState });
       return newState;

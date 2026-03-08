@@ -28,9 +28,14 @@ export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeD
   const [showDetails, setShowDetails] = useState(false);
   const multiplier = typeof data.multiplier === "number" && Number.isFinite(data.multiplier) ? data.multiplier : 1;
   const hasSolveData = Boolean(data.solveData);
-  const itemIdByName = useMemo(() => new Map(items.map((item) => [item.name, item.id])), [items]);
+  const itemNameById = useMemo(() => new Map(items.map((item) => [item.id, item.name])), [items]);
+  const recipeTitle = recipes.find((recipe) => recipe.id === data.recipeId)?.name ?? data.title;
 
-  const resolveItemId = (output: Port) => output.itemId ?? itemIdByName.get(output.name) ?? output.name;
+  const resolveItemId = (output: Port) => output.itemId ?? output.name;
+  const getOutputLabel = (output: Port) => {
+    const itemId = output.itemId;
+    return itemId ? itemNameById.get(itemId) ?? output.name : output.name;
+  };
 
   const buildOutputs = (recipeId: string, nextMultiplier: number) => {
     const recipe = recipes.find((r) => r.id === recipeId);
@@ -146,7 +151,7 @@ export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeD
                   </span>
                 )}
                 <span className="port-amount">{output.amountPerCycle}</span>
-                <span className="port-name">{output.name}</span>
+                <span className="port-name">{getOutputLabel(output)}</span>
                 {output.probability !== undefined && output.probability < 1 ? (
                   <span className="prob">{Math.round(output.probability * 100)}%</span>
                 ) : null}
@@ -164,7 +169,7 @@ export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeD
           <div className="node-detail-panel">
             <div className="node-detail-title">Input Recipe Details</div>
             <div className="node-detail-row">
-              <span>{data.title}</span>
+              <span>{recipeTitle}</span>
               <span>x{multiplier} • {data.timeSeconds}s</span>
             </div>
             {data.outputs.map((output) => {
@@ -175,7 +180,7 @@ export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeD
               return (
                 <div key={`detail-${output.id}`} className="node-detail-item">
                   <div className="node-detail-row">
-                    <span className="flow-name">{output.name}</span>
+                    <span className="flow-name">{getOutputLabel(output)}</span>
                     <span className="flow-rate">{actualUsed.toFixed(2)}/s used</span>
                   </div>
                   <div className="node-detail-subrow">

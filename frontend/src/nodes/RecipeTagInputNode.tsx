@@ -98,11 +98,15 @@ export default function RecipeTagInputNode({ id, data }: NodeProps<RecipeTagInpu
   const [showDetails, setShowDetails] = useState(false);
   const multiplier = typeof data.multiplier === "number" && Number.isFinite(data.multiplier) ? data.multiplier : 1;
   const hasSolveData = Boolean(data.solveData);
-  const itemIdByName = useMemo(() => new Map(items.map((item) => [item.name, item.id])), [items]);
   const itemNameById = useMemo(() => new Map(items.map((item) => [item.id, item.name])), [items]);
+  const recipeTagTitle = recipeTags.find((tag) => tag.id === data.recipeTagId)?.name ?? data.title;
 
   const resolveItemId = (output: PortPattern) =>
-    output.itemId ?? output.fixedRefId ?? itemIdByName.get(output.name) ?? output.name;
+    output.itemId ?? output.fixedRefId ?? output.name;
+  const getOutputLabel = (output: PortPattern) => {
+    const itemId = output.itemId ?? output.fixedRefId;
+    return itemId && !output.isMixed ? itemNameById.get(itemId) ?? output.name : output.name;
+  };
 
   const handleRecipeTagChange = (newRecipeTagId: string) => {
     const recipeTag = recipeTags.find((rt) => rt.id === newRecipeTagId);
@@ -207,7 +211,7 @@ export default function RecipeTagInputNode({ id, data }: NodeProps<RecipeTagInpu
                 )}
                 <span className="port-amount">{output.amountPerCycle}</span>
                 <span className={`port-name ${output.isMixed ? "mixed-label" : ""}`}>
-                  {output.name}
+                  {getOutputLabel(output)}
                 </span>
                 {output.probability !== undefined && output.probability < 1 ? (
                   <span className="prob">{Math.round(output.probability * 100)}%</span>
@@ -226,7 +230,7 @@ export default function RecipeTagInputNode({ id, data }: NodeProps<RecipeTagInpu
           <div className="node-detail-panel">
             <div className="node-detail-title">Input Recipe Tag Details</div>
             <div className="node-detail-row">
-              <span>{data.title}</span>
+              <span>{recipeTagTitle}</span>
               <span>x{multiplier}</span>
             </div>
             {(recipeTags.find((tag) => tag.id === data.recipeTagId)?.memberRecipeIds ?? []).map((recipeId) => {

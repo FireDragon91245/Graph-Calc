@@ -152,10 +152,25 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
   const [showDetails, setShowDetails] = useState(false);
   const hasSolveData = Boolean(data.solveData);
   const itemNameById = useMemo(() => new Map(items.map((item) => [item.id, item.name])), [items]);
-  const itemIdByName = useMemo(() => new Map(items.map((item) => [item.name, item.id])), [items]);
+  const tagNameById = useMemo(() => new Map(tags.map((tag) => [tag.id, tag.name])), [tags]);
 
-  const resolveInputId = (port: PortPattern) => port.refId ?? port.fixedRefId ?? itemIdByName.get(port.name) ?? port.name;
-  const resolveOutputId = (port: PortPattern) => port.itemId ?? port.fixedRefId ?? itemIdByName.get(port.name) ?? port.name;
+  const resolveInputId = (port: PortPattern) => port.refId ?? port.fixedRefId ?? port.name;
+  const resolveOutputId = (port: PortPattern) => port.itemId ?? port.fixedRefId ?? port.name;
+  const recipeTagTitle = recipeTags.find((tag) => tag.id === data.recipeTagId)?.name ?? data.title;
+  const getInputLabel = (port: PortPattern) => {
+    const referencedId = port.refId ?? port.fixedRefId;
+    if (!referencedId || port.isMixed) {
+      return port.name;
+    }
+    if (port.refType === "tag") {
+      return tagNameById.get(referencedId) ?? port.name;
+    }
+    return itemNameById.get(referencedId) ?? tagNameById.get(referencedId) ?? port.name;
+  };
+  const getOutputLabel = (port: PortPattern) => {
+    const referencedId = port.itemId ?? port.fixedRefId;
+    return !referencedId || port.isMixed ? port.name : itemNameById.get(referencedId) ?? port.name;
+  };
 
   const handleRecipeTagChange = (newRecipeTagId: string) => {
     const recipeTag = recipeTags.find((rt) => rt.id === newRecipeTagId);
@@ -234,7 +249,7 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
                   isConnectableStart={true}
                 />
                 <span className={`port-name ${input.isMixed ? "mixed-label" : ""}`}>
-                  {input.name}
+                  {getInputLabel(input)}
                 </span>
                 <span className="port-amount">{input.amountPerCycle}</span>
                 {hasSolveData && !input.isMixed ? (
@@ -255,7 +270,7 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
                 ) : null}
                 <span className="port-amount">{output.amountPerCycle}</span>
                 <span className={`port-name ${output.isMixed ? "mixed-label" : ""}`}>
-                  {output.name}
+                  {getOutputLabel(output)}
                 </span>
                 {output.probability !== undefined && output.probability < 1 ? (
                   <span className="prob">{Math.round(output.probability * 100)}%</span>
@@ -274,7 +289,7 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
           <div className="node-detail-panel">
             <div className="node-detail-title">Recipe Tag Details</div>
             <div className="node-detail-row">
-              <span>{data.title}</span>
+              <span>{recipeTagTitle}</span>
               <span>{(data.solveData.machineCount ?? 0).toFixed(2)} machines</span>
             </div>
             {Object.entries(data.solveData.recipeRuns ?? {}).map(([recipeId, runCount]) => {
