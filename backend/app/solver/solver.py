@@ -34,6 +34,158 @@ class EdgeFlow:
         self.is_input_to_recipe = False
 
 
+def _compute_strongly_connected_components(
+    node_ids: Set[str], edges: List[GraphEdge]
+) -> Tuple[List[Set[str]], Dict[str, int]]:
+    adjacency: Dict[str, List[str]] = defaultdict(list)
+    for edge in edges:
+        adjacency[edge.source].append(edge.target)
+
+    index = 0
+    stack: List[str] = []
+    on_stack: Set[str] = set()
+    indices: Dict[str, int] = {}
+    lowlinks: Dict[str, int] = {}
+    sccs: List[Set[str]] = []
+
+    def strongconnect(node_id: str) -> None:
+        nonlocal index
+        indices[node_id] = index
+        lowlinks[node_id] = index
+        index += 1
+        stack.append(node_id)
+        on_stack.add(node_id)
+
+        for neighbor in adjacency.get(node_id, []):
+            if neighbor not in indices:
+                strongconnect(neighbor)
+                lowlinks[node_id] = min(lowlinks[node_id], lowlinks[neighbor])
+            elif neighbor in on_stack:
+                lowlinks[node_id] = min(lowlinks[node_id], indices[neighbor])
+
+        if lowlinks[node_id] != indices[node_id]:
+            return
+
+        component: Set[str] = set()
+        while stack:
+            member = stack.pop()
+            on_stack.remove(member)
+            component.add(member)
+            if member == node_id:
+                break
+        sccs.append(component)
+
+    for node_id in node_ids:
+        if node_id not in indices:
+            strongconnect(node_id)
+
+    node_to_scc: Dict[str, int] = {}
+    for scc_index, component in enumerate(sccs):
+        for node_id in component:
+            node_to_scc[node_id] = scc_index
+
+    return sccs, node_to_scc
+
+
+def _compute_cycle_edge_ids(
+    graph: Graph, sccs: List[Set[str]], node_to_scc: Dict[str, int]
+) -> Set[str]:
+    cyclical_sccs = {
+        scc_index for scc_index, component in enumerate(sccs)
+        if len(component) > 1
+    }
+    cycle_edge_ids: Set[str] = set()
+
+    for edge in graph.edges:
+        src_scc = node_to_scc.get(edge.source)
+        tgt_scc = node_to_scc.get(edge.target)
+        if src_scc is None or src_scc != tgt_scc:
+            continue
+        if src_scc in cyclical_sccs or edge.source == edge.target:
+            cycle_edge_ids.add(edge.id)
+
+    return cycle_edge_ids
+
+
+def _compute_node_depths(
+    graph: Graph,
+    node_type_map: Dict[str, str],
+    input_nodes: List[GraphNode],
+    recipes: List[RecipeInstance],
+    sccs: List[Set[str]],
+    node_to_scc: Dict[str, int],
+) -> Dict[str, int]:
+    recipe_types = frozenset((
+        "recipe", "recipetag", "inputrecipe", "inputrecipetag"
+    ))
+    comp_edges: Dict[int, Set[int]] = defaultdict(set)
+    recipe_target_edges: Set[Tuple[int, int]] = set()
+    indegree: Dict[int, int] = {idx: 0 for idx in range(len(sccs))}
+
+    for edge in graph.edges:
+        src_comp = node_to_scc.get(edge.source)
+        tgt_comp = node_to_scc.get(edge.target)
+        if src_comp is None or tgt_comp is None or src_comp == tgt_comp:
+            continue
+        if tgt_comp not in comp_edges[src_comp]:
+            comp_edges[src_comp].add(tgt_comp)
+            indegree[tgt_comp] += 1
+        if node_type_map.get(edge.target) in recipe_types:
+            recipe_target_edges.add((src_comp, tgt_comp))
+
+    component_depths: Dict[int, int] = {}
+    for node in input_nodes:
+        component_depths[node_to_scc[node.id]] = 0
+    for recipe in recipes:
+        if recipe.max_machines is None:
+            continue
+        visual_id = recipe.parent_tag_node_id or recipe.node_id
+        component_depths[node_to_scc[visual_id]] = 0
+
+    queue: List[int] = [idx for idx in range(len(sccs)) if indegree[idx] == 0]
+    queue_index = 0
+    while queue_index < len(queue):
+        component_id = queue[queue_index]
+        queue_index += 1
+        current_depth = component_depths.get(component_id)
+
+        for next_component in comp_edges.get(component_id, set()):
+            if current_depth is not None and (component_id, next_component) in recipe_target_edges:
+                next_depth = current_depth + 1
+                if next_depth > component_depths.get(next_component, -1):
+                    component_depths[next_component] = next_depth
+            indegree[next_component] -= 1
+            if indegree[next_component] == 0:
+                queue.append(next_component)
+
+    node_depth: Dict[str, int] = {}
+    for node in input_nodes:
+        node_depth[node.id] = 0
+    for component_id, component_depth in component_depths.items():
+        for node_id in sccs[component_id]:
+            if node_type_map.get(node_id) in recipe_types:
+                node_depth[node_id] = component_depth
+
+    return node_depth
+
+
+def _get_supply_preference_weight(
+    edge: GraphEdge,
+    node_type_map: Dict[str, str],
+    node_depth: Dict[str, int],
+    max_depth: int,
+) -> float:
+    capped_depth = min(max_depth, 6)
+    source_type = node_type_map.get(edge.source)
+    if source_type == "input":
+        return float(10 ** min(capped_depth + 3, 8))
+    if source_type in ("inputrecipe", "inputrecipetag"):
+        return float(10 ** min(capped_depth + 2, 8))
+
+    source_depth = node_depth.get(edge.source, 0)
+    return float(10 ** min(max(capped_depth - source_depth, 0) + 1, 8))
+
+
 def _build_name_to_id_map(store_data: Optional[Dict]) -> Dict[str, str]:
     """Build a mapping from item display name -> item id for normalization"""
     name_to_id = {}
@@ -464,6 +616,11 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                             queue.append(nb)
                 components.append(comp)
 
+        sccs, node_to_scc = _compute_strongly_connected_components(
+            all_node_ids, graph.edges
+        )
+        cycle_edge_ids = _compute_cycle_edge_ids(graph, sccs, node_to_scc)
+
         if len(components) > 1:
             return _solve_components_independently(
                 graph, store_data, components, warnings
@@ -766,9 +923,9 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                     if item_id in edge_flow_vars.get(e.id, {})
                 ]
                 if out_terms:
-                    # >= allows waste: multi-output recipes can discard
-                    # byproducts that no downstream node needs.
-                    solver.Add(production >= solver.Sum(out_terms))
+                    # Once an output port is wired, all production on that
+                    # item/port must be accounted for on its edges.
+                    solver.Add(production == solver.Sum(out_terms))
                 # else: no outgoing edge carries this item – waste at port
 
         # ───────────────────────────────────────────────────────────────
@@ -887,29 +1044,11 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
         # Step 11 – Output-node surplus variables & depth weighting
         # ───────────────────────────────────────────────────────────────
         # Node depth (for prioritising complex outputs)
-        node_depth: Dict[str, int] = {}
-        for node in input_nodes:
-            node_depth[node.id] = 0
-        for recipe in recipes:
-            if recipe.max_machines is not None:
-                vid = recipe.parent_tag_node_id or recipe.node_id
-                if vid not in node_depth:
-                    node_depth[vid] = 0
-
         _recipe_types = frozenset((
             "recipe", "recipetag", "inputrecipe", "inputrecipetag"))
-        changed = True
-        while changed:
-            changed = False
-            for edge in graph.edges:
-                if edge.source in node_depth:
-                    tgt_t = node_type_map.get(edge.target)
-                    if tgt_t in _recipe_types:
-                        new_d = node_depth[edge.source] + 1
-                        if (edge.target not in node_depth
-                                or node_depth[edge.target] < new_d):
-                            node_depth[edge.target] = new_d
-                            changed = True
+        node_depth = _compute_node_depths(
+            graph, node_type_map, input_nodes, recipes, sccs, node_to_scc
+        )
 
         output_surplus_vars: List[Tuple] = []
         has_output_sinks = False
@@ -972,42 +1111,77 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                 weight = 10.0 ** max(max_src_depth, 1)
                 output_surplus_vars.append((surplus, weight))
 
+        secondary_preference_terms: List[Tuple[pywraplp.Variable, float]] = []
+        if cycle_edge_ids:
+            max_depth = max(node_depth.values(), default=0)
+            for port_key, incoming_edges in edges_by_tgt.items():
+                if len(incoming_edges) < 2:
+                    continue
+                target_node_id, _ = port_key
+                if node_type_map.get(target_node_id) not in _recipe_types:
+                    continue
+
+                weights_by_edge: Dict[str, float] = {}
+                distinct_weights: Set[float] = set()
+                for edge in incoming_edges:
+                    weight = _get_supply_preference_weight(
+                        edge, node_type_map, node_depth, max_depth
+                    )
+                    weights_by_edge[edge.id] = weight
+                    distinct_weights.add(weight)
+
+                if len(distinct_weights) < 2:
+                    continue
+
+                for edge in incoming_edges:
+                    for var in edge_flow_vars.get(edge.id, {}).values():
+                        secondary_preference_terms.append(
+                            (var, weights_by_edge[edge.id])
+                        )
+
         # ───────────────────────────────────────────────────────────────
         # Step 12 – Objective function
         # ───────────────────────────────────────────────────────────────
         objective = solver.Objective()
+        objective_terms: List[Tuple[pywraplp.Variable, float]] = []
+
+        def add_objective_term(var: pywraplp.Variable, coeff: float) -> None:
+            objective.SetCoefficient(var, coeff)
+            objective_terms.append((var, coeff))
+
+        objective_is_maximization = False
 
         if has_output_demands and not has_input_constraints:
             for var in recipe_vars.values():
-                objective.SetCoefficient(var, 1)
+                add_objective_term(var, 1)
             objective.SetMinimization()
 
         elif has_input_constraints and not has_output_demands:
             for recipe in recipes:
                 if recipe.max_machines is not None:
-                    objective.SetCoefficient(
-                        recipe_vars[recipe.node_id], 10000)
+                    add_objective_term(recipe_vars[recipe.node_id], 10000)
                 else:
-                    objective.SetCoefficient(
-                        recipe_vars[recipe.node_id], -0.001)
+                    add_objective_term(recipe_vars[recipe.node_id], -0.001)
             for sv, w in output_surplus_vars:
-                objective.SetCoefficient(sv, w)
+                add_objective_term(sv, w)
             objective.SetMaximization()
+            objective_is_maximization = True
 
         elif has_input_constraints and has_output_demands:
             if has_output_sinks:
                 for var in recipe_vars.values():
-                    objective.SetCoefficient(var, -0.001)
+                    add_objective_term(var, -0.001)
                 for sv, w in output_surplus_vars:
-                    objective.SetCoefficient(sv, w)
+                    add_objective_term(sv, w)
                 objective.SetMaximization()
+                objective_is_maximization = True
             else:
                 for var in recipe_vars.values():
-                    objective.SetCoefficient(var, 1)
+                    add_objective_term(var, 1)
                 objective.SetMinimization()
         else:
             for var in recipe_vars.values():
-                objective.SetCoefficient(var, 1)
+                add_objective_term(var, 1)
             objective.SetMinimization()
 
         # ───────────────────────────────────────────────────────────────
@@ -1021,11 +1195,141 @@ def solve_graph(graph: Graph, store_data: Optional[Dict] = None) -> SolveRespons
                 pywraplp.Solver.INFEASIBLE: "infeasible",
                 pywraplp.Solver.UNBOUNDED:  "unbounded",
             }.get(status, "error")
+            if cycle_edge_ids:
+                for edge_id in sorted(cycle_edge_ids):
+                    if edge_id not in problem_edge_ids:
+                        problem_edge_ids.append(edge_id)
+                if status == pywraplp.Solver.UNBOUNDED:
+                    warnings.append(
+                        "Circular reference is runaway: the cycle can "
+                        "produce more reusable output than it can consume."
+                    )
+                elif status == pywraplp.Solver.INFEASIBLE:
+                    warnings.append(
+                        "Circular reference cannot be balanced with the "
+                        "available fresh inputs."
+                    )
             warnings.append(
                 f"No feasible solution found ({status_msg}). "
                 f"Check constraints - demands may exceed supply limits.")
             return SolveResponse(status="error", warnings=warnings,
                                  problemEdgeIds=problem_edge_ids)
+
+        if cycle_edge_ids and secondary_preference_terms:
+            primary_value = objective.Value()
+            tolerance = max(1e-7, 1e-7 * max(1.0, abs(primary_value)))
+            primary_expr = solver.Sum([
+                var * coeff for var, coeff in objective_terms
+            ])
+            if objective_is_maximization:
+                solver.Add(primary_expr >= primary_value - tolerance)
+            else:
+                solver.Add(primary_expr <= primary_value + tolerance)
+
+            secondary_coeffs: Dict[pywraplp.Variable, float] = defaultdict(float)
+            for var, coeff in secondary_preference_terms:
+                secondary_coeffs[var] += coeff
+
+            for var, _ in objective_terms:
+                objective.SetCoefficient(var, 0)
+            for var, coeff in secondary_coeffs.items():
+                objective.SetCoefficient(var, coeff)
+            objective.SetMinimization()
+
+            status = solver.Solve()
+            if status not in (pywraplp.Solver.OPTIMAL,
+                              pywraplp.Solver.FEASIBLE):
+                warnings.append(
+                    "Circular preference pass failed; falling back to the "
+                    "primary cycle solution may require a retry."
+                )
+
+        if cycle_edge_ids:
+            cycle_edges_by_scc: Dict[int, List[str]] = defaultdict(list)
+            for edge in graph.edges:
+                if edge.id not in cycle_edge_ids:
+                    continue
+                cycle_edges_by_scc[node_to_scc[edge.source]].append(edge.id)
+
+            for scc_index, component_nodes in enumerate(sccs):
+                cycle_items: Set[str] = set()
+                for edge in graph.edges:
+                    if edge.id not in cycle_edge_ids:
+                        continue
+                    if node_to_scc.get(edge.source) != scc_index:
+                        continue
+                    for item_id, var in edge_flow_vars.get(edge.id, {}).items():
+                        if var.solution_value() > 1e-7:
+                            cycle_items.add(item_id)
+
+                if not cycle_items:
+                    continue
+
+                for item_id in cycle_items:
+                    internal_production = 0.0
+                    internal_consumption = 0.0
+                    external_entry = 0.0
+                    external_exit = 0.0
+
+                    for recipe in recipes:
+                        visual_id = recipe.parent_tag_node_id or recipe.node_id
+                        if visual_id not in component_nodes:
+                            continue
+                        machine_count = recipe_vars[recipe.node_id].solution_value()
+                        if machine_count <= 1e-7:
+                            continue
+
+                        for out in recipe.outputs:
+                            output_item_id = out.get("itemId") or out.get("name", "")
+                            output_item_id = name_to_id.get(output_item_id, output_item_id)
+                            if output_item_id != item_id:
+                                continue
+                            amount = float(out.get("amountPerCycle", out.get("amount", 0)))
+                            prob = float(out.get("probability", 1.0))
+                            internal_production += (
+                                machine_count * amount * prob / recipe.time_seconds
+                            )
+
+                        for inp in recipe.inputs:
+                            input_item_id = (
+                                inp.get("itemId") or inp.get("refId") or inp.get("name", "")
+                            )
+                            input_item_id = name_to_id.get(input_item_id, input_item_id)
+                            if input_item_id != item_id:
+                                continue
+                            amount = float(inp.get("amountPerCycle", inp.get("amount", 0)))
+                            internal_consumption += (
+                                machine_count * amount / recipe.time_seconds
+                            )
+
+                    for edge in graph.edges:
+                        src_scc = node_to_scc.get(edge.source)
+                        tgt_scc = node_to_scc.get(edge.target)
+                        if src_scc == scc_index and tgt_scc != scc_index:
+                            var = edge_flow_vars.get(edge.id, {}).get(item_id)
+                            if var:
+                                external_exit += var.solution_value()
+                        elif src_scc != scc_index and tgt_scc == scc_index:
+                            var = edge_flow_vars.get(edge.id, {}).get(item_id)
+                            if var:
+                                external_entry += var.solution_value()
+
+                    if internal_production + external_entry > internal_consumption + external_exit + 1e-6:
+                        for edge_id in cycle_edges_by_scc.get(scc_index, []):
+                            if edge_id not in problem_edge_ids:
+                                problem_edge_ids.append(edge_id)
+                        warnings.append(
+                            f"Circular reference is runaway for {item_id}: "
+                            f"{round(internal_production + external_entry, 3)}/s "
+                            f"available inside the cycle but only "
+                            f"{round(internal_consumption + external_exit, 3)}/s "
+                            f"can be consumed or removed."
+                        )
+                        return SolveResponse(
+                            status="error",
+                            warnings=warnings,
+                            problemEdgeIds=problem_edge_ids,
+                        )
 
         # ───────────────────────────────────────────────────────────────
         # Step 14 – Extract results
