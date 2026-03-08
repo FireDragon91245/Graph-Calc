@@ -1,13 +1,11 @@
 & "$PSScriptRoot\scripts\generate-dev-cert.ps1"
 
-Set-Location "$PSScriptRoot\backend"
-$env:FRONTEND_ORIGINS = "https://localhost:5173,https://127.0.0.1:5173"
-$env:MONGO_HOST = "localhost"
-$env:MONGO_PORT = "27017"
-$env:MONGO_USERNAME = "graphcalc"
-$env:MONGO_PASSWORD = "MONGO_PASSWORD"
-$env:MONGO_AUTH_DB = "graphcalc"
-$env:MONGO_DB_NAME = "graphcalc"
+$backendDir = Join-Path $PSScriptRoot "backend"
+$config = Get-Content (Join-Path $backendDir "config.json") -Raw | ConvertFrom-Json
+$certFile = (Resolve-Path (Join-Path $backendDir $config.server.ssl.certFile)).Path
+$keyFile = (Resolve-Path (Join-Path $backendDir $config.server.ssl.keyFile)).Path
+
+Set-Location $backendDir
 
 $pythonCommand = if (Test-Path "$PSScriptRoot\backend\venv\Scripts\python.exe") {
 	"$PSScriptRoot\backend\venv\Scripts\python.exe"
@@ -17,5 +15,5 @@ $pythonCommand = if (Test-Path "$PSScriptRoot\backend\venv\Scripts\python.exe") 
 	"python"
 }
 
-& $pythonCommand -m uvicorn app.main:app --reload --host localhost --port 8000 --ssl-certfile "$PSScriptRoot\certs\localhost-cert.pem" --ssl-keyfile "$PSScriptRoot\certs\localhost-key.pem"
+& $pythonCommand -m uvicorn app.main:app --reload --host $config.server.host --port $config.server.port --ssl-certfile $certFile --ssl-keyfile $keyFile
 Set-Location $PSScriptRoot

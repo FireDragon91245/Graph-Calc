@@ -6,12 +6,14 @@ import secrets
 import time
 from typing import Any, Dict, Optional
 
+from app.config import get_config
 from app.persistence import _generate_id, get_jwt_secret
 
-JWT_ALGORITHM = "HS256"
-JWT_TTL_SECONDS = 60 * 60 * 24 * 7
-PASSWORD_HASH_ITERATIONS = 200_000
-DEFAULT_SESSION_VERSION = 1
+AUTH_CONFIG = get_config().auth
+JWT_ALGORITHM = AUTH_CONFIG.jwtAlgorithm
+JWT_TTL_SECONDS = AUTH_CONFIG.jwtTtlSeconds
+PASSWORD_HASH_ITERATIONS = AUTH_CONFIG.passwordHashIterations
+DEFAULT_SESSION_VERSION = AUTH_CONFIG.defaultSessionVersion
 
 
 def _b64url_encode(data: bytes) -> str:

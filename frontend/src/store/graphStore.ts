@@ -129,44 +129,11 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
   setActiveProjectId: (id) => set({ activeProjectId: id }),
   activeGraphId: null,
   setActiveGraphId: (id) => set({ activeGraphId: id }),
-  categories: [
-    { id: "ore", name: "Ore" },
-    { id: "ingot", name: "Ingot" }
-  ],
-  items: [
-    { id: "iron_ore", name: "Iron Ore", categoryId: "ore" },
-    { id: "iron_dust", name: "Iron Dust" },
-    { id: "iron_ingot", name: "Iron Ingot", categoryId: "ingot" },
-    { id: "copper_ore", name: "Copper Ore", categoryId: "ore" },
-    { id: "copper_dust", name: "Copper Dust" },
-    { id: "copper_ingot", name: "Copper Ingot", categoryId: "ingot" },
-    { id: "gold_dust", name: "Gold Dust" },
-    { id: "zinc_dust", name: "Zinc Dust" }
-  ],
-  tags: [
-    { id: "@ore", name: "@ore", memberItemIds: ["iron_ore", "copper_ore"] },
-    { id: "@ingot", name: "@ingot", memberItemIds: ["iron_ingot", "copper_ingot"] }
-  ],
+  categories: [],
+  items: [],
+  tags: [],
   recipeTags: [],
-  recipes: [
-    {
-      id: "macerate_iron",
-      name: "Macerate Iron",
-      timeSeconds: 2,
-      inputs: [{ id: "i1", refType: "item", refId: "iron_ore", amount: 1 }],
-      outputs: [
-        { id: "o1", itemId: "iron_dust", amount: 1, probability: 1 },
-        { id: "o2", itemId: "gold_dust", amount: 1, probability: 0.1 }
-      ]
-    },
-    {
-      id: "smelt_iron",
-      name: "Smelt Iron",
-      timeSeconds: 3.2,
-      inputs: [{ id: "i1", refType: "item", refId: "iron_dust", amount: 1 }],
-      outputs: [{ id: "o1", itemId: "iron_ingot", amount: 1, probability: 1 }]
-    }
-  ],
+  recipes: [],
   addCategory: (name) =>
     set((state) => {
       const newState = {

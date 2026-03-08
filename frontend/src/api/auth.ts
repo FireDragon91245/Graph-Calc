@@ -49,14 +49,6 @@ export async function getMe(): Promise<AuthUser> {
   return response.json() as Promise<AuthUser>;
 }
 
-export async function getWhoAmI(): Promise<AuthUser> {
-  const response = await apiFetch("/whoami");
-  if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to load account"));
-  }
-  return response.json() as Promise<AuthUser>;
-}
-
 export async function getSession(): Promise<SessionResponse> {
   const response = await apiFetch("/session");
   if (response.status === 401) {

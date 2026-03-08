@@ -1,10 +1,10 @@
 import json
-import os
 import uuid
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import quote_plus
 
+from app.config import get_config
 from pymongo import ASCENDING, MongoClient
 from pymongo.collection import Collection
 from pymongo.database import Database
@@ -28,14 +28,7 @@ DEFAULT_STORE = {
     "recipes": [],
 }
 
-MONGO_HOST = os.getenv("MONGO_HOST", "localhost")
-MONGO_PORT = int(os.getenv("MONGO_PORT", "27017"))
-MONGO_USERNAME = os.getenv("MONGO_USERNAME", "graphcalc")
-MONGO_PASSWORD = os.getenv("MONGO_PASSWORD", "MONGO_PASSWORD")
-MONGO_AUTH_DB = os.getenv("MONGO_AUTH_DB", "graphcalc")
-MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "graphcalc")
-MONGO_URI = os.getenv("MONGO_URI")
-MONGO_ALLOW_NOAUTH_FALLBACK = os.getenv("MONGO_ALLOW_NOAUTH_FALLBACK", "true").lower() not in {"0", "false", "no"}
+MONGO_CONFIG = get_config().mongo
 
 _client: Optional[MongoClient] = None
 _database: Optional[Database] = None
@@ -46,33 +39,28 @@ def _generate_id() -> str:
 
 
 def _build_mongo_uri() -> str:
-    if MONGO_URI:
-        return MONGO_URI
-
     credentials = ""
-    if MONGO_USERNAME:
-        credentials = quote_plus(MONGO_USERNAME)
-        if MONGO_PASSWORD:
-            credentials = f"{credentials}:{quote_plus(MONGO_PASSWORD)}"
+    if MONGO_CONFIG.username:
+        credentials = quote_plus(MONGO_CONFIG.username)
+        if MONGO_CONFIG.password:
+            credentials = f"{credentials}:{quote_plus(MONGO_CONFIG.password)}"
         credentials = f"{credentials}@"
 
-    return f"mongodb://{credentials}{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}?authSource={quote_plus(MONGO_AUTH_DB)}"
+    return (
+        f"mongodb://{credentials}{MONGO_CONFIG.host}:{MONGO_CONFIG.port}/"
+        f"{MONGO_CONFIG.database}?authSource={quote_plus(MONGO_CONFIG.authDatabase)}"
+    )
 
 
 def _build_noauth_mongo_uri() -> str:
-    return f"mongodb://{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}"
+    return f"mongodb://{MONGO_CONFIG.host}:{MONGO_CONFIG.port}/{MONGO_CONFIG.database}"
 
 
 def _candidate_mongo_uris() -> List[str]:
-    uris: List[str] = []
-    primary = _build_mongo_uri()
-    if primary:
-        uris.append(primary)
-
+    uris = [_build_mongo_uri()]
     noauth_uri = _build_noauth_mongo_uri()
-    if MONGO_ALLOW_NOAUTH_FALLBACK and noauth_uri not in uris:
+    if MONGO_CONFIG.allowNoAuthFallback and noauth_uri not in uris:
         uris.append(noauth_uri)
-
     return uris
 
 
@@ -84,7 +72,7 @@ def _db() -> Database:
         for candidate_uri in _candidate_mongo_uris():
             try:
                 candidate_client = MongoClient(candidate_uri, serverSelectionTimeoutMS=5000)
-                candidate_database = candidate_client[MONGO_DB_NAME]
+                candidate_database = candidate_client[MONGO_CONFIG.database]
                 candidate_database.command("ping")
                 _client = candidate_client
                 _database = candidate_database

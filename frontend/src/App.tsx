@@ -15,8 +15,8 @@ import ReactFlow, {
     useReactFlow
 } from "reactflow";
 import { solveGraph, SolveResponse } from "./api/solve";
-import { GraphData, loadGraph, saveGraph, loadStore, saveStore, listProjects, listGraphs } from "./api/persistence";
-import { authenticateUser, AuthUser, changePassword, deleteAccount, getMe, getSession, getWhoAmI, logoutUser, registerUser } from "./api/auth";
+import { GraphData, loadGraph, saveGraph, loadStore, listProjects, listGraphs } from "./api/persistence";
+import { authenticateUser, AuthUser, changePassword, deleteAccount, getMe, getSession, logoutUser, registerUser } from "./api/auth";
 import ContextMenu from "./editor/ContextMenu";
 import CommandPalette, { CommandAction } from "./editor/CommandPalette";
 import { useGraphStore } from "./store/graphStore";
@@ -58,77 +58,9 @@ const edgeTypes = {
     default: EdgeWithTooltip,
 };
 
-const initialNodes: Node[] = [
-    {
-        id: "n-input-iron",
-        type: "input",
-        position: { x: -400, y: -60 },
-        data: {
-            items: [{ id: "row1", itemId: "iron_ore", mode: "limit", limit: 2 }]
-        }
-    },
-    {
-        id: "n-recipe-macerate",
-        type: "recipe",
-        position: { x: -60, y: -80 },
-        data: {
-            title: "Macerate Iron",
-            timeSeconds: 2,
-            inputs: [{ id: "i1", name: "Iron Ore", refId: "iron_ore", refType: "item", amountPerCycle: 1 }],
-            outputs: [
-                { id: "o1", itemId: "iron_dust", name: "Iron Dust", amountPerCycle: 1, probability: 1 },
-                { id: "o2", itemId: "gold_dust", name: "Gold Dust", amountPerCycle: 1, probability: 0.1 }
-            ]
-        }
-    },
-    {
-        id: "n-recipe-smelt",
-        type: "recipe",
-        position: { x: 260, y: -80 },
-        data: {
-            title: "Smelt Iron",
-            timeSeconds: 3.2,
-            inputs: [{ id: "i1", name: "Iron Dust", refId: "iron_dust", refType: "item", amountPerCycle: 1 }],
-            outputs: [{ id: "o1", itemId: "iron_ingot", name: "Iron Ingot", amountPerCycle: 1, probability: 1 }]
-        }
-    },
-    {
-        id: "n-output-iron",
-        type: "output",
-        position: { x: 560, y: -60 },
-        data: { items: [{ id: "row1", itemId: "iron_ingot" }] }
-    },
-    {
-        id: "n-requester",
-        type: "requester",
-        position: { x: 260, y: 160 },
-        data: { requests: [{ id: "req1", itemId: "iron_ingot", targetPerSecond: 1.2 }] }
-    }
-];
+const initialNodes: Node[] = [];
 
-const initialEdges: Edge[] = [
-    {
-        id: "e1",
-        source: "n-input-iron",
-        target: "n-recipe-macerate",
-        sourceHandle: "output-row1",
-        targetHandle: "input-i1"
-    },
-    {
-        id: "e2",
-        source: "n-recipe-macerate",
-        target: "n-recipe-smelt",
-        sourceHandle: "output-o1",
-        targetHandle: "input-i1"
-    },
-    {
-        id: "e3",
-        source: "n-recipe-smelt",
-        target: "n-output-iron",
-        sourceHandle: "output-o1",
-        targetHandle: "input-row1"
-    }
-];
+const initialEdges: Edge[] = [];
 
 const stripSolveData = (value: unknown): unknown => {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -295,23 +227,7 @@ function AppContent() {
                     return;
                 }
 
-                // If store has data, load it; otherwise keep the default state and save it
-                if (storeData.categories.length > 0 || storeData.items.length > 0 ||
-                    storeData.tags.length > 0 || storeData.recipeTags.length > 0 ||
-                    storeData.recipes.length > 0) {
-                    loadStoreData(storeData);
-                } else {
-                    // Save the default store data from the initial state
-                    const currentState = useGraphStore.getState();
-                    const defaultData = {
-                        categories: currentState.categories,
-                        items: currentState.items,
-                        tags: currentState.tags,
-                        recipeTags: currentState.recipeTags,
-                        recipes: currentState.recipes
-                    };
-                    saveStore(defaultData, pid ?? undefined).catch(console.error);
-                }
+                loadStoreData(storeData);
 
                 // Fetch active graph for this project
                 let gid: string | undefined;
@@ -339,6 +255,9 @@ function AppContent() {
 
                     setNodes(sanitizedNodes);
                     setEdges(graphData.edges);
+                } else {
+                    setNodes([]);
+                    setEdges([]);
                 }
             } catch (error) {
                 console.error("Error loading data:", error);
@@ -1211,14 +1130,14 @@ function AppContent() {
 
     const handleLogin = useCallback(async (username: string, password: string) => {
         await authenticateUser(username, password);
-        const profile = await getWhoAmI();
+        const profile = await getMe();
         setAuthUser(profile);
         setIsAuthDialogOpen(false);
     }, []);
 
     const handleRegister = useCallback(async (username: string, password: string) => {
         await registerUser(username, password);
-        const profile = await getWhoAmI();
+        const profile = await getMe();
         setAuthUser(profile);
         setIsAuthDialogOpen(false);
     }, []);
