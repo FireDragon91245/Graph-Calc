@@ -50,9 +50,32 @@ class SolveStoreData(BaseModel):
 
 
 class SolveRequest(BaseModel):
-    graph: Graph
+    graph: Optional[Graph] = None
+    projectId: Optional[str] = None
+    graphId: Optional[str] = None
     targets: SolveTargets = SolveTargets()
     storeData: Optional[SolveStoreData] = None
+
+
+class AccountProfile(BaseModel):
+    id: str
+    username: str
+    projectCount: int
+    activeProjectId: Optional[str] = None
+
+
+class SessionResponse(BaseModel):
+    authenticated: bool
+    user: Optional[AccountProfile] = None
+
+
+class PasswordChangeRequest(BaseModel):
+    currentPassword: str
+    newPassword: str
+
+
+class DeleteAccountRequest(BaseModel):
+    currentPassword: str
 
 
 class NodeFlowData(BaseModel):

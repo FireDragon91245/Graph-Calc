@@ -13,6 +13,7 @@ JWT_SECRET_FILE = DATA_DIR / "jwt_secret.json"
 JWT_ALGORITHM = "HS256"
 JWT_TTL_SECONDS = 60 * 60 * 24 * 7
 PASSWORD_HASH_ITERATIONS = 200_000
+DEFAULT_SESSION_VERSION = 1
 
 
 def _b64url_encode(data: bytes) -> str:
@@ -70,6 +71,7 @@ def create_user_record(username: str, password: str) -> Dict[str, Any]:
     return {
         "id": _generate_id(),
         "username": username,
+        "sessionVersion": DEFAULT_SESSION_VERSION,
         **password_data,
     }
 
@@ -81,6 +83,7 @@ def create_session_token(user: Dict[str, Any]) -> str:
         "sub": user["id"],
         "userId": user["id"],
         "username": user["username"],
+        "sessionVersion": int(user.get("sessionVersion") or DEFAULT_SESSION_VERSION),
         "iat": now,
         "exp": now + JWT_TTL_SECONDS,
     }
@@ -125,8 +128,13 @@ def decode_session_token(token: str) -> Optional[Dict[str, Any]]:
     if not isinstance(user_id, str) or not isinstance(username, str):
         return None
 
+    session_version = payload.get("sessionVersion")
+    if not isinstance(session_version, int):
+        session_version = DEFAULT_SESSION_VERSION
+
     return {
         "userId": user_id,
         "username": username,
         "exp": expires_at,
+        "sessionVersion": session_version,
     }

@@ -5,3 +5,4 @@ __pycache__
 certs/*.pem
 data/users.json
 data/jwt_secret.json
+data/user_data/

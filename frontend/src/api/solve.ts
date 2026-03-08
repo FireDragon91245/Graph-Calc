@@ -1,19 +1,5 @@
 import { apiFetch, getErrorMessage } from "./client";
 
-export type GraphNode = {
-  id: string;
-  type: "recipe" | "recipetag" | "input" | "inputrecipe" | "inputrecipetag" | "output" | "requester" | "mixedoutput";
-  data?: Record<string, unknown>;
-};
-
-export type GraphEdge = {
-  id: string;
-  source: string;
-  target: string;
-  sourceHandle?: string | null;
-  targetHandle?: string | null;
-};
-
 export type SolveTargets = {
   maximizeOutput?: string[];
   minimizeInput?: string[];
@@ -34,20 +20,10 @@ export type EdgeFlowData = {
   totalFlow: number;
 };
 
-export type StoreDataForSolve = {
-  items: { id: string; name: string; categoryId?: string }[];
-  recipes: Record<string, unknown>[];
-  recipeTags: { id: string; name: string; memberRecipeIds: string[] }[];
-  tags: { id: string; name: string; memberItemIds: string[] }[];
-};
-
 export type SolveRequest = {
-  graph: {
-    nodes: GraphNode[];
-    edges: GraphEdge[];
-  };
+  projectId?: string | null;
+  graphId?: string | null;
   targets?: SolveTargets;
-  storeData?: StoreDataForSolve;
 };
 
 export type SolveResponse = {

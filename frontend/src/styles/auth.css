@@ -10,7 +10,7 @@
   margin-left: auto;
 }
 
-.secondary {
+.auth-secondary {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
   border: 1px solid var(--panel-border);
@@ -19,8 +19,18 @@
   font-weight: 600;
 }
 
-.secondary:disabled,
-.primary:disabled {
+.auth-danger {
+  background: rgba(239, 68, 68, 0.14);
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.auth-secondary:disabled,
+.primary:disabled,
+.auth-danger:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
@@ -168,6 +178,73 @@
   font-size: 13px;
 }
 
+.auth-settings-form {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.auth-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.auth-inline-actions {
+  justify-content: flex-start;
+}
+
+.auth-danger-zone {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.14);
+}
+
+.auth-success {
+  margin: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.24);
+  color: #bbf7d0;
+  font-size: 13px;
+}
+
+.auth-empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.auth-empty-card {
+  width: min(100%, 560px);
+  padding: 32px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(22, 28, 38, 0.94), rgba(10, 14, 20, 0.96));
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.35);
+}
+
+.auth-empty-card h1 {
+  margin: 0 0 12px;
+  font-size: 32px;
+}
+
+.auth-empty-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.auth-empty-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
 @media (max-width: 720px) {
   .top-bar-actions {
     width: 100%;
@@ -180,5 +257,13 @@
 
   .auth-dialog {
     padding: 20px;
+  }
+
+  .auth-empty-card {
+    padding: 24px;
+  }
+
+  .auth-empty-actions {
+    flex-direction: column;
   }
 }

@@ -10,6 +10,8 @@ type AuthDialogProps = {
   onClose: () => void;
   onLogin: (username: string, password: string) => Promise<void>;
   onRegister: (username: string, password: string) => Promise<void>;
+  onPasswordChange: (currentPassword: string, newPassword: string) => Promise<void>;
+  onDeleteAccount: (currentPassword: string) => Promise<void>;
   onLogout: () => Promise<void>;
 };
 
@@ -20,11 +22,17 @@ export default function AuthDialog({
   onClose,
   onLogin,
   onRegister,
+  onPasswordChange,
+  onDeleteAccount,
   onLogout,
 }: AuthDialogProps) {
   const [mode, setMode] = useState<AuthDialogMode>(initialMode);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -36,7 +44,11 @@ export default function AuthDialog({
     setMode(initialMode);
     setUsername("");
     setPassword("");
+    setCurrentPassword("");
+    setNewPassword("");
+    setDeletePassword("");
     setError(null);
+    setSuccessMessage(null);
     setIsSubmitting(false);
   }, [initialMode, isOpen]);
 
@@ -60,6 +72,7 @@ export default function AuthDialog({
 
     setIsSubmitting(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       if (mode === "login") {
@@ -77,12 +90,61 @@ export default function AuthDialog({
   const handleLogout = async () => {
     setIsSubmitting(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       await onLogout();
     } catch (logoutError) {
       setError(logoutError instanceof Error ? logoutError.message : "Logout failed.");
     } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePasswordChange = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (newPassword.length <= 8) {
+      setError("Password must be longer than 8 characters.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      await onPasswordChange(currentPassword, newPassword);
+      setCurrentPassword("");
+      setNewPassword("");
+      setSuccessMessage("Password updated.");
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Password change failed.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteAccount = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!deletePassword) {
+      setError("Current password is required to delete the account.");
+      return;
+    }
+
+    if (!confirm("Delete this account and all of its projects? This cannot be undone.")) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      await onDeleteAccount(deletePassword);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Account deletion failed.");
       setIsSubmitting(false);
     }
   };
@@ -110,10 +172,69 @@ export default function AuthDialog({
             <div className="auth-session-meta">
               <div>Logged in with a secure session cookie.</div>
               <div>User ID: {currentUser.id}</div>
+              <div>Projects: {currentUser.projectCount}</div>
+              <div>Active project: {currentUser.activeProjectId ?? "none"}</div>
             </div>
+            <form className="auth-form auth-settings-form" onSubmit={handlePasswordChange}>
+              <div className="auth-section-title">Change Password</div>
+              <div className="auth-field">
+                <label htmlFor="auth-current-password">Current password</label>
+                <input
+                  id="auth-current-password"
+                  className="auth-input"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  autoComplete="current-password"
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div className="auth-field">
+                <label htmlFor="auth-new-password">New password</label>
+                <input
+                  id="auth-new-password"
+                  className="auth-input"
+                  type="password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  autoComplete="new-password"
+                  disabled={isSubmitting}
+                />
+              </div>
+              <p className="auth-helper">Changing the password rotates the session version and invalidates older JWTs.</p>
+              <div className="auth-actions auth-inline-actions">
+                <button className="auth-secondary" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Saving..." : "Change Password"}
+                </button>
+              </div>
+            </form>
+
+            <form className="auth-form auth-settings-form auth-danger-zone" onSubmit={handleDeleteAccount}>
+              <div className="auth-section-title">Delete Account</div>
+              <div className="auth-field">
+                <label htmlFor="auth-delete-password">Current password</label>
+                <input
+                  id="auth-delete-password"
+                  className="auth-input"
+                  type="password"
+                  value={deletePassword}
+                  onChange={(event) => setDeletePassword(event.target.value)}
+                  autoComplete="current-password"
+                  disabled={isSubmitting}
+                />
+              </div>
+              <p className="auth-helper">This removes the user and all user-owned projects, graphs, and store data.</p>
+              <div className="auth-actions auth-inline-actions">
+                <button className="auth-danger" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Deleting..." : "Delete Account"}
+                </button>
+              </div>
+            </form>
+
             {error && <p className="auth-error">{error}</p>}
+            {successMessage && <p className="auth-success">{successMessage}</p>}
             <div className="auth-actions">
-              <button className="secondary" type="button" onClick={onClose} disabled={isSubmitting}>
+              <button className="auth-secondary" type="button" onClick={onClose} disabled={isSubmitting}>
                 Close
               </button>
               <button className="primary" type="button" onClick={handleLogout} disabled={isSubmitting}>
@@ -176,7 +297,7 @@ export default function AuthDialog({
               {error && <p className="auth-error">{error}</p>}
 
               <div className="auth-actions">
-                <button className="secondary" type="button" onClick={onClose} disabled={isSubmitting}>
+                <button className="auth-secondary" type="button" onClick={onClose} disabled={isSubmitting}>
                   Cancel
                 </button>
                 <button className="primary" type="submit" disabled={isSubmitting}>

@@ -16,7 +16,7 @@ import ReactFlow, {
 } from "reactflow";
 import { solveGraph, SolveResponse } from "./api/solve";
 import { loadGraph, saveGraph, loadStore, saveStore, listProjects, listGraphs } from "./api/persistence";
-import { authenticateUser, AuthUser, getSession, logoutUser, registerUser } from "./api/auth";
+import { authenticateUser, AuthUser, changePassword, deleteAccount, getMe, getSession, getWhoAmI, logoutUser, registerUser } from "./api/auth";
 import ContextMenu from "./editor/ContextMenu";
 import CommandPalette, { CommandAction } from "./editor/CommandPalette";
 import { useGraphStore } from "./store/graphStore";
@@ -205,7 +205,14 @@ function AppContent() {
       try {
         const session = await getSession();
         if (!ignore) {
-          setAuthUser(session.authenticated ? session.user : null);
+          if (session.authenticated) {
+            const profile = await getMe();
+            if (!ignore) {
+              setAuthUser(profile);
+            }
+          } else {
+            setAuthUser(null);
+          }
         }
       } catch (error) {
         console.error("Error loading session:", error);
@@ -228,10 +235,30 @@ function AppContent() {
 
   // Load data on mount
   useEffect(() => {
+    if (isAuthChecking) {
+      return;
+    }
+
+    if (!authUser) {
+      setIsLoaded(false);
+      setActiveProjectId(null);
+      setActiveGraphId(null);
+      setNodes([]);
+      setEdges([]);
+      setSolveResult(null);
+      setSolveError(null);
+      return;
+    }
+
+    let ignore = false;
+
     const loadData = async () => {
       try {
         // First, fetch project list to discover the active project
         const projectsRes = await listProjects();
+        if (ignore) {
+          return;
+        }
         const pid = projectsRes.activeProjectId;
         if (pid) {
           setActiveProjectId(pid);
@@ -239,6 +266,9 @@ function AppContent() {
 
         // Load store data (categories, items, tags, recipes, etc.)
         const storeData = await loadStore(pid ?? undefined);
+        if (ignore) {
+          return;
+        }
         
         // If store has data, load it; otherwise keep the default state and save it
         if (storeData.categories.length > 0 || storeData.items.length > 0 || 
@@ -262,6 +292,9 @@ function AppContent() {
         let gid: string | undefined;
         if (pid) {
           const graphsRes = await listGraphs(pid);
+          if (ignore) {
+            return;
+          }
           gid = graphsRes.activeGraphId ?? undefined;
           if (gid) {
             setActiveGraphId(gid);
@@ -270,6 +303,9 @@ function AppContent() {
 
         // Load graph data (nodes and edges)
         const graphData = await loadGraph(pid ?? undefined, gid);
+        if (ignore) {
+          return;
+        }
         if (graphData.nodes.length > 0 || graphData.edges.length > 0) {
           const sanitizedNodes = graphData.nodes.map((node) => ({
             ...node,
@@ -282,18 +318,24 @@ function AppContent() {
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
-        setIsLoaded(true);
+        if (!ignore) {
+          setIsLoaded(true);
+        }
       }
     };
 
     loadData();
-  }, [loadStoreData, setNodes, setEdges, setActiveProjectId, setActiveGraphId]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [authUser, isAuthChecking, loadStoreData, setNodes, setEdges, setActiveProjectId, setActiveGraphId]);
 
   // Auto-save graph (nodes and edges) with debouncing
   const saveTimeoutRef = useRef<number | null>(null);
   useEffect(() => {
     // Don't save until initial load is complete
-    if (!isLoaded) return;
+    if (!authUser || !isLoaded) return;
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -326,7 +368,7 @@ function AppContent() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [nodes, edges, isLoaded, activeProjectId, activeGraphId]);
+  }, [authUser, nodes, edges, isLoaded, activeProjectId, activeGraphId]);
 
   // Handle project change (reload all data for new project)
   const handleProjectChange = useCallback(async (newProjectId: string) => {
@@ -1081,32 +1123,6 @@ function AppContent() {
     [recipes, items, tags, setNodes, nodes.length]
   );
 
-  const graphPayload = useMemo(
-    () => ({
-      graph: {
-        nodes: nodes.map((node) => ({
-          id: node.id,
-          type: (node.type ?? "recipe") as "recipe" | "recipetag" | "input" | "inputrecipe" | "inputrecipetag" | "output" | "requester" | "mixedoutput",
-          data: node.data as Record<string, unknown>
-        })),
-        edges: edges.map((edge) => ({
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          sourceHandle: edge.sourceHandle ?? null,
-          targetHandle: edge.targetHandle ?? null
-        }))
-      },
-      storeData: {
-        items: items,
-        recipes: recipes as unknown as Record<string, unknown>[],
-        recipeTags: recipeTags,
-        tags: tags
-      }
-    }),
-    [nodes, edges, items, recipes, recipeTags, tags]
-  );
-
   const handleSolve = useCallback(async () => {
     setIsSolving(true);
     setSolveError(null);
@@ -1128,7 +1144,10 @@ function AppContent() {
     );
 
     try {
-      const result = await solveGraph(graphPayload);
+      const result = await solveGraph({
+        projectId: activeProjectId,
+        graphId: activeGraphId,
+      });
       console.log("Solve result:", result);
       setSolveResult(result);
     } catch (error) {
@@ -1136,7 +1155,7 @@ function AppContent() {
     } finally {
       setIsSolving(false);
     }
-  }, [graphPayload, setNodes, setEdges]);
+  }, [activeGraphId, activeProjectId, setNodes, setEdges]);
 
   const openAuthDialog = useCallback((mode: AuthDialogMode = "login") => {
     setAuthDialogMode(mode);
@@ -1144,14 +1163,27 @@ function AppContent() {
   }, []);
 
   const handleLogin = useCallback(async (username: string, password: string) => {
-    const result = await authenticateUser(username, password);
-    setAuthUser(result.user);
+    await authenticateUser(username, password);
+    const profile = await getWhoAmI();
+    setAuthUser(profile);
     setIsAuthDialogOpen(false);
   }, []);
 
   const handleRegister = useCallback(async (username: string, password: string) => {
-    const result = await registerUser(username, password);
-    setAuthUser(result.user);
+    await registerUser(username, password);
+    const profile = await getWhoAmI();
+    setAuthUser(profile);
+    setIsAuthDialogOpen(false);
+  }, []);
+
+  const handlePasswordChange = useCallback(async (currentPassword: string, newPassword: string) => {
+    const profile = await changePassword(currentPassword, newPassword);
+    setAuthUser(profile);
+  }, []);
+
+  const handleDeleteAccount = useCallback(async (currentPassword: string) => {
+    await deleteAccount(currentPassword);
+    setAuthUser(null);
     setIsAuthDialogOpen(false);
   }, []);
 
@@ -1161,26 +1193,32 @@ function AppContent() {
     setIsAuthDialogOpen(false);
   }, []);
 
+  const isAuthenticated = Boolean(authUser);
+
   return (
     <div className="app-root">
       <div className="top-bar">
         <div className="brand">GraphCalc</div>
-        <ProjectSelector
-          activeProjectId={activeProjectId}
-          onProjectChange={handleProjectChange}
-        />
-        <GraphSelector
-          activeProjectId={activeProjectId}
-          activeGraphId={activeGraphId}
-          onGraphChange={handleGraphChange}
-        />
-        <ModeSelector
-          currentMode={appMode}
-          onModeChange={setAppMode}
-          configSubMode={configSubMode}
-          onConfigSubModeChange={setConfigSubMode}
-        />
-        {appMode === "edit" ? (
+        {isAuthenticated && (
+          <>
+            <ProjectSelector
+              activeProjectId={activeProjectId}
+              onProjectChange={handleProjectChange}
+            />
+            <GraphSelector
+              activeProjectId={activeProjectId}
+              activeGraphId={activeGraphId}
+              onGraphChange={handleGraphChange}
+            />
+            <ModeSelector
+              currentMode={appMode}
+              onModeChange={setAppMode}
+              configSubMode={configSubMode}
+              onConfigSubModeChange={setConfigSubMode}
+            />
+          </>
+        )}
+        {isAuthenticated && appMode === "edit" ? (
           <input 
             className="search" 
             placeholder="Quick Actions (Ctrl+I)" 
@@ -1192,17 +1230,18 @@ function AppContent() {
           <div className="top-bar-spacer" />
         )}
         <div className="top-bar-actions">
-          {appMode === "edit" && (
+          {isAuthenticated && appMode === "edit" && (
             <button className="primary" onClick={handleSolve} disabled={isSolving}>
               {isSolving ? "Solving..." : "Solve"}
             </button>
           )}
           <button
-            className="secondary auth-button"
+            className="auth-secondary auth-button"
             onClick={() => openAuthDialog("login")}
             disabled={isAuthChecking}
+            title={authUser ? `${authUser.username} · ${authUser.projectCount} project${authUser.projectCount === 1 ? "" : "s"}` : "Login"}
           >
-            {isAuthChecking ? "Checking..." : authUser ? authUser.username : "Login"}
+            {isAuthChecking ? "Checking..." : authUser ? `${authUser.username} · ${authUser.projectCount}` : "Login"}
           </button>
         </div>
       </div>
@@ -1213,10 +1252,30 @@ function AppContent() {
         onClose={() => setIsAuthDialogOpen(false)}
         onLogin={handleLogin}
         onRegister={handleRegister}
+        onPasswordChange={handlePasswordChange}
+        onDeleteAccount={handleDeleteAccount}
         onLogout={handleLogout}
       />
-      
-      {appMode === "edit" ? (
+
+      {!isAuthChecking && !isAuthenticated ? (
+        <div className="auth-empty-state">
+          <div className="auth-empty-card">
+            <h1>Login Required</h1>
+            <p>
+              All project, graph, store, and solver endpoints are now bound to the authenticated user.
+              Sign in to load your personal workspace, or register a new account to start with a private copy.
+            </p>
+            <div className="auth-empty-actions">
+              <button className="primary" type="button" onClick={() => openAuthDialog("login")}>
+                Login
+              </button>
+              <button className="auth-secondary" type="button" onClick={() => openAuthDialog("register")}>
+                Register
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : appMode === "edit" ? (
         <div className="layout">
           <NodeTypeSelector onNodeTypeSelected={handleNodeTypeSelected} />
           <ReactFlow
