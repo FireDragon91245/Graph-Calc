@@ -6,15 +6,16 @@ export type ConfigSubMode = "items" | "tags" | "recipes" | "recipeTags" | "recip
 type ModeSelectorProps = {
   currentMode: AppMode;
   onModeChange: (mode: AppMode) => void;
+};
+
+type ConfigSubmodeSelectorProps = {
   configSubMode?: ConfigSubMode;
   onConfigSubModeChange?: (subMode: ConfigSubMode) => void;
 };
 
 export default function ModeSelector({
   currentMode,
-  onModeChange,
-  configSubMode,
-  onConfigSubModeChange
+  onModeChange
 }: ModeSelectorProps) {
   return (
     <div className="mode-selector">
@@ -34,47 +35,56 @@ export default function ModeSelector({
           Config Mode
         </button>
       </div>
-      
-      {currentMode === "config" && onConfigSubModeChange && (
-        <div className="config-submodes">
-          <button
-            className={`submode-tab ${configSubMode === "items" ? "active" : ""}`}
-            onClick={() => onConfigSubModeChange("items")}
-          >
-            Items & Categories
-          </button>
-          <button
-            className={`submode-tab ${configSubMode === "tags" ? "active" : ""}`}
-            onClick={() => onConfigSubModeChange("tags")}
-          >
-            Item Tags
-          </button>
-          <button
-            className={`submode-tab ${configSubMode === "recipes" ? "active" : ""}`}
-            onClick={() => onConfigSubModeChange("recipes")}
-          >
-            Recipes
-          </button>
-          <button
-            className={`submode-tab ${configSubMode === "recipeTags" ? "active" : ""}`}
-            onClick={() => onConfigSubModeChange("recipeTags")}
-          >
-            Recipe Tags
-          </button>
-          <button
-            className={`submode-tab ${configSubMode === "recipeGenerator" ? "active" : ""}`}
-            onClick={() => onConfigSubModeChange("recipeGenerator")}
-          >
-            🤖 Recipe Generator
-          </button>
-          <button
-            className={`submode-tab ${configSubMode === "itemGenerator" ? "active" : ""}`}
-            onClick={() => onConfigSubModeChange("itemGenerator")}
-          >
-            🔮 Item Generator
-          </button>
-        </div>
-      )}
+    </div>
+  );
+}
+
+export function ConfigSubmodeSelector({
+  configSubMode,
+  onConfigSubModeChange
+}: ConfigSubmodeSelectorProps) {
+  if (!onConfigSubModeChange) {
+    return null;
+  }
+
+  return (
+    <div className="config-submodes">
+      <button
+        className={`submode-tab ${configSubMode === "items" ? "active" : ""}`}
+        onClick={() => onConfigSubModeChange("items")}
+      >
+        Items & Categories
+      </button>
+      <button
+        className={`submode-tab ${configSubMode === "tags" ? "active" : ""}`}
+        onClick={() => onConfigSubModeChange("tags")}
+      >
+        Item Tags
+      </button>
+      <button
+        className={`submode-tab ${configSubMode === "recipes" ? "active" : ""}`}
+        onClick={() => onConfigSubModeChange("recipes")}
+      >
+        Recipes
+      </button>
+      <button
+        className={`submode-tab ${configSubMode === "recipeTags" ? "active" : ""}`}
+        onClick={() => onConfigSubModeChange("recipeTags")}
+      >
+        Recipe Tags
+      </button>
+      <button
+        className={`submode-tab ${configSubMode === "recipeGenerator" ? "active" : ""}`}
+        onClick={() => onConfigSubModeChange("recipeGenerator")}
+      >
+        🤖 Recipe Generator
+      </button>
+      <button
+        className={`submode-tab ${configSubMode === "itemGenerator" ? "active" : ""}`}
+        onClick={() => onConfigSubModeChange("itemGenerator")}
+      >
+        🔮 Item Generator
+      </button>
     </div>
   );
 }

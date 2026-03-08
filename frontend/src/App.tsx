@@ -28,7 +28,7 @@ import MixedOutputNode from "./nodes/MixedOutputNode";
 import RecipeTagNode from "./nodes/RecipeTagNode";
 import InputRecipeNode from "./nodes/InputRecipeNode";
 import RecipeTagInputNode from "./nodes/RecipeTagInputNode";
-import ModeSelector, { AppMode, ConfigSubMode } from "./components/ModeSelector";
+import ModeSelector, { AppMode, ConfigSubMode, ConfigSubmodeSelector } from "./components/ModeSelector";
 import NodeTypeSelector from "./components/NodeTypeSelector";
 import NodeConfigDialog from "./components/NodeConfigDialog";
 import ItemMode from "./components/ItemMode";
@@ -1164,52 +1164,62 @@ function AppContent() {
     return (
         <div className="app-root">
             <div className="top-bar">
-                <div className="brand">GraphCalc</div>
-                {isAuthenticated && (
-                    <>
-                        <ProjectSelector
-                            activeProjectId={activeProjectId}
-                            onProjectChange={handleProjectChange}
+                <div className="top-bar-main">
+                    <div className="top-bar-main-left">
+                        <div className="brand">GraphCalc</div>
+                        {isAuthenticated && (
+                            <>
+                                <ProjectSelector
+                                    activeProjectId={activeProjectId}
+                                    onProjectChange={handleProjectChange}
+                                />
+                                <GraphSelector
+                                    activeProjectId={activeProjectId}
+                                    activeGraphId={activeGraphId}
+                                    onGraphChange={handleGraphChange}
+                                />
+                                <ModeSelector
+                                    currentMode={appMode}
+                                    onModeChange={setAppMode}
+                                />
+                            </>
+                        )}
+                    </div>
+                    {isAuthenticated && appMode === "edit" ? (
+                        <input
+                            className="search"
+                            placeholder="Quick Actions (Ctrl+I)"
+                            readOnly
+                            onClick={() => setIsCommandPaletteOpen(true)}
+                            style={{ cursor: "pointer" }}
                         />
-                        <GraphSelector
-                            activeProjectId={activeProjectId}
-                            activeGraphId={activeGraphId}
-                            onGraphChange={handleGraphChange}
-                        />
-                        <ModeSelector
-                            currentMode={appMode}
-                            onModeChange={setAppMode}
+                    ) : (
+                        <div className="top-bar-spacer" />
+                    )}
+                    <div className="top-bar-actions">
+                        {isAuthenticated && appMode === "edit" && (
+                            <button className="primary" onClick={handleSolve} disabled={isSolving}>
+                                {isSolving ? "Solving..." : "Solve"}
+                            </button>
+                        )}
+                        <button
+                            className="auth-secondary auth-button"
+                            onClick={() => openAuthDialog("login")}
+                            disabled={isAuthChecking}
+                            title={authUser ? `${authUser.username} · ${authUser.projectCount} project${authUser.projectCount === 1 ? "" : "s"}` : "Login"}
+                        >
+                            {isAuthChecking ? "Checking..." : authUser ? `${authUser.username} · ${authUser.projectCount}` : "Login"}
+                        </button>
+                    </div>
+                </div>
+                {isAuthenticated && appMode === "config" && (
+                    <div className="top-bar-subnav">
+                        <ConfigSubmodeSelector
                             configSubMode={configSubMode}
                             onConfigSubModeChange={setConfigSubMode}
                         />
-                    </>
+                    </div>
                 )}
-                {isAuthenticated && appMode === "edit" ? (
-                    <input
-                        className="search"
-                        placeholder="Quick Actions (Ctrl+I)"
-                        readOnly
-                        onClick={() => setIsCommandPaletteOpen(true)}
-                        style={{ cursor: "pointer" }}
-                    />
-                ) : (
-                    <div className="top-bar-spacer" />
-                )}
-                <div className="top-bar-actions">
-                    {isAuthenticated && appMode === "edit" && (
-                        <button className="primary" onClick={handleSolve} disabled={isSolving}>
-                            {isSolving ? "Solving..." : "Solve"}
-                        </button>
-                    )}
-                    <button
-                        className="auth-secondary auth-button"
-                        onClick={() => openAuthDialog("login")}
-                        disabled={isAuthChecking}
-                        title={authUser ? `${authUser.username} · ${authUser.projectCount} project${authUser.projectCount === 1 ? "" : "s"}` : "Login"}
-                    >
-                        {isAuthChecking ? "Checking..." : authUser ? `${authUser.username} · ${authUser.projectCount}` : "Login"}
-                    </button>
-                </div>
             </div>
             <AuthDialog
                 isOpen={isAuthDialogOpen}
