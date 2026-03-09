@@ -16,7 +16,7 @@ import ReactFlow, {
 } from "reactflow";
 import { solveGraph, SolveResponse } from "./api/solve";
 import { GraphData, loadGraph, saveGraph, loadStore, listProjects, listGraphs } from "./api/persistence";
-import { authenticateUser, AuthUser, changePassword, deleteAccount, getMe, getSession, logoutUser, registerUser } from "./api/auth";
+import { authenticateUser, AuthUser, changePassword, deleteAccount, getMe, logoutUser, registerUser } from "./api/auth";
 import ContextMenu from "./editor/ContextMenu";
 import CommandPalette, { CommandAction } from "./editor/CommandPalette";
 import { useGraphStore } from "./store/graphStore";
@@ -71,6 +71,14 @@ const stripSolveData = (value: unknown): unknown => {
     return rest;
 };
 
+const getRequiredValue = (value: string | null, message: string): string => {
+    if (!value) {
+        throw new Error(message);
+    }
+
+    return value;
+};
+
 function AppContent() {
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -102,7 +110,7 @@ function AppContent() {
     const selectionLoadRequestIdRef = useRef(0);
     const saveTimeoutRef = useRef<number | null>(null);
     const graphSaveInFlightRef = useRef(false);
-    const pendingGraphSaveRef = useRef<{ graphData: GraphData; projectId?: string; graphId?: string } | null>(null);
+    const pendingGraphSaveRef = useRef<{ graphData: GraphData; projectId: string; graphId: string } | null>(null);
 
     const flushGraphSave = useCallback(async () => {
         if (graphSaveInFlightRef.current || !pendingGraphSaveRef.current) {
@@ -160,19 +168,21 @@ function AppContent() {
 
         const loadSession = async () => {
             try {
-                const session = await getSession();
                 if (!ignore) {
-                    if (session.authenticated) {
-                        const profile = await getMe();
-                        if (!ignore) {
-                            setAuthUser(profile);
-                        }
-                    } else {
-                        setAuthUser(null);
+                    const profile = await getMe();
+                    if (!ignore) {
+                        setAuthUser(profile);
                     }
                 }
             } catch (error) {
-                console.error("Error loading session:", error);
+                if (error instanceof Error && error.message === "Unauthorized") {
+                    if (!ignore) {
+                        setAuthUser(null);
+                    }
+                    return;
+                }
+
+                console.error("Error loading account:", error);
                 if (!ignore) {
                     setAuthUser(null);
                 }
@@ -219,10 +229,15 @@ function AppContent() {
                 const pid = projectsRes.activeProjectId;
                 if (pid) {
                     setActiveProjectId(pid);
+                } else {
+                    setActiveGraphId(null);
+                    setNodes([]);
+                    setEdges([]);
+                    return;
                 }
 
                 // Load store data (categories, items, tags, recipes, etc.)
-                const storeData = await loadStore(pid ?? undefined);
+                const storeData = await loadStore(pid);
                 if (ignore) {
                     return;
                 }
@@ -239,11 +254,15 @@ function AppContent() {
                     gid = graphsRes.activeGraphId ?? undefined;
                     if (gid) {
                         setActiveGraphId(gid);
+                    } else {
+                        setNodes([]);
+                        setEdges([]);
+                        return;
                     }
                 }
 
                 // Load graph data (nodes and edges)
-                const graphData = await loadGraph(pid ?? undefined, gid);
+                const graphData = await loadGraph(pid, getRequiredValue(gid ?? null, "No active graph selected"));
                 if (ignore) {
                     return;
                 }
@@ -279,6 +298,7 @@ function AppContent() {
     useEffect(() => {
         // Don't save until initial load is complete
         if (!authUser || !isLoaded) return;
+        if (!activeProjectId || !activeGraphId) return;
 
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current);
@@ -303,8 +323,8 @@ function AppContent() {
 
             pendingGraphSaveRef.current = {
                 graphData,
-                projectId: activeProjectId ?? undefined,
-                graphId: activeGraphId ?? undefined
+                projectId: activeProjectId,
+                graphId: activeGraphId
             };
             void flushGraphSave();
         }, 500); // 500ms debounce
@@ -339,6 +359,11 @@ function AppContent() {
             }
             const gid = graphsRes.activeGraphId ?? undefined;
             setActiveGraphId(gid ?? null);
+            if (!gid) {
+                setNodes([]);
+                setEdges([]);
+                return;
+            }
 
             const graphData = await loadGraph(newProjectId, gid);
             if (selectionLoadRequestIdRef.current !== requestId) {
@@ -374,7 +399,8 @@ function AppContent() {
         setActiveGraphId(newGraphId);
 
         try {
-            const graphData = await loadGraph(activeProjectId ?? undefined, newGraphId);
+            const projectId = getRequiredValue(activeProjectId, "No active project selected");
+            const graphData = await loadGraph(projectId, newGraphId);
             if (selectionLoadRequestIdRef.current !== requestId) {
                 return;
             }
@@ -1110,10 +1136,9 @@ function AppContent() {
         );
 
         try {
-            const result = await solveGraph({
-                projectId: activeProjectId,
-                graphId: activeGraphId,
-            });
+            const projectId = getRequiredValue(activeProjectId, "No active project selected");
+            const graphId = getRequiredValue(activeGraphId, "No active graph selected");
+            const result = await solveGraph(projectId, graphId);
             console.log("Solve result:", result);
             setSolveResult(result);
         } catch (error) {

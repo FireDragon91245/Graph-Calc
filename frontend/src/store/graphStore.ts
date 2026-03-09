@@ -83,7 +83,7 @@ const slugify = (value: string) =>
 // Debounced save function
 let saveTimeout: number | null = null;
 let storeSaveInFlight = false;
-let pendingStoreSave: { data: StoreData; projectId?: string } | null = null;
+let pendingStoreSave: { data: StoreData; projectId: string } | null = null;
 
 const flushStoreSave = () => {
   if (storeSaveInFlight || !pendingStoreSave) {
@@ -111,6 +111,10 @@ const debouncedSave = (state: GraphStore) => {
     clearTimeout(saveTimeout);
   }
   saveTimeout = setTimeout(() => {
+    if (!state.activeProjectId) {
+      return;
+    }
+
     const dataToSave: StoreData = {
       categories: state.categories,
       items: state.items,
@@ -118,8 +122,7 @@ const debouncedSave = (state: GraphStore) => {
       recipeTags: state.recipeTags,
       recipes: state.recipes
     };
-    const projectId = state.activeProjectId ?? undefined;
-    pendingStoreSave = { data: dataToSave, projectId };
+    pendingStoreSave = { data: dataToSave, projectId: state.activeProjectId };
     flushStoreSave();
   }, 300); // 300ms debounce
 };

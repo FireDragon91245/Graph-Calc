@@ -15,11 +15,6 @@ export interface AuthResponse {
   };
 }
 
-export interface SessionResponse {
-  authenticated: boolean;
-  user: AuthUser | null;
-}
-
 async function submitCredentials(path: string, username: string, password: string): Promise<AuthResponse> {
   const response = await apiFetch(path, {
     method: "POST",
@@ -43,21 +38,13 @@ export function authenticateUser(username: string, password: string): Promise<Au
 
 export async function getMe(): Promise<AuthUser> {
   const response = await apiFetch("/me");
+  if (response.status === 401) {
+    throw new Error("Unauthorized");
+  }
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Failed to load account"));
   }
   return response.json() as Promise<AuthUser>;
-}
-
-export async function getSession(): Promise<SessionResponse> {
-  const response = await apiFetch("/session");
-  if (response.status === 401) {
-    return { authenticated: false, user: null };
-  }
-  if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to load session"));
-  }
-  return response.json() as Promise<SessionResponse>;
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<AuthUser> {

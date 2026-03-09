@@ -9,6 +9,7 @@ type Port = {
   name: string;
   itemId?: string;
   refId?: string;
+  refType?: "item" | "tag";
   fixedRefId?: string;
   amountPerCycle: number;
   probability?: number;
@@ -73,6 +74,7 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
         id: input.id,
         name,
         refId: input.refId,
+        refType: input.refType,
         amountPerCycle: input.amount
       };
     });

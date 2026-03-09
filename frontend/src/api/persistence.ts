@@ -204,23 +204,16 @@ export async function deleteGraph(projectId: string, graphId: string): Promise<v
 
 // ── Graph / Store (project-scoped) ─────────────────────────────
 
-function qs(projectId?: string, graphId?: string): string {
-  const params: string[] = [];
-  if (projectId) params.push(`project_id=${encodeURIComponent(projectId)}`);
-  if (graphId) params.push(`graph_id=${encodeURIComponent(graphId)}`);
-  return params.length > 0 ? `?${params.join("&")}` : "";
-}
-
-export async function loadGraph(projectId?: string, graphId?: string): Promise<GraphData> {
-  const response = await apiFetch(`/graph${qs(projectId, graphId)}`);
+export async function loadGraph(projectId: string, graphId: string): Promise<GraphData> {
+  const response = await apiFetch(`/graph/${encodeURIComponent(projectId)}/${encodeURIComponent(graphId)}`);
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Failed to load graph"));
   }
   return response.json();
 }
 
-export async function saveGraph(graph: GraphData, projectId?: string, graphId?: string): Promise<void> {
-  const response = await apiFetch(`/graph${qs(projectId, graphId)}`, {
+export async function saveGraph(graph: GraphData, projectId: string, graphId: string): Promise<void> {
+  const response = await apiFetch(`/graph/${encodeURIComponent(projectId)}/${encodeURIComponent(graphId)}`, {
     method: "POST",
     body: JSON.stringify(graph)
   });
@@ -229,16 +222,16 @@ export async function saveGraph(graph: GraphData, projectId?: string, graphId?: 
   }
 }
 
-export async function loadStore(projectId?: string): Promise<StoreData> {
-  const response = await apiFetch(`/store${qs(projectId)}`);
+export async function loadStore(projectId: string): Promise<StoreData> {
+  const response = await apiFetch(`/store/${encodeURIComponent(projectId)}`);
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Failed to load store"));
   }
   return response.json();
 }
 
-export async function saveStore(store: StoreData, projectId?: string): Promise<void> {
-  const response = await apiFetch(`/store${qs(projectId)}`, {
+export async function saveStore(store: StoreData, projectId: string): Promise<void> {
+  const response = await apiFetch(`/store/${encodeURIComponent(projectId)}`, {
     method: "POST",
     body: JSON.stringify(store)
   });
