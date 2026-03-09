@@ -36,7 +36,7 @@ export type SolveResponse = {
 };
 
 export async function solveGraph(projectId: string, graphId: string, payload: SolveRequest = {}): Promise<SolveResponse> {
-  const res = await apiFetch(`/solve/${encodeURIComponent(projectId)}/${encodeURIComponent(graphId)}`, {
+  const res = await apiFetch(`/projects/${encodeURIComponent(projectId)}/graphs/${encodeURIComponent(graphId)}/solve`, {
     method: "POST",
     body: JSON.stringify(payload)
   });

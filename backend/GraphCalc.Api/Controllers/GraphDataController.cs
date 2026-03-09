@@ -9,7 +9,7 @@ namespace GraphCalc.Api.Controllers;
 
 [ApiController]
 [Authorize]
-[Route("")]
+[Route("projects/{projectId}")]
 public sealed class GraphDataController : ControllerBase
 {
     private readonly BackendStore _store;
@@ -23,8 +23,8 @@ public sealed class GraphDataController : ControllerBase
         _solverQueue = solverQueue;
     }
 
-    [HttpPost("solve/{projectId}/{graphId}")]
-    [EnableRateLimiting("solver")]
+    [HttpPost("graphs/{graphId}/solve")]
+    [EnableRateLimiting("solve")]
     public async Task<ActionResult<SolveResponse>> Solve(string projectId, string graphId, [FromBody] SolveRequest request, CancellationToken cancellationToken)
     {
         var user = ApiRequestContext.GetAuthenticatedUser(User);
@@ -38,8 +38,8 @@ public sealed class GraphDataController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("graph/{projectId}/{graphId}")]
-    [EnableRateLimiting("global-authenticated")]
+    [HttpGet("graphs/{graphId}/load")]
+    [EnableRateLimiting("crud")]
     public async Task<ActionResult<GraphData>> GetGraph(string projectId, string graphId, CancellationToken cancellationToken)
     {
         var user = ApiRequestContext.GetAuthenticatedUser(User);
@@ -47,8 +47,8 @@ public sealed class GraphDataController : ControllerBase
         return Ok(await _store.LoadGraphAsync(user.Id, projectId, graphId, cancellationToken));
     }
 
-    [HttpPost("graph/{projectId}/{graphId}")]
-    [EnableRateLimiting("global-authenticated")]
+    [HttpPost("graphs/{graphId}/save")]
+    [EnableRateLimiting("crud")]
     public async Task<ActionResult<StatusResponse>> SaveGraph(string projectId, string graphId, [FromBody] GraphData graph, CancellationToken cancellationToken)
     {
         var user = ApiRequestContext.GetAuthenticatedUser(User);
@@ -57,8 +57,8 @@ public sealed class GraphDataController : ControllerBase
         return Ok(new StatusResponse { Status = "ok" });
     }
 
-    [HttpGet("store/{projectId}")]
-    [EnableRateLimiting("global-authenticated")]
+    [HttpGet("store/load")]
+    [EnableRateLimiting("crud")]
     public async Task<ActionResult<StoreData>> GetStore(string projectId, CancellationToken cancellationToken)
     {
         var user = ApiRequestContext.GetAuthenticatedUser(User);
@@ -66,8 +66,8 @@ public sealed class GraphDataController : ControllerBase
         return Ok(await _store.LoadStoreAsync(user.Id, projectId, cancellationToken));
     }
 
-    [HttpPost("store/{projectId}")]
-    [EnableRateLimiting("global-authenticated")]
+    [HttpPost("store/save")]
+    [EnableRateLimiting("crud")]
     public async Task<ActionResult<StatusResponse>> SaveStore(string projectId, [FromBody] StoreData storeData, CancellationToken cancellationToken)
     {
         var user = ApiRequestContext.GetAuthenticatedUser(User);

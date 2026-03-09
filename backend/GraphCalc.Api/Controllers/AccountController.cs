@@ -11,8 +11,8 @@ namespace GraphCalc.Api.Controllers;
 
 [ApiController]
 [Authorize]
-[EnableRateLimiting("global-authenticated")]
-[Route("")]
+[EnableRateLimiting("auth")]
+[Route("user")]
 public sealed class AccountController : ControllerBase
 {
     private readonly BackendStore _store;
@@ -35,14 +35,14 @@ public sealed class AccountController : ControllerBase
         _options = options.Value;
     }
 
-    [HttpGet("me")]
+    [HttpGet("info")]
     public async Task<ActionResult<AccountProfileResponse>> Me(CancellationToken cancellationToken)
     {
         var user = await ApiRequestContext.GetRequiredUserDocumentAsync(User, _store, cancellationToken);
         return Ok(await _store.BuildAccountProfileAsync(user, cancellationToken));
     }
 
-    [HttpPut("me/password")]
+    [HttpPut("password")]
     public async Task<ActionResult<PasswordChangeResponse>> ChangePassword([FromBody] PasswordChangeRequest request, CancellationToken cancellationToken)
     {
         if ((request.NewPassword ?? string.Empty).Length <= 8)
@@ -74,7 +74,7 @@ public sealed class AccountController : ControllerBase
         });
     }
 
-    [HttpDelete("me")]
+    [HttpDelete("delete")]
     public async Task<ActionResult<StatusResponse>> DeleteAccount([FromBody] DeleteAccountRequest request, CancellationToken cancellationToken)
     {
         var user = await ApiRequestContext.GetRequiredUserDocumentAsync(User, _store, cancellationToken);

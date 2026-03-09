@@ -9,7 +9,7 @@ namespace GraphCalc.Api.Controllers;
 
 [ApiController]
 [Authorize]
-[EnableRateLimiting("global-authenticated")]
+[EnableRateLimiting("crud")]
 [Route("projects")]
 public sealed class ProjectsController : ControllerBase
 {
@@ -65,7 +65,7 @@ public sealed class ProjectsController : ControllerBase
         return Ok(await _store.CopyProjectAsync(user.Id, projectId, ApiRequestContext.NormalizeName(request.Name, "Project name is required"), cancellationToken));
     }
 
-    [HttpDelete("{projectId}")]
+    [HttpDelete("{projectId}/delete")]
     public async Task<ActionResult<StatusResponse>> DeleteProject(string projectId, CancellationToken cancellationToken)
     {
         var user = ApiRequestContext.GetAuthenticatedUser(User);
@@ -127,7 +127,7 @@ public sealed class ProjectsController : ControllerBase
         return Ok(await _store.CopyGraphAsync(user.Id, projectId, graphId, ApiRequestContext.NormalizeName(request.Name, "Graph name is required"), cancellationToken));
     }
 
-    [HttpDelete("{projectId}/graphs/{graphId}")]
+    [HttpDelete("{projectId}/graphs/{graphId}/delete")]
     public async Task<ActionResult<StatusResponse>> DeleteGraph(string projectId, string graphId, CancellationToken cancellationToken)
     {
         var user = ApiRequestContext.GetAuthenticatedUser(User);

@@ -115,12 +115,21 @@ public sealed class SolverOptions
 
 public sealed class RateLimitingOptions
 {
+    [Required]
+    public required RateLimitCategoryLimits Global { get; init; }
+
+    [Required]
+    public required RateLimitCategoryLimits PerUserOrIp { get; init; }
+}
+
+public sealed class RateLimitCategoryLimits
+{
     [Range(1, 100000)]
-    public int GlobalRequestsPerMinute { get; init; } = 240;
+    public int AuthRequestsPerMinute { get; init; } = 60;
 
     [Range(1, 100000)]
-    public int AuthRequestsPerMinute { get; init; } = 10;
+    public int SolveRequestsPerMinute { get; init; } = 20;
 
     [Range(1, 100000)]
-    public int SolverRequestsPerMinute { get; init; } = 20;
+    public int CrudRequestsPerMinute { get; init; } = 240;
 }

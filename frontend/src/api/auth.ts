@@ -29,15 +29,15 @@ async function submitCredentials(path: string, username: string, password: strin
 }
 
 export function registerUser(username: string, password: string): Promise<AuthResponse> {
-  return submitCredentials("/register", username, password);
+  return submitCredentials("/user/register", username, password);
 }
 
 export function authenticateUser(username: string, password: string): Promise<AuthResponse> {
-  return submitCredentials("/authenticate", username, password);
+  return submitCredentials("/user/auth", username, password);
 }
 
 export async function getMe(): Promise<AuthUser> {
-  const response = await apiFetch("/me");
+  const response = await apiFetch("/user/info");
   if (response.status === 401) {
     throw new Error("Unauthorized");
   }
@@ -48,7 +48,7 @@ export async function getMe(): Promise<AuthUser> {
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<AuthUser> {
-  const response = await apiFetch("/me/password", {
+  const response = await apiFetch("/user/password", {
     method: "PUT",
     body: JSON.stringify({ currentPassword, newPassword })
   });
@@ -60,7 +60,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
 }
 
 export async function deleteAccount(currentPassword: string): Promise<void> {
-  const response = await apiFetch("/me", {
+  const response = await apiFetch("/user/delete", {
     method: "DELETE",
     body: JSON.stringify({ currentPassword })
   });
@@ -70,7 +70,7 @@ export async function deleteAccount(currentPassword: string): Promise<void> {
 }
 
 export async function logoutUser(): Promise<void> {
-  const response = await apiFetch("/logout", { method: "POST" });
+  const response = await apiFetch("/user/logout", { method: "POST" });
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Failed to log out"));
   }

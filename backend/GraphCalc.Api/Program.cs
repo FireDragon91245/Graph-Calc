@@ -77,36 +77,27 @@ public class Program
 				context.HttpContext.Response.ContentType = "application/json";
 				await context.HttpContext.Response.WriteAsJsonAsync(new { detail = "Too many requests" }, cancellationToken);
 			};
+			options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+			{
+				var category = ResolveRateLimitCategory(context);
+				var permitLimit = GetCategoryLimit(context, category, global: true);
+				return CreateFixedWindowPartition("global", category, permitLimit);
+			});
 			options.AddPolicy("auth", context =>
-				RateLimitPartition.GetFixedWindowLimiter(
-					$"auth:{GetIpKey(context)}",
-					_ => new FixedWindowRateLimiterOptions
-					{
-						PermitLimit = startupOptions.RateLimiting.AuthRequestsPerMinute,
-						Window = TimeSpan.FromMinutes(1),
-						QueueLimit = 0,
-						AutoReplenishment = true
-					}));
-			options.AddPolicy("global-authenticated", context =>
-				RateLimitPartition.GetFixedWindowLimiter(
-					$"global:{GetUserOrIpKey(context)}",
-					_ => new FixedWindowRateLimiterOptions
-					{
-						PermitLimit = startupOptions.RateLimiting.GlobalRequestsPerMinute,
-						Window = TimeSpan.FromMinutes(1),
-						QueueLimit = 0,
-						AutoReplenishment = true
-					}));
-			options.AddPolicy("solver", context =>
-				RateLimitPartition.GetFixedWindowLimiter(
-					$"solver:{GetUserOrIpKey(context)}",
-					_ => new FixedWindowRateLimiterOptions
-					{
-						PermitLimit = startupOptions.RateLimiting.SolverRequestsPerMinute,
-						Window = TimeSpan.FromMinutes(1),
-						QueueLimit = 0,
-						AutoReplenishment = true
-					}));
+			{
+				var permitLimit = GetCategoryLimit(context, "auth", global: false);
+				return CreateFixedWindowPartition("user-or-ip:auth", GetUserOrIpKey(context), permitLimit);
+			});
+			options.AddPolicy("solve", context =>
+			{
+				var permitLimit = GetCategoryLimit(context, "solve", global: false);
+				return CreateFixedWindowPartition("user-or-ip:solve", GetUserOrIpKey(context), permitLimit);
+			});
+			options.AddPolicy("crud", context =>
+			{
+				var permitLimit = GetCategoryLimit(context, "crud", global: false);
+				return CreateFixedWindowPartition("user-or-ip:crud", GetUserOrIpKey(context), permitLimit);
+			});
 		});
 
 		var app = builder.Build();
@@ -175,6 +166,47 @@ public class Program
 		app.MapControllers();
 
 		app.Run();
+
+		static RateLimitPartition<string> CreateFixedWindowPartition(string scope, string key, int permitLimit)
+		{
+			return RateLimitPartition.GetFixedWindowLimiter(
+				$"{scope}:{key}:{permitLimit}",
+				_ => new FixedWindowRateLimiterOptions
+				{
+					PermitLimit = permitLimit,
+					Window = TimeSpan.FromMinutes(1),
+					QueueLimit = 0,
+					AutoReplenishment = true
+				});
+		}
+
+		static string ResolveRateLimitCategory(HttpContext context)
+		{
+			if (context.Request.Path.StartsWithSegments("/user", StringComparison.OrdinalIgnoreCase))
+			{
+				return "auth";
+			}
+
+			if (context.Request.Path.Value?.EndsWith("/solve", StringComparison.OrdinalIgnoreCase) == true)
+			{
+				return "solve";
+			}
+
+			return "crud";
+		}
+
+		static int GetCategoryLimit(HttpContext context, string category, bool global)
+		{
+			var rateLimiting = context.RequestServices.GetRequiredService<IOptionsMonitor<GraphCalcOptions>>().CurrentValue.RateLimiting;
+			var limits = global ? rateLimiting.Global : rateLimiting.PerUserOrIp;
+
+			return category switch
+			{
+				"auth" => limits.AuthRequestsPerMinute,
+				"solve" => limits.SolveRequestsPerMinute,
+				_ => limits.CrudRequestsPerMinute
+			};
+		}
 
 		static string GetIpKey(HttpContext context)
 		{

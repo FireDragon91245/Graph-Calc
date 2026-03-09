@@ -9,7 +9,7 @@ namespace GraphCalc.Api.Controllers;
 
 [ApiController]
 [AllowAnonymous]
-[Route("")]
+[Route("user")]
 public sealed class AuthController : ControllerBase
 {
     private readonly BackendStore _store;
@@ -61,7 +61,7 @@ public sealed class AuthController : ControllerBase
         });
     }
 
-    [HttpPost("authenticate")]
+    [HttpPost("auth")]
     [EnableRateLimiting("auth")]
     public async Task<ActionResult<AuthResponse>> Authenticate([FromBody] AuthCredentialsRequest request, CancellationToken cancellationToken)
     {

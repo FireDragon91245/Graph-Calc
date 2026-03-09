@@ -134,7 +134,7 @@ export async function copyProject(projectId: string, name: string): Promise<Proj
 }
 
 export async function deleteProject(projectId: string): Promise<void> {
-  const response = await apiFetch(`/projects/${projectId}`, {
+  const response = await apiFetch(`/projects/${projectId}/delete`, {
     method: "DELETE"
   });
   if (!response.ok) {
@@ -194,7 +194,7 @@ export async function copyGraph(projectId: string, graphId: string, name: string
 }
 
 export async function deleteGraph(projectId: string, graphId: string): Promise<void> {
-  const response = await apiFetch(`/projects/${projectId}/graphs/${graphId}`, {
+  const response = await apiFetch(`/projects/${projectId}/graphs/${graphId}/delete`, {
     method: "DELETE"
   });
   if (!response.ok) {
@@ -205,7 +205,7 @@ export async function deleteGraph(projectId: string, graphId: string): Promise<v
 // ── Graph / Store (project-scoped) ─────────────────────────────
 
 export async function loadGraph(projectId: string, graphId: string): Promise<GraphData> {
-  const response = await apiFetch(`/graph/${encodeURIComponent(projectId)}/${encodeURIComponent(graphId)}`);
+  const response = await apiFetch(`/projects/${encodeURIComponent(projectId)}/graphs/${encodeURIComponent(graphId)}/load`);
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Failed to load graph"));
   }
@@ -213,7 +213,7 @@ export async function loadGraph(projectId: string, graphId: string): Promise<Gra
 }
 
 export async function saveGraph(graph: GraphData, projectId: string, graphId: string): Promise<void> {
-  const response = await apiFetch(`/graph/${encodeURIComponent(projectId)}/${encodeURIComponent(graphId)}`, {
+  const response = await apiFetch(`/projects/${encodeURIComponent(projectId)}/graphs/${encodeURIComponent(graphId)}/save`, {
     method: "POST",
     body: JSON.stringify(graph)
   });
@@ -223,7 +223,7 @@ export async function saveGraph(graph: GraphData, projectId: string, graphId: st
 }
 
 export async function loadStore(projectId: string): Promise<StoreData> {
-  const response = await apiFetch(`/store/${encodeURIComponent(projectId)}`);
+  const response = await apiFetch(`/projects/${encodeURIComponent(projectId)}/store/load`);
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "Failed to load store"));
   }
@@ -231,7 +231,7 @@ export async function loadStore(projectId: string): Promise<StoreData> {
 }
 
 export async function saveStore(store: StoreData, projectId: string): Promise<void> {
-  const response = await apiFetch(`/store/${encodeURIComponent(projectId)}`, {
+  const response = await apiFetch(`/projects/${encodeURIComponent(projectId)}/store/save`, {
     method: "POST",
     body: JSON.stringify(store)
   });
