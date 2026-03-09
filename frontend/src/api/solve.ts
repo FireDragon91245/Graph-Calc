@@ -1,3 +1,4 @@
+import type { GraphData, StoreData } from "./persistence";
 import { apiFetch, getErrorMessage } from "./client";
 
 export type SolveTargets = {
@@ -21,6 +22,8 @@ export type EdgeFlowData = {
 };
 
 export type SolveRequest = {
+  graph?: GraphData;
+  storeData?: StoreData;
   targets?: SolveTargets;
 };
 
@@ -37,6 +40,19 @@ export type SolveResponse = {
 
 export async function solveGraph(projectId: string, graphId: string, payload: SolveRequest = {}): Promise<SolveResponse> {
   const res = await apiFetch(`/projects/${encodeURIComponent(projectId)}/graphs/${encodeURIComponent(graphId)}/solve`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) {
+    throw new Error(await getErrorMessage(res, `Solve failed: ${res.status}`));
+  }
+
+  return res.json() as Promise<SolveResponse>;
+}
+
+export async function solveGuestGraph(payload: SolveRequest): Promise<SolveResponse> {
+  const res = await apiFetch("/solve", {
     method: "POST",
     body: JSON.stringify(payload)
   });

@@ -134,6 +134,9 @@ public sealed class RateLimitCategoryLimits
     public int SolveRequestsPerMinute { get; init; } = 20;
 
     [Range(1, 100000)]
+    public int GuestSolveRequestsPerMinute { get; init; } = 6;
+
+    [Range(1, 100000)]
     public int CrudRequestsPerMinute { get; init; } = 240;
 }
 

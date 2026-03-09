@@ -156,7 +156,9 @@ export default function AuthDialog({
           <div>
             <h2 className="auth-dialog-title">Account</h2>
             <p className="auth-dialog-subtitle">
-              {currentUser ? "You are signed in for this browser session." : "Use a username and password to create or resume a session."}
+              {currentUser
+                ? "You are signed in and your workspace is synced to your account."
+                : "Guest work stays in this browser until you sign in or create an account."}
             </p>
           </div>
           <button className="auth-close" type="button" onClick={onClose} aria-label="Close authentication dialog">
@@ -174,6 +176,7 @@ export default function AuthDialog({
               <div>User ID: {currentUser.id}</div>
               <div>Projects: {currentUser.projectCount}</div>
               <div>Active project: {currentUser.activeProjectId ?? "none"}</div>
+              <div>Logout copies the current account workspace back into local browser storage.</div>
             </div>
             <form className="auth-form auth-settings-form" onSubmit={handlePasswordChange}>
               <div className="auth-section-title">Change Password</div>
@@ -244,6 +247,9 @@ export default function AuthDialog({
           </div>
         ) : (
           <>
+            <div className="auth-helper" style={{ marginBottom: 16 }}>
+              Login opens the existing account workspace and will ask for merge decisions if guest and account data differ. Register creates a new account and imports your current guest projects, graphs, and store data immediately.
+            </div>
             <div className="auth-tabs">
               <button
                 className={`auth-tab${mode === "login" ? " active" : ""}`}

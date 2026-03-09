@@ -94,6 +94,11 @@ public class Program
 				var permitLimit = GetCategoryLimit(context, "solve", global: false);
 				return CreateFixedWindowPartition("user-or-ip:solve", GetUserOrIpKey(context), permitLimit);
 			});
+			options.AddPolicy("guest-solve", context =>
+			{
+				var permitLimit = GetCategoryLimit(context, "guest-solve", global: false);
+				return CreateFixedWindowPartition("ip:guest-solve", GetIpKey(context), permitLimit);
+			});
 			options.AddPolicy("crud", context =>
 			{
 				var permitLimit = GetCategoryLimit(context, "crud", global: false);
@@ -193,6 +198,11 @@ public class Program
 				return "auth";
 			}
 
+			if (context.Request.Path.Equals("/solve", StringComparison.OrdinalIgnoreCase))
+			{
+				return "guest-solve";
+			}
+
 			if (context.Request.Path.Value?.EndsWith("/solve", StringComparison.OrdinalIgnoreCase) == true)
 			{
 				return "solve";
@@ -210,6 +220,7 @@ public class Program
 			{
 				"auth" => limits.AuthRequestsPerMinute,
 				"solve" => limits.SolveRequestsPerMinute,
+				"guest-solve" => limits.GuestSolveRequestsPerMinute,
 				_ => limits.CrudRequestsPerMinute
 			};
 		}

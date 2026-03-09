@@ -14,12 +14,29 @@ import ReactFlow, {
     ReactFlowProvider,
     useReactFlow
 } from "reactflow";
-import { solveGraph, SolveResponse } from "./api/solve";
-import { GraphData, loadGraph, saveGraph, loadStore, listProjects, listGraphs } from "./api/persistence";
+import { solveGraph, SolveResponse, solveGuestGraph } from "./api/solve";
+import {
+    areWorkspaceSnapshotsEqual,
+    captureRemoteWorkspaceToLocal,
+    createEmptyStoreData,
+    GraphData,
+    getLocalWorkspaceSnapshot,
+    getRemoteWorkspaceSnapshot,
+    hasMeaningfulWorkspaceSnapshot,
+    listGraphs,
+    listProjects,
+    loadGraph,
+    loadStore,
+    replaceRemoteWorkspace,
+    saveGraph,
+    setPersistenceMode,
+    syncLocalWorkspaceToRemote,
+    WorkspaceSnapshot
+} from "./api/persistence";
 import { authenticateUser, AuthUser, changePassword, deleteAccount, getMe, logoutUser, registerUser } from "./api/auth";
 import ContextMenu from "./editor/ContextMenu";
 import CommandPalette, { CommandAction } from "./editor/CommandPalette";
-import { useGraphStore } from "./store/graphStore";
+import { flushPendingStoreSave, useGraphStore } from "./store/graphStore";
 import RecipeNode from "./nodes/RecipeNode";
 import InputNode from "./nodes/InputNode";
 import OutputNode from "./nodes/OutputNode";
@@ -40,6 +57,7 @@ import ItemGenerator from "./components/ItemGenerator";
 import ProjectSelector from "./components/ProjectSelector";
 import GraphSelector from "./components/GraphSelector";
 import AuthDialog, { AuthDialogMode } from "./components/AuthDialog";
+import WorkspaceMergeDialog from "./components/WorkspaceMergeDialog";
 import { NodeType } from "./components/NodeTypeSelector";
 import EdgeWithTooltip from "./edges/EdgeWithTooltip";
 
@@ -96,12 +114,20 @@ function AppContent() {
     const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
     const [authDialogMode, setAuthDialogMode] = useState<AuthDialogMode>("login");
     const [isAuthChecking, setIsAuthChecking] = useState(true);
+    const [pendingMerge, setPendingMerge] = useState<{
+        profile: AuthUser;
+        localSnapshot: WorkspaceSnapshot;
+        remoteSnapshot: WorkspaceSnapshot;
+    } | null>(null);
+    const [isMergeApplying, setIsMergeApplying] = useState(false);
+    const [mergeDialogError, setMergeDialogError] = useState<string | null>(null);
 
     const activeProjectId = useGraphStore((state) => state.activeProjectId);
     const setActiveProjectId = useGraphStore((state) => state.setActiveProjectId);
     const activeGraphId = useGraphStore((state) => state.activeGraphId);
     const setActiveGraphId = useGraphStore((state) => state.setActiveGraphId);
     const recipes = useGraphStore((state) => state.recipes);
+    const categories = useGraphStore((state) => state.categories);
     const items = useGraphStore((state) => state.items);
     const tags = useGraphStore((state) => state.tags);
     const recipeTags = useGraphStore((state) => state.recipeTags);
@@ -111,6 +137,22 @@ function AppContent() {
     const saveTimeoutRef = useRef<number | null>(null);
     const graphSaveInFlightRef = useRef(false);
     const pendingGraphSaveRef = useRef<{ graphData: GraphData; projectId: string; graphId: string } | null>(null);
+
+    const buildGraphData = useCallback((): GraphData => ({
+        nodes: nodes.map((node) => ({
+            id: node.id,
+            type: node.type ?? "recipe",
+            position: node.position,
+            data: stripSolveData(node.data)
+        })),
+        edges: edges.map((edge) => ({
+            id: edge.id,
+            source: edge.source,
+            target: edge.target,
+            sourceHandle: edge.sourceHandle ?? null,
+            targetHandle: edge.targetHandle ?? null
+        }))
+    }), [nodes, edges]);
 
     const flushGraphSave = useCallback(async () => {
         if (graphSaveInFlightRef.current || !pendingGraphSaveRef.current) {
@@ -132,6 +174,24 @@ function AppContent() {
             }
         }
     }, []);
+
+    const flushPendingGraphSave = useCallback(async () => {
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = null;
+        }
+
+        if (!isLoaded || !activeProjectId || !activeGraphId) {
+            return;
+        }
+
+        pendingGraphSaveRef.current = {
+            graphData: buildGraphData(),
+            projectId: activeProjectId,
+            graphId: activeGraphId
+        };
+        await flushGraphSave();
+    }, [activeGraphId, activeProjectId, buildGraphData, flushGraphSave, isLoaded]);
 
     // Fit view whenever a graph finishes loading
     const prevIsLoadedRef = useRef(false);
@@ -171,12 +231,14 @@ function AppContent() {
                 if (!ignore) {
                     const profile = await getMe();
                     if (!ignore) {
+                        setPersistenceMode("remote");
                         setAuthUser(profile);
                     }
                 }
             } catch (error) {
                 if (error instanceof Error && error.message === "Unauthorized") {
                     if (!ignore) {
+                        setPersistenceMode("local");
                         setAuthUser(null);
                     }
                     return;
@@ -184,6 +246,7 @@ function AppContent() {
 
                 console.error("Error loading account:", error);
                 if (!ignore) {
+                    setPersistenceMode("local");
                     setAuthUser(null);
                 }
             } finally {
@@ -206,17 +269,6 @@ function AppContent() {
             return;
         }
 
-        if (!authUser) {
-            setIsLoaded(false);
-            setActiveProjectId(null);
-            setActiveGraphId(null);
-            setNodes([]);
-            setEdges([]);
-            setSolveResult(null);
-            setSolveError(null);
-            return;
-        }
-
         let ignore = false;
 
         const loadData = async () => {
@@ -227,9 +279,11 @@ function AppContent() {
                     return;
                 }
                 const pid = projectsRes.activeProjectId;
+                loadStoreData(createEmptyStoreData());
                 if (pid) {
                     setActiveProjectId(pid);
                 } else {
+                    setActiveProjectId(null);
                     setActiveGraphId(null);
                     setNodes([]);
                     setEdges([]);
@@ -255,6 +309,7 @@ function AppContent() {
                     if (gid) {
                         setActiveGraphId(gid);
                     } else {
+                        setActiveGraphId(null);
                         setNodes([]);
                         setEdges([]);
                         return;
@@ -297,7 +352,7 @@ function AppContent() {
     // Auto-save graph (nodes and edges) with debouncing
     useEffect(() => {
         // Don't save until initial load is complete
-        if (!authUser || !isLoaded) return;
+        if (!isLoaded) return;
         if (!activeProjectId || !activeGraphId) return;
 
         if (saveTimeoutRef.current) {
@@ -305,24 +360,8 @@ function AppContent() {
         }
 
         saveTimeoutRef.current = setTimeout(() => {
-            const graphData: GraphData = {
-                nodes: nodes.map((node) => ({
-                    id: node.id,
-                    type: node.type ?? "recipe",
-                    position: node.position,
-                    data: stripSolveData(node.data)
-                })),
-                edges: edges.map((edge) => ({
-                    id: edge.id,
-                    source: edge.source,
-                    target: edge.target,
-                    sourceHandle: edge.sourceHandle ?? null,
-                    targetHandle: edge.targetHandle ?? null
-                }))
-            };
-
             pendingGraphSaveRef.current = {
-                graphData,
+                graphData: buildGraphData(),
                 projectId: activeProjectId,
                 graphId: activeGraphId
             };
@@ -334,7 +373,7 @@ function AppContent() {
                 clearTimeout(saveTimeoutRef.current);
             }
         };
-    }, [authUser, nodes, edges, isLoaded, activeProjectId, activeGraphId, flushGraphSave]);
+    }, [buildGraphData, nodes, edges, isLoaded, activeProjectId, activeGraphId, flushGraphSave]);
 
     // Handle project change (reload all data for new project)
     const handleProjectChange = useCallback(async (newProjectId: string) => {
@@ -1115,6 +1154,26 @@ function AppContent() {
         [recipes, items, tags, setNodes, nodes.length]
     );
 
+    const openAuthDialog = useCallback((mode: AuthDialogMode = "login") => {
+        setAuthDialogMode(mode);
+        setIsAuthDialogOpen(true);
+    }, []);
+
+    const finalizeAuthenticatedSession = useCallback((profile: AuthUser) => {
+        setMergeDialogError(null);
+        setPendingMerge(null);
+        setIsLoaded(false);
+        setPersistenceMode("remote");
+        setAuthUser(profile);
+    }, []);
+
+    const rollbackPendingLogin = useCallback(async (errorContext: string) => {
+        setPersistenceMode("local");
+        await logoutUser().catch((logoutError) => {
+            console.error(`Failed to roll back session after ${errorContext}:`, logoutError);
+        });
+    }, []);
+
     const handleSolve = useCallback(async () => {
         setIsSolving(true);
         setSolveError(null);
@@ -1136,9 +1195,21 @@ function AppContent() {
         );
 
         try {
-            const projectId = getRequiredValue(activeProjectId, "No active project selected");
-            const graphId = getRequiredValue(activeGraphId, "No active graph selected");
-            const result = await solveGraph(projectId, graphId);
+            const result = authUser
+                ? await solveGraph(
+                    getRequiredValue(activeProjectId, "No active project selected"),
+                    getRequiredValue(activeGraphId, "No active graph selected")
+                )
+                : await solveGuestGraph({
+                    graph: buildGraphData(),
+                    storeData: {
+                        categories,
+                        items,
+                        tags,
+                        recipeTags,
+                        recipes,
+                    }
+                });
             console.log("Solve result:", result);
             setSolveResult(result);
         } catch (error) {
@@ -1146,26 +1217,81 @@ function AppContent() {
         } finally {
             setIsSolving(false);
         }
-    }, [activeGraphId, activeProjectId, setNodes, setEdges]);
-
-    const openAuthDialog = useCallback((mode: AuthDialogMode = "login") => {
-        setAuthDialogMode(mode);
-        setIsAuthDialogOpen(true);
-    }, []);
+    }, [activeGraphId, activeProjectId, authUser, buildGraphData, categories, items, recipeTags, recipes, setNodes, setEdges, tags]);
 
     const handleLogin = useCallback(async (username: string, password: string) => {
         await authenticateUser(username, password);
-        const profile = await getMe();
-        setAuthUser(profile);
-        setIsAuthDialogOpen(false);
-    }, []);
+        await flushPendingGraphSave();
+        await flushPendingStoreSave();
+
+        try {
+            const [profile, localSnapshot, remoteSnapshot] = await Promise.all([
+                getMe(),
+                getLocalWorkspaceSnapshot(),
+                getRemoteWorkspaceSnapshot(),
+            ]);
+
+            if (!hasMeaningfulWorkspaceSnapshot(localSnapshot) || areWorkspaceSnapshotsEqual(localSnapshot, remoteSnapshot)) {
+                finalizeAuthenticatedSession(profile);
+                setIsAuthDialogOpen(false);
+                return;
+            }
+
+            setMergeDialogError(null);
+            setPendingMerge({ profile, localSnapshot, remoteSnapshot });
+            setIsAuthDialogOpen(false);
+        } catch (error) {
+            await rollbackPendingLogin("login error");
+            throw error;
+        }
+    }, [finalizeAuthenticatedSession, flushPendingGraphSave, rollbackPendingLogin]);
+
+    const handleMergeCancel = useCallback(async () => {
+        setMergeDialogError(null);
+        setPendingMerge(null);
+        await rollbackPendingLogin("merge cancellation");
+    }, [rollbackPendingLogin]);
+
+    const handleMergeConfirm = useCallback(async (mergedSnapshot: WorkspaceSnapshot) => {
+        if (!pendingMerge) {
+            return;
+        }
+
+        setIsMergeApplying(true);
+        setMergeDialogError(null);
+
+        try {
+            if (!areWorkspaceSnapshotsEqual(mergedSnapshot, pendingMerge.remoteSnapshot)) {
+                await replaceRemoteWorkspace(mergedSnapshot);
+            }
+
+            finalizeAuthenticatedSession(pendingMerge.profile);
+        } catch (error) {
+            setMergeDialogError(error instanceof Error ? error.message : "Failed to apply workspace merge.");
+        } finally {
+            setIsMergeApplying(false);
+        }
+    }, [finalizeAuthenticatedSession, pendingMerge]);
 
     const handleRegister = useCallback(async (username: string, password: string) => {
         await registerUser(username, password);
-        const profile = await getMe();
-        setAuthUser(profile);
+        await flushPendingGraphSave();
+        await flushPendingStoreSave();
+
+        try {
+            await syncLocalWorkspaceToRemote();
+            const profile = await getMe();
+            finalizeAuthenticatedSession(profile);
+        } catch (error) {
+            setPersistenceMode("local");
+            await logoutUser().catch((logoutError) => {
+                console.error("Failed to roll back session after sync error:", logoutError);
+            });
+            throw error;
+        }
+
         setIsAuthDialogOpen(false);
-    }, []);
+    }, [finalizeAuthenticatedSession, flushPendingGraphSave]);
 
     const handlePasswordChange = useCallback(async (currentPassword: string, newPassword: string) => {
         const profile = await changePassword(currentPassword, newPassword);
@@ -1174,17 +1300,25 @@ function AppContent() {
 
     const handleDeleteAccount = useCallback(async (currentPassword: string) => {
         await deleteAccount(currentPassword);
+        setIsLoaded(false);
+        setPersistenceMode("local");
         setAuthUser(null);
         setIsAuthDialogOpen(false);
     }, []);
 
     const handleLogout = useCallback(async () => {
+        await flushPendingGraphSave();
+        await flushPendingStoreSave();
+        await captureRemoteWorkspaceToLocal();
         await logoutUser();
+        setIsLoaded(false);
+        setPersistenceMode("local");
         setAuthUser(null);
         setIsAuthDialogOpen(false);
-    }, []);
+    }, [flushPendingGraphSave]);
 
     const isAuthenticated = Boolean(authUser);
+    const workspaceSelectorKey = authUser ? `remote:${authUser.id}` : "local";
 
     return (
         <div className="app-root">
@@ -1192,13 +1326,15 @@ function AppContent() {
                 <div className="top-bar-main">
                     <div className="top-bar-main-left">
                         <div className="brand">GraphCalc</div>
-                        {isAuthenticated && (
+                        {!isAuthChecking && (
                             <>
                                 <ProjectSelector
+                                    key={`project-selector:${workspaceSelectorKey}`}
                                     activeProjectId={activeProjectId}
                                     onProjectChange={handleProjectChange}
                                 />
                                 <GraphSelector
+                                    key={`graph-selector:${workspaceSelectorKey}:${activeProjectId ?? "none"}`}
                                     activeProjectId={activeProjectId}
                                     activeGraphId={activeGraphId}
                                     onGraphChange={handleGraphChange}
@@ -1210,7 +1346,7 @@ function AppContent() {
                             </>
                         )}
                     </div>
-                    {isAuthenticated && appMode === "edit" ? (
+                    {appMode === "edit" ? (
                         <input
                             className="search"
                             placeholder="Quick Actions (Ctrl+I)"
@@ -1222,7 +1358,7 @@ function AppContent() {
                         <div className="top-bar-spacer" />
                     )}
                     <div className="top-bar-actions">
-                        {isAuthenticated && appMode === "edit" && (
+                        {appMode === "edit" && (
                             <button className="primary" onClick={handleSolve} disabled={isSolving}>
                                 {isSolving ? "Solving..." : "Solve"}
                             </button>
@@ -1231,13 +1367,13 @@ function AppContent() {
                             className="auth-secondary auth-button"
                             onClick={() => openAuthDialog("login")}
                             disabled={isAuthChecking}
-                            title={authUser ? `${authUser.username} · ${authUser.projectCount} project${authUser.projectCount === 1 ? "" : "s"}` : "Login"}
+                            title={authUser ? `${authUser.username} · ${authUser.projectCount} project${authUser.projectCount === 1 ? "" : "s"}` : "Guest mode · workspace is stored in this browser"}
                         >
-                            {isAuthChecking ? "Checking..." : authUser ? `${authUser.username} · ${authUser.projectCount}` : "Login"}
+                            {isAuthChecking ? "Checking..." : authUser ? `${authUser.username} · ${authUser.projectCount}` : "Guest Mode"}
                         </button>
                     </div>
                 </div>
-                {isAuthenticated && appMode === "config" && (
+                {appMode === "config" && (
                     <div className="top-bar-subnav">
                         <ConfigSubmodeSelector
                             configSubMode={configSubMode}
@@ -1257,26 +1393,17 @@ function AppContent() {
                 onDeleteAccount={handleDeleteAccount}
                 onLogout={handleLogout}
             />
+            <WorkspaceMergeDialog
+                isOpen={Boolean(pendingMerge)}
+                localSnapshot={pendingMerge?.localSnapshot ?? null}
+                remoteSnapshot={pendingMerge?.remoteSnapshot ?? null}
+                isSubmitting={isMergeApplying}
+                error={mergeDialogError}
+                onCancel={handleMergeCancel}
+                onConfirm={handleMergeConfirm}
+            />
 
-            {!isAuthChecking && !isAuthenticated ? (
-                <div className="auth-empty-state">
-                    <div className="auth-empty-card">
-                        <h1>Login Required</h1>
-                        <p>
-                            All project, graph, store, and solver endpoints are now bound to the authenticated user.
-                            Sign in to load your personal workspace, or register a new account to start with a private copy.
-                        </p>
-                        <div className="auth-empty-actions">
-                            <button className="primary" type="button" onClick={() => openAuthDialog("login")}>
-                                Login
-                            </button>
-                            <button className="auth-secondary" type="button" onClick={() => openAuthDialog("register")}>
-                                Register
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            ) : appMode === "edit" ? (
+            {appMode === "edit" ? (
                 <div className="layout">
                     <NodeTypeSelector onNodeTypeSelected={handleNodeTypeSelected} />
                     <ReactFlow

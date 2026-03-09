@@ -82,28 +82,41 @@ const slugify = (value: string) =>
 
 // Debounced save function
 let saveTimeout: number | null = null;
-let storeSaveInFlight = false;
+let storeSaveInFlight: Promise<void> | null = null;
 let pendingStoreSave: { data: StoreData; projectId: string } | null = null;
 
-const flushStoreSave = () => {
-  if (storeSaveInFlight || !pendingStoreSave) {
+const buildStoreData = (state: Pick<GraphStore, "categories" | "items" | "tags" | "recipeTags" | "recipes">): StoreData => ({
+  categories: state.categories,
+  items: state.items,
+  tags: state.tags,
+  recipeTags: state.recipeTags,
+  recipes: state.recipes
+});
+
+const flushStoreSave = async (): Promise<void> => {
+  if (storeSaveInFlight) {
+    await storeSaveInFlight;
+  }
+
+  if (!pendingStoreSave) {
     return;
   }
 
   const saveJob = pendingStoreSave;
   pendingStoreSave = null;
-  storeSaveInFlight = true;
 
-  saveStore(saveJob.data, saveJob.projectId)
+  storeSaveInFlight = saveStore(saveJob.data, saveJob.projectId)
     .catch((err) => {
       console.error("Failed to auto-save store:", err);
     })
     .finally(() => {
-      storeSaveInFlight = false;
-      if (pendingStoreSave) {
-        flushStoreSave();
-      }
+      storeSaveInFlight = null;
     });
+
+  await storeSaveInFlight;
+  if (pendingStoreSave) {
+    await flushStoreSave();
+  }
 };
 
 const debouncedSave = (state: GraphStore) => {
@@ -111,21 +124,32 @@ const debouncedSave = (state: GraphStore) => {
     clearTimeout(saveTimeout);
   }
   saveTimeout = setTimeout(() => {
+    saveTimeout = null;
     if (!state.activeProjectId) {
       return;
     }
 
-    const dataToSave: StoreData = {
-      categories: state.categories,
-      items: state.items,
-      tags: state.tags,
-      recipeTags: state.recipeTags,
-      recipes: state.recipes
-    };
-    pendingStoreSave = { data: dataToSave, projectId: state.activeProjectId };
-    flushStoreSave();
+    pendingStoreSave = { data: buildStoreData(state), projectId: state.activeProjectId };
+    void flushStoreSave();
   }, 300); // 300ms debounce
 };
+
+export async function flushPendingStoreSave(): Promise<void> {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+    saveTimeout = null;
+  }
+
+  const state = useGraphStore.getState();
+  if (state.activeProjectId) {
+    pendingStoreSave = {
+      data: buildStoreData(state),
+      projectId: state.activeProjectId
+    };
+  }
+
+  await flushStoreSave();
+}
 
 export const useGraphStore = create<GraphStore>((set, get) => ({
   activeProjectId: null,

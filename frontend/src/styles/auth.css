@@ -245,6 +245,159 @@
   margin-top: 24px;
 }
 
+.workspace-merge-dialog {
+  width: min(100%, 920px);
+  max-height: min(86vh, 980px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: linear-gradient(180deg, rgba(22, 28, 38, 0.98), rgba(10, 14, 20, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  padding: 24px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+}
+
+.workspace-merge-legend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.workspace-merge-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.workspace-merge-chip.same {
+  background: rgba(16, 185, 129, 0.16);
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  color: #bbf7d0;
+}
+
+.workspace-merge-chip.warning {
+  background: rgba(249, 115, 22, 0.14);
+  border: 1px solid rgba(249, 115, 22, 0.32);
+  color: #fed7aa;
+}
+
+.workspace-merge-chip.conflict {
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  color: #fecaca;
+}
+
+.workspace-merge-helper {
+  margin-bottom: 4px;
+}
+
+.workspace-merge-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.workspace-merge-project {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.workspace-merge-same {
+  border-color: rgba(16, 185, 129, 0.22);
+}
+
+.workspace-merge-only-local,
+.workspace-merge-only-account {
+  border-color: rgba(249, 115, 22, 0.22);
+}
+
+.workspace-merge-different {
+  border-color: rgba(239, 68, 68, 0.22);
+}
+
+.workspace-merge-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.workspace-merge-project-row {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.workspace-merge-row-same {
+  border-color: rgba(16, 185, 129, 0.18);
+}
+
+.workspace-merge-row-warning {
+  border-color: rgba(249, 115, 22, 0.18);
+}
+
+.workspace-merge-row-conflict {
+  border-color: rgba(239, 68, 68, 0.18);
+}
+
+.workspace-merge-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.workspace-merge-meta {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.workspace-merge-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.workspace-merge-project-actions {
+  padding-top: 2px;
+}
+
+.workspace-merge-children {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 12px;
+  border-left: 2px solid rgba(255, 255, 255, 0.06);
+}
+
+.workspace-merge-row-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 720px) {
   .top-bar-actions {
     width: 100%;
@@ -265,5 +418,26 @@
 
   .auth-empty-actions {
     flex-direction: column;
+  }
+
+  .workspace-merge-dialog {
+    padding: 18px;
+    max-height: min(92vh, 980px);
+  }
+
+  .workspace-merge-row,
+  .workspace-merge-project-row {
+    flex-direction: column;
+  }
+
+  .workspace-merge-row-actions,
+  .workspace-merge-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .workspace-merge-children {
+    padding-left: 0;
+    border-left: 0;
   }
 }
