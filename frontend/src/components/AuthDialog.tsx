@@ -1,5 +1,6 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import type { AuthUser } from "../api/auth";
+import PrivacyNoticeDialog from "./PrivacyNoticeDialog";
 
 export type AuthDialogMode = "login" | "register";
 
@@ -35,6 +36,9 @@ export default function AuthDialog({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPrivacyNoticeOpen, setIsPrivacyNoticeOpen] = useState(false);
+  const [logoutButtonWidth, setLogoutButtonWidth] = useState<number | null>(null);
+  const legalNoticeLinkRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -50,7 +54,24 @@ export default function AuthDialog({
     setError(null);
     setSuccessMessage(null);
     setIsSubmitting(false);
+    setIsPrivacyNoticeOpen(false);
+    setLogoutButtonWidth(null);
   }, [initialMode, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !currentUser) {
+      setLogoutButtonWidth(null);
+      return;
+    }
+
+    const measure = () => {
+      setLogoutButtonWidth(legalNoticeLinkRef.current?.offsetWidth ?? null);
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [currentUser, isOpen]);
 
   if (!isOpen) {
     return null;
@@ -167,16 +188,18 @@ export default function AuthDialog({
         </div>
 
         {currentUser ? (
-          <div className="auth-session-card">
-            <div>
-              <strong>{currentUser.username}</strong>
-            </div>
-            <div className="auth-session-meta">
-              <div>Logged in with a secure session cookie.</div>
-              <div>User ID: {currentUser.id}</div>
-              <div>Projects: {currentUser.projectCount}</div>
-              <div>Active project: {currentUser.activeProjectId ?? "none"}</div>
-              <div>Logout copies the current account workspace back into local browser storage.</div>
+          <>
+            <div className="auth-session-summary">
+              <div>
+                <strong>{currentUser.username}</strong>
+              </div>
+              <div className="auth-session-meta">
+                <div>Logged in with a secure session cookie.</div>
+                <div>User ID: {currentUser.id}</div>
+                <div>Projects: {currentUser.projectCount}</div>
+                <div>Active project: {currentUser.activeProjectId ?? "none"}</div>
+                <div>Logout copies the current account workspace back into local browser storage.</div>
+              </div>
             </div>
             <form className="auth-form auth-settings-form" onSubmit={handlePasswordChange}>
               <div className="auth-section-title">Change Password</div>
@@ -212,6 +235,8 @@ export default function AuthDialog({
               </div>
             </form>
 
+            <div className="auth-section-separator" aria-hidden="true" />
+
             <form className="auth-form auth-settings-form auth-danger-zone" onSubmit={handleDeleteAccount}>
               <div className="auth-section-title">Delete Account</div>
               <div className="auth-field">
@@ -234,17 +259,35 @@ export default function AuthDialog({
               </div>
             </form>
 
+            <div className="auth-section-separator" aria-hidden="true" />
+
             {error && <p className="auth-error">{error}</p>}
             {successMessage && <p className="auth-success">{successMessage}</p>}
             <div className="auth-actions">
               <button className="auth-secondary" type="button" onClick={onClose} disabled={isSubmitting}>
                 Close
               </button>
-              <button className="primary" type="button" onClick={handleLogout} disabled={isSubmitting}>
+              <button
+                className="primary auth-logout-button"
+                type="button"
+                onClick={handleLogout}
+                disabled={isSubmitting}
+                style={logoutButtonWidth ? { width: `${logoutButtonWidth}px` } : undefined}
+              >
                 {isSubmitting ? "Logging out..." : "Logout"}
               </button>
             </div>
-          </div>
+            <div className="auth-legal-link-row">
+              <button
+                ref={legalNoticeLinkRef}
+                className="auth-legal-link"
+                type="button"
+                onClick={() => setIsPrivacyNoticeOpen(true)}
+              >
+                Privacy Notice
+              </button>
+            </div>
+          </>
         ) : (
           <>
             <div className="auth-helper" style={{ marginBottom: 16 }}>
@@ -311,8 +354,17 @@ export default function AuthDialog({
                 </button>
               </div>
             </form>
+            <div className="auth-legal-link-row">
+              <button className="auth-legal-link" type="button" onClick={() => setIsPrivacyNoticeOpen(true)}>
+                Privacy Notice
+              </button>
+            </div>
           </>
         )}
+        <PrivacyNoticeDialog
+          isOpen={isPrivacyNoticeOpen}
+          onClose={() => setIsPrivacyNoticeOpen(false)}
+        />
       </div>
     </div>
   );
