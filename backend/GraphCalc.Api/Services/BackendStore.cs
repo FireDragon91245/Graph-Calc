@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text.Json;
 using GraphCalc.Api.Configuration;
@@ -28,6 +29,11 @@ public sealed class BackendStore
     private readonly string _legacyMetaFile;
     private readonly string _usersFile;
     private readonly SemaphoreSlim _initializeLock = new(1, 1);
+    private readonly ConcurrentDictionary<string, CacheEntry<UserDocument>> _userCacheById = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, string> _userIdByUsername = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, CacheEntry<WorkspaceDocument>> _workspaceCache = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, CacheEntry<ProjectDocument>> _projectCache = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, CacheEntry<GraphDocument>> _graphCache = new(StringComparer.Ordinal);
 
     private IMongoDatabase? _database;
     private bool _initialized;
@@ -75,16 +81,70 @@ public sealed class BackendStore
         }
     }
 
+    public async Task RunCacheMaintenanceAsync(CancellationToken cancellationToken)
+    {
+        await InitializeAsync(cancellationToken);
+
+        var now = DateTime.UtcNow;
+        var idleCutoff = now.AddSeconds(-_options.Caching.EntryIdleTtlSeconds);
+        var dirtyCutoff = now.AddSeconds(-_options.Caching.DirtyWriteBackSeconds);
+
+        await FlushDirtyProjectsAsync(dirtyCutoff, idleCutoff, flushAll: false, cancellationToken);
+        await FlushDirtyGraphsAsync(dirtyCutoff, idleCutoff, flushAll: false, cancellationToken);
+
+        EvictIdleUsers(idleCutoff);
+        EvictIdleEntries(_workspaceCache, idleCutoff);
+        EvictIdleEntries(_projectCache, idleCutoff);
+        EvictIdleEntries(_graphCache, idleCutoff);
+    }
+
+    public async Task FlushAllDirtyCacheAsync(CancellationToken cancellationToken)
+    {
+        await InitializeAsync(cancellationToken);
+        await FlushDirtyProjectsAsync(DateTime.MinValue, DateTime.MinValue, flushAll: true, cancellationToken);
+        await FlushDirtyGraphsAsync(DateTime.MinValue, DateTime.MinValue, flushAll: true, cancellationToken);
+    }
+
     public async Task<UserDocument?> GetUserByIdAsync(string userId, CancellationToken cancellationToken)
     {
         await InitializeAsync(cancellationToken);
-        return await Users().Find(x => x.Id == userId).FirstOrDefaultAsync(cancellationToken);
+        if (_userCacheById.TryGetValue(userId, out var cachedUser))
+        {
+            return ReadCachedValue(cachedUser, CloneUserDocument);
+        }
+
+        var user = await Users().Find(x => x.Id == userId).FirstOrDefaultAsync(cancellationToken);
+        if (user is null)
+        {
+            return null;
+        }
+
+        CacheUser(user);
+        return CloneUserDocument(user);
     }
 
     public async Task<UserDocument?> GetUserByUsernameAsync(string username, CancellationToken cancellationToken)
     {
         await InitializeAsync(cancellationToken);
-        return await Users().Find(x => x.Username == username).FirstOrDefaultAsync(cancellationToken);
+        if (_userIdByUsername.TryGetValue(username, out var userId))
+        {
+            var cachedUser = await GetUserByIdAsync(userId, cancellationToken);
+            if (cachedUser is not null && string.Equals(cachedUser.Username, username, StringComparison.Ordinal))
+            {
+                return cachedUser;
+            }
+
+            _userIdByUsername.TryRemove(username, out _);
+        }
+
+        var user = await Users().Find(x => x.Username == username).FirstOrDefaultAsync(cancellationToken);
+        if (user is null)
+        {
+            return null;
+        }
+
+        CacheUser(user);
+        return CloneUserDocument(user);
     }
 
     public async Task<UserDocument> CreateUserAsync(string username, string passwordSalt, string passwordHash, int passwordIterations, CancellationToken cancellationToken)
@@ -102,22 +162,35 @@ public sealed class BackendStore
 
         await Users().InsertOneAsync(user, cancellationToken: cancellationToken);
         await EnsureUserWorkspaceAsync(user.Id, cancellationToken);
-        return user;
+        CacheUser(user);
+        return CloneUserDocument(user);
     }
 
     public async Task ReplaceUserAsync(UserDocument user, CancellationToken cancellationToken)
     {
         await InitializeAsync(cancellationToken);
         await Users().ReplaceOneAsync(x => x.Id == user.Id, user, new ReplaceOptions { IsUpsert = true }, cancellationToken);
+        CacheUser(user);
     }
 
     public async Task DeleteAccountAsync(string userId, CancellationToken cancellationToken)
     {
         await InitializeAsync(cancellationToken);
+        var existingUser = await GetUserByIdAsync(userId, cancellationToken);
         await Graphs().DeleteManyAsync(x => x.UserId == userId, cancellationToken);
         await Projects().DeleteManyAsync(x => x.UserId == userId, cancellationToken);
         await Workspaces().DeleteOneAsync(x => x.Id == userId, cancellationToken);
         await Users().DeleteOneAsync(x => x.Id == userId, cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(existingUser?.Username))
+        {
+            _userIdByUsername.TryRemove(existingUser.Username, out _);
+        }
+
+        _userCacheById.TryRemove(userId, out _);
+        _workspaceCache.TryRemove(userId, out _);
+        RemoveProjectCacheEntries(userId);
+        RemoveGraphCacheEntries(userId);
     }
 
     public async Task<int> CountProjectsAsync(string userId, CancellationToken cancellationToken)
@@ -190,8 +263,11 @@ public sealed class BackendStore
         var sortOrder = await NextSortOrderAsync(Projects().Find(x => x.UserId == userId).Project(x => x.SortOrder), cancellationToken);
         var project = DefaultProjectDocument(userId, projectId, name, sortOrder);
         await Projects().InsertOneAsync(project, cancellationToken: cancellationToken);
-        await Graphs().InsertOneAsync(DefaultGraphDocument(userId, projectId, DefaultGraphId, DefaultGraphName, 0), cancellationToken: cancellationToken);
+        var defaultGraph = DefaultGraphDocument(userId, projectId, DefaultGraphId, DefaultGraphName, 0);
+        await Graphs().InsertOneAsync(defaultGraph, cancellationToken: cancellationToken);
         await SetActiveProjectIfMissingAsync(userId, projectId, cancellationToken);
+        CacheProject(project);
+        CacheGraph(defaultGraph);
         return ToSummary(project);
     }
 
@@ -202,6 +278,10 @@ public sealed class BackendStore
             x => x.UserId == userId && x.ProjectId == projectId,
             Builders<ProjectDocument>.Update.Set(x => x.Name, newName),
             cancellationToken: cancellationToken);
+        if (result.MatchedCount > 0)
+        {
+            UpdateCachedProject(userId, projectId, project => project.Name = newName, markDirty: false);
+        }
         return result.MatchedCount > 0;
     }
 
@@ -217,6 +297,7 @@ public sealed class BackendStore
         copy.ActiveGraphId = sourceProject.ActiveGraphId ?? DefaultGraphId;
         copy.Store = NormalizeStoreDocument(sourceProject.Store);
         await Projects().InsertOneAsync(copy, cancellationToken: cancellationToken);
+        CacheProject(copy);
 
         var graphs = await Graphs()
             .Find(x => x.UserId == userId && x.ProjectId == projectId)
@@ -226,7 +307,9 @@ public sealed class BackendStore
 
         if (graphs.Count == 0)
         {
-            await Graphs().InsertOneAsync(DefaultGraphDocument(userId, newProjectId, DefaultGraphId, DefaultGraphName, 0), cancellationToken: cancellationToken);
+            var defaultGraph = DefaultGraphDocument(userId, newProjectId, DefaultGraphId, DefaultGraphName, 0);
+            await Graphs().InsertOneAsync(defaultGraph, cancellationToken: cancellationToken);
+            CacheGraph(defaultGraph);
         }
         else
         {
@@ -241,6 +324,10 @@ public sealed class BackendStore
                 Data = NormalizeGraphDocument(graph.Data)
             }).ToList();
             await Graphs().InsertManyAsync(copies, cancellationToken: cancellationToken);
+            foreach (var graphCopy in copies)
+            {
+                CacheGraph(graphCopy);
+            }
         }
 
         return ToSummary(copy);
@@ -256,6 +343,8 @@ public sealed class BackendStore
         }
 
         await Graphs().DeleteManyAsync(x => x.UserId == userId && x.ProjectId == projectId, cancellationToken);
+        _projectCache.TryRemove(ProjectCacheKey(userId, projectId), out _);
+        RemoveGraphCacheEntries(userId, projectId);
         var workspace = await GetWorkspaceAsync(userId, cancellationToken);
         if (workspace?.ActiveProjectId == projectId)
         {
@@ -264,6 +353,7 @@ public sealed class BackendStore
                 x => x.Id == userId,
                 Builders<WorkspaceDocument>.Update.Set(x => x.ActiveProjectId, fallback?.ProjectId),
                 cancellationToken: cancellationToken);
+            UpdateCachedWorkspace(userId, cached => cached.ActiveProjectId = fallback?.ProjectId);
         }
 
         return true;
@@ -280,6 +370,7 @@ public sealed class BackendStore
 
         await EnsureUserWorkspaceAsync(userId, cancellationToken);
         await Workspaces().UpdateOneAsync(x => x.Id == userId, Builders<WorkspaceDocument>.Update.Set(x => x.ActiveProjectId, projectId), cancellationToken: cancellationToken);
+        UpdateCachedWorkspace(userId, cached => cached.ActiveProjectId = projectId);
         return true;
     }
 
@@ -308,9 +399,7 @@ public sealed class BackendStore
 
     public async Task RequireProjectAccessAsync(string userId, string projectId, CancellationToken cancellationToken)
     {
-        await InitializeAsync(cancellationToken);
-        var exists = await Projects().Find(x => x.UserId == userId && x.ProjectId == projectId).AnyAsync(cancellationToken);
-        if (!exists)
+        if (await GetProjectAsync(userId, projectId, cancellationToken) is null)
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Project not found");
         }
@@ -338,6 +427,7 @@ public sealed class BackendStore
                 x => x.UserId == userId && x.ProjectId == projectId,
                 Builders<ProjectDocument>.Update.Set(x => x.ActiveGraphId, activeGraphId),
                 cancellationToken: cancellationToken);
+            UpdateCachedProject(userId, projectId, project => project.ActiveGraphId = activeGraphId, markDirty: false);
         }
 
         return new GraphsResponse
@@ -355,6 +445,7 @@ public sealed class BackendStore
         var graph = DefaultGraphDocument(userId, projectId, graphId, name, sortOrder);
         await Graphs().InsertOneAsync(graph, cancellationToken: cancellationToken);
         await SetActiveGraphIfMissingAsync(userId, projectId, graphId, cancellationToken);
+        CacheGraph(graph);
         return ToSummary(graph);
     }
 
@@ -365,6 +456,10 @@ public sealed class BackendStore
             x => x.UserId == userId && x.ProjectId == projectId && x.GraphId == graphId,
             Builders<GraphDocument>.Update.Set(x => x.Name, newName),
             cancellationToken: cancellationToken);
+        if (result.MatchedCount > 0)
+        {
+            UpdateCachedGraph(userId, projectId, graphId, graph => graph.Name = newName, markDirty: false);
+        }
         return result.MatchedCount > 0;
     }
 
@@ -378,6 +473,7 @@ public sealed class BackendStore
         var graph = DefaultGraphDocument(userId, projectId, newGraphId, newName, sortOrder);
         graph.Data = NormalizeGraphDocument(sourceGraph.Data);
         await Graphs().InsertOneAsync(graph, cancellationToken: cancellationToken);
+        CacheGraph(graph);
         return ToSummary(graph);
     }
 
@@ -390,6 +486,8 @@ public sealed class BackendStore
             return false;
         }
 
+        _graphCache.TryRemove(GraphCacheKey(userId, projectId, graphId), out _);
+
         var project = await GetProjectAsync(userId, projectId, cancellationToken);
         if (project?.ActiveGraphId == graphId)
         {
@@ -398,6 +496,7 @@ public sealed class BackendStore
                 x => x.UserId == userId && x.ProjectId == projectId,
                 Builders<ProjectDocument>.Update.Set(x => x.ActiveGraphId, fallback?.GraphId),
                 cancellationToken: cancellationToken);
+            UpdateCachedProject(userId, projectId, cached => cached.ActiveGraphId = fallback?.GraphId, markDirty: false);
         }
 
         return true;
@@ -416,13 +515,27 @@ public sealed class BackendStore
             x => x.UserId == userId && x.ProjectId == projectId,
             Builders<ProjectDocument>.Update.Set(x => x.ActiveGraphId, graphId),
             cancellationToken: cancellationToken);
+        if (result.MatchedCount > 0)
+        {
+            UpdateCachedProject(userId, projectId, project => project.ActiveGraphId = graphId, markDirty: false);
+        }
         return result.MatchedCount > 0;
     }
 
     public async Task<GraphData> LoadGraphAsync(string userId, string projectId, string graphId, CancellationToken cancellationToken)
     {
         await InitializeAsync(cancellationToken);
+        if (_graphCache.TryGetValue(GraphCacheKey(userId, projectId, graphId), out var cachedGraph))
+        {
+            return ReadCachedValue(cachedGraph, graph => FromBsonDocument(graph.Data, DefaultGraphData));
+        }
+
         var graph = await Graphs().Find(x => x.UserId == userId && x.ProjectId == projectId && x.GraphId == graphId).FirstOrDefaultAsync(cancellationToken);
+        if (graph is not null)
+        {
+            CacheGraph(graph);
+        }
+
         return graph is null ? DefaultGraphData() : FromBsonDocument(graph.Data, DefaultGraphData);
     }
 
@@ -430,10 +543,17 @@ public sealed class BackendStore
     {
         await InitializeAsync(cancellationToken);
         var normalized = NormalizeGraphData(data);
+        if (_graphCache.TryGetValue(GraphCacheKey(userId, projectId, graphId), out var cachedGraph))
+        {
+            UpdateCachedEntry(cachedGraph, graph => graph.Data = normalized, markDirty: true);
+            return;
+        }
+
         var existing = await Graphs().Find(x => x.UserId == userId && x.ProjectId == projectId && x.GraphId == graphId).FirstOrDefaultAsync(cancellationToken);
         if (existing is not null)
         {
-            await Graphs().UpdateOneAsync(x => x.Id == existing.Id, Builders<GraphDocument>.Update.Set(x => x.Data, normalized), cancellationToken: cancellationToken);
+            existing.Data = normalized;
+            CacheGraph(existing, dirty: true);
             return;
         }
 
@@ -441,11 +561,11 @@ public sealed class BackendStore
         var graph = DefaultGraphDocument(userId, projectId, graphId, graphId, sortOrder);
         graph.Data = normalized;
         await Graphs().InsertOneAsync(graph, cancellationToken: cancellationToken);
+        CacheGraph(graph);
     }
 
     public async Task<StoreData> LoadStoreAsync(string userId, string projectId, CancellationToken cancellationToken)
     {
-        await InitializeAsync(cancellationToken);
         var project = await GetProjectAsync(userId, projectId, cancellationToken);
         return project is null ? DefaultStoreData() : FromBsonDocument(project.Store, DefaultStoreData);
     }
@@ -453,10 +573,21 @@ public sealed class BackendStore
     public async Task SaveStoreAsync(string userId, string projectId, StoreData store, CancellationToken cancellationToken)
     {
         await InitializeAsync(cancellationToken);
-        await Projects().UpdateOneAsync(
-            x => x.UserId == userId && x.ProjectId == projectId,
-            Builders<ProjectDocument>.Update.Set(x => x.Store, NormalizeStoreData(store)),
-            cancellationToken: cancellationToken);
+        var normalized = NormalizeStoreData(store);
+        if (_projectCache.TryGetValue(ProjectCacheKey(userId, projectId), out var cachedProject))
+        {
+            UpdateCachedEntry(cachedProject, project => project.Store = normalized, markDirty: true);
+            return;
+        }
+
+        var project = await Projects().Find(x => x.UserId == userId && x.ProjectId == projectId).FirstOrDefaultAsync(cancellationToken);
+        if (project is null)
+        {
+            return;
+        }
+
+        project.Store = normalized;
+        CacheProject(project, dirty: true);
     }
 
     private async Task<IMongoDatabase> ConnectAsync(CancellationToken cancellationToken)
@@ -716,11 +847,20 @@ public sealed class BackendStore
     private async Task EnsureUserWorkspaceAsync(string userId, CancellationToken cancellationToken)
     {
         await InitializeAsync(cancellationToken);
+        if (_workspaceCache.ContainsKey(userId))
+        {
+            return;
+        }
+
         await Workspaces().UpdateOneAsync(
             x => x.Id == userId,
             Builders<WorkspaceDocument>.Update.SetOnInsert(x => x.UserId, userId).SetOnInsert(x => x.ActiveProjectId, null),
             new UpdateOptions { IsUpsert = true },
             cancellationToken);
+
+        var workspace = await Workspaces().Find(x => x.Id == userId).FirstOrDefaultAsync(cancellationToken)
+            ?? new WorkspaceDocument { Id = userId, UserId = userId, ActiveProjectId = null };
+        CacheWorkspace(workspace);
     }
 
     private async Task EnsureProjectGraphsAsync(string userId, string projectId, CancellationToken cancellationToken)
@@ -734,11 +874,14 @@ public sealed class BackendStore
         var count = await Graphs().CountDocumentsAsync(x => x.UserId == userId && x.ProjectId == projectId, cancellationToken: cancellationToken);
         if (count == 0)
         {
-            await Graphs().InsertOneAsync(DefaultGraphDocument(userId, projectId, DefaultGraphId, DefaultGraphName, 0), cancellationToken: cancellationToken);
+            var defaultGraph = DefaultGraphDocument(userId, projectId, DefaultGraphId, DefaultGraphName, 0);
+            await Graphs().InsertOneAsync(defaultGraph, cancellationToken: cancellationToken);
             await Projects().UpdateOneAsync(
                 x => x.UserId == userId && x.ProjectId == projectId,
                 Builders<ProjectDocument>.Update.Set(x => x.ActiveGraphId, DefaultGraphId),
                 cancellationToken: cancellationToken);
+            CacheGraph(defaultGraph);
+            UpdateCachedProject(userId, projectId, cached => cached.ActiveGraphId = DefaultGraphId, markDirty: false);
         }
     }
 
@@ -748,6 +891,7 @@ public sealed class BackendStore
         if (string.IsNullOrWhiteSpace(workspace?.ActiveProjectId))
         {
             await Workspaces().UpdateOneAsync(x => x.Id == userId, Builders<WorkspaceDocument>.Update.Set(x => x.ActiveProjectId, projectId), cancellationToken: cancellationToken);
+            UpdateCachedWorkspace(userId, cached => cached.ActiveProjectId = projectId);
         }
     }
 
@@ -760,19 +904,45 @@ public sealed class BackendStore
                 x => x.UserId == userId && x.ProjectId == projectId,
                 Builders<ProjectDocument>.Update.Set(x => x.ActiveGraphId, graphId),
                 cancellationToken: cancellationToken);
+            UpdateCachedProject(userId, projectId, cached => cached.ActiveGraphId = graphId, markDirty: false);
         }
     }
 
     private async Task<WorkspaceDocument?> GetWorkspaceAsync(string userId, CancellationToken cancellationToken)
     {
         await InitializeAsync(cancellationToken);
-        return await Workspaces().Find(x => x.Id == userId).FirstOrDefaultAsync(cancellationToken);
+        if (_workspaceCache.TryGetValue(userId, out var cachedWorkspace))
+        {
+            return ReadCachedValue(cachedWorkspace, CloneWorkspaceDocument);
+        }
+
+        var workspace = await Workspaces().Find(x => x.Id == userId).FirstOrDefaultAsync(cancellationToken);
+        if (workspace is null)
+        {
+            return null;
+        }
+
+        CacheWorkspace(workspace);
+        return CloneWorkspaceDocument(workspace);
     }
 
     private async Task<ProjectDocument?> GetProjectAsync(string userId, string projectId, CancellationToken cancellationToken)
     {
         await InitializeAsync(cancellationToken);
-        return await Projects().Find(x => x.UserId == userId && x.ProjectId == projectId).FirstOrDefaultAsync(cancellationToken);
+        var cacheKey = ProjectCacheKey(userId, projectId);
+        if (_projectCache.TryGetValue(cacheKey, out var cachedProject))
+        {
+            return ReadCachedValue(cachedProject, CloneProjectDocument);
+        }
+
+        var project = await Projects().Find(x => x.UserId == userId && x.ProjectId == projectId).FirstOrDefaultAsync(cancellationToken);
+        if (project is null)
+        {
+            return null;
+        }
+
+        CacheProject(project);
+        return CloneProjectDocument(project);
     }
 
     private static async Task<int> NextSortOrderAsync<TDocument>(IFindFluent<TDocument, int> sortProjection, CancellationToken cancellationToken)
@@ -879,6 +1049,334 @@ public sealed class BackendStore
     private static BsonDocument ToBsonDocument<T>(T value)
     {
         return BsonDocument.Parse(JsonSerializer.Serialize(value, JsonOptions));
+    }
+
+    private async Task FlushDirtyProjectsAsync(DateTime dirtyCutoffUtc, DateTime idleCutoffUtc, bool flushAll, CancellationToken cancellationToken)
+    {
+        foreach (var pair in _projectCache.ToArray())
+        {
+            var entry = pair.Value;
+            long dirtyVersion;
+            ProjectDocument snapshot;
+
+            lock (entry.SyncRoot)
+            {
+                if (!entry.IsDirty || (!flushAll && entry.DirtySinceUtc > dirtyCutoffUtc && entry.LastAccessUtc > idleCutoffUtc))
+                {
+                    continue;
+                }
+
+                dirtyVersion = entry.DirtyVersion;
+                snapshot = CloneProjectDocument(entry.Value);
+            }
+
+            await Projects().ReplaceOneAsync(x => x.Id == snapshot.Id, snapshot, new ReplaceOptions { IsUpsert = true }, cancellationToken);
+
+            lock (entry.SyncRoot)
+            {
+                if (entry.IsDirty && entry.DirtyVersion == dirtyVersion)
+                {
+                    entry.IsDirty = false;
+                    entry.DirtySinceUtc = default;
+                }
+            }
+        }
+    }
+
+    private async Task FlushDirtyGraphsAsync(DateTime dirtyCutoffUtc, DateTime idleCutoffUtc, bool flushAll, CancellationToken cancellationToken)
+    {
+        foreach (var pair in _graphCache.ToArray())
+        {
+            var entry = pair.Value;
+            long dirtyVersion;
+            GraphDocument snapshot;
+
+            lock (entry.SyncRoot)
+            {
+                if (!entry.IsDirty || (!flushAll && entry.DirtySinceUtc > dirtyCutoffUtc && entry.LastAccessUtc > idleCutoffUtc))
+                {
+                    continue;
+                }
+
+                dirtyVersion = entry.DirtyVersion;
+                snapshot = CloneGraphDocument(entry.Value);
+            }
+
+            await Graphs().ReplaceOneAsync(x => x.Id == snapshot.Id, snapshot, new ReplaceOptions { IsUpsert = true }, cancellationToken);
+
+            lock (entry.SyncRoot)
+            {
+                if (entry.IsDirty && entry.DirtyVersion == dirtyVersion)
+                {
+                    entry.IsDirty = false;
+                    entry.DirtySinceUtc = default;
+                }
+            }
+        }
+    }
+
+    private void EvictIdleUsers(DateTime idleCutoffUtc)
+    {
+        foreach (var pair in _userCacheById.ToArray())
+        {
+            var shouldEvict = false;
+            string? username = null;
+
+            lock (pair.Value.SyncRoot)
+            {
+                shouldEvict = !pair.Value.IsDirty && pair.Value.LastAccessUtc <= idleCutoffUtc;
+                if (shouldEvict)
+                {
+                    username = pair.Value.Value.Username;
+                }
+            }
+
+            if (!shouldEvict || !_userCacheById.TryRemove(pair.Key, out _))
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(username) && _userIdByUsername.TryGetValue(username, out var mappedUserId) && string.Equals(mappedUserId, pair.Key, StringComparison.Ordinal))
+            {
+                _userIdByUsername.TryRemove(username, out _);
+            }
+        }
+    }
+
+    private static void EvictIdleEntries<T>(ConcurrentDictionary<string, CacheEntry<T>> cache, DateTime idleCutoffUtc)
+    {
+        foreach (var pair in cache.ToArray())
+        {
+            var shouldEvict = false;
+            lock (pair.Value.SyncRoot)
+            {
+                shouldEvict = !pair.Value.IsDirty && pair.Value.LastAccessUtc <= idleCutoffUtc;
+            }
+
+            if (shouldEvict)
+            {
+                cache.TryRemove(pair.Key, out _);
+            }
+        }
+    }
+
+    private void CacheUser(UserDocument user)
+    {
+        CacheValue(_userCacheById, user.Id, CloneUserDocument(user), dirty: false);
+        _userIdByUsername[user.Username] = user.Id;
+    }
+
+    private void CacheWorkspace(WorkspaceDocument workspace)
+    {
+        CacheValue(_workspaceCache, workspace.Id, CloneWorkspaceDocument(workspace), dirty: false);
+    }
+
+    private void CacheProject(ProjectDocument project, bool dirty = false)
+    {
+        CacheValue(_projectCache, ProjectCacheKey(project.UserId, project.ProjectId), CloneProjectDocument(project), dirty);
+    }
+
+    private void CacheGraph(GraphDocument graph, bool dirty = false)
+    {
+        CacheValue(_graphCache, GraphCacheKey(graph.UserId, graph.ProjectId, graph.GraphId), CloneGraphDocument(graph), dirty);
+    }
+
+    private static TResult ReadCachedValue<TValue, TResult>(CacheEntry<TValue> entry, Func<TValue, TResult> projector)
+    {
+        lock (entry.SyncRoot)
+        {
+            entry.LastAccessUtc = DateTime.UtcNow;
+            return projector(entry.Value);
+        }
+    }
+
+    private static void CacheValue<TValue>(ConcurrentDictionary<string, CacheEntry<TValue>> cache, string key, TValue value, bool dirty)
+    {
+        cache.AddOrUpdate(
+            key,
+            _ => CreateEntry(value, dirty),
+            (_, existing) =>
+            {
+                lock (existing.SyncRoot)
+                {
+                    existing.Value = value;
+                    existing.LastAccessUtc = DateTime.UtcNow;
+                    if (dirty)
+                    {
+                        MarkDirty(existing);
+                    }
+                    else
+                    {
+                        existing.IsDirty = false;
+                        existing.DirtySinceUtc = default;
+                    }
+                }
+
+                return existing;
+            });
+    }
+
+    private static CacheEntry<TValue> CreateEntry<TValue>(TValue value, bool dirty)
+    {
+        var entry = new CacheEntry<TValue> { Value = value, LastAccessUtc = DateTime.UtcNow };
+        if (dirty)
+        {
+            MarkDirty(entry);
+        }
+
+        return entry;
+    }
+
+    private static void UpdateCachedEntry<TValue>(CacheEntry<TValue> entry, Action<TValue> update, bool markDirty)
+    {
+        lock (entry.SyncRoot)
+        {
+            update(entry.Value);
+            entry.LastAccessUtc = DateTime.UtcNow;
+            if (markDirty)
+            {
+                MarkDirty(entry);
+            }
+        }
+    }
+
+    private void UpdateCachedWorkspace(string userId, Action<WorkspaceDocument> update)
+    {
+        if (_workspaceCache.TryGetValue(userId, out var cachedWorkspace))
+        {
+            UpdateCachedEntry(cachedWorkspace, update, markDirty: false);
+        }
+    }
+
+    private void UpdateCachedProject(string userId, string projectId, Action<ProjectDocument> update, bool markDirty)
+    {
+        if (_projectCache.TryGetValue(ProjectCacheKey(userId, projectId), out var cachedProject))
+        {
+            UpdateCachedEntry(cachedProject, update, markDirty);
+        }
+    }
+
+    private void UpdateCachedGraph(string userId, string projectId, string graphId, Action<GraphDocument> update, bool markDirty)
+    {
+        if (_graphCache.TryGetValue(GraphCacheKey(userId, projectId, graphId), out var cachedGraph))
+        {
+            UpdateCachedEntry(cachedGraph, update, markDirty);
+        }
+    }
+
+    private void RemoveProjectCacheEntries(string userId, string? projectId = null)
+    {
+        foreach (var key in _projectCache.Keys)
+        {
+            if (key.StartsWith(ProjectCacheKeyPrefix(userId, projectId), StringComparison.Ordinal))
+            {
+                _projectCache.TryRemove(key, out _);
+            }
+        }
+    }
+
+    private void RemoveGraphCacheEntries(string userId, string? projectId = null)
+    {
+        foreach (var key in _graphCache.Keys)
+        {
+            if (key.StartsWith(GraphCacheKeyPrefix(userId, projectId), StringComparison.Ordinal))
+            {
+                _graphCache.TryRemove(key, out _);
+            }
+        }
+    }
+
+    private static void MarkDirty<TValue>(CacheEntry<TValue> entry)
+    {
+        entry.IsDirty = true;
+        entry.DirtySinceUtc = DateTime.UtcNow;
+        entry.DirtyVersion++;
+    }
+
+    private static string ProjectCacheKey(string userId, string projectId)
+    {
+        return $"{userId}:{projectId}";
+    }
+
+    private static string GraphCacheKey(string userId, string projectId, string graphId)
+    {
+        return $"{userId}:{projectId}:{graphId}";
+    }
+
+    private static string ProjectCacheKeyPrefix(string userId, string? projectId)
+    {
+        return string.IsNullOrWhiteSpace(projectId) ? $"{userId}:" : $"{userId}:{projectId}";
+    }
+
+    private static string GraphCacheKeyPrefix(string userId, string? projectId)
+    {
+        return string.IsNullOrWhiteSpace(projectId) ? $"{userId}:" : $"{userId}:{projectId}:";
+    }
+
+    private static UserDocument CloneUserDocument(UserDocument user)
+    {
+        return new UserDocument
+        {
+            Id = user.Id,
+            Username = user.Username,
+            SessionVersion = user.SessionVersion,
+            PasswordSalt = user.PasswordSalt,
+            PasswordHash = user.PasswordHash,
+            PasswordIterations = user.PasswordIterations
+        };
+    }
+
+    private static WorkspaceDocument CloneWorkspaceDocument(WorkspaceDocument workspace)
+    {
+        return new WorkspaceDocument
+        {
+            Id = workspace.Id,
+            UserId = workspace.UserId,
+            ActiveProjectId = workspace.ActiveProjectId
+        };
+    }
+
+    private static ProjectDocument CloneProjectDocument(ProjectDocument project)
+    {
+        return new ProjectDocument
+        {
+            Id = project.Id,
+            UserId = project.UserId,
+            ProjectId = project.ProjectId,
+            Name = project.Name,
+            SortOrder = project.SortOrder,
+            ActiveGraphId = project.ActiveGraphId,
+            Store = (BsonDocument)project.Store.DeepClone()
+        };
+    }
+
+    private static GraphDocument CloneGraphDocument(GraphDocument graph)
+    {
+        return new GraphDocument
+        {
+            Id = graph.Id,
+            UserId = graph.UserId,
+            ProjectId = graph.ProjectId,
+            GraphId = graph.GraphId,
+            Name = graph.Name,
+            SortOrder = graph.SortOrder,
+            Data = (BsonDocument)graph.Data.DeepClone()
+        };
+    }
+
+    private sealed class CacheEntry<TValue>
+    {
+        public TValue Value { get; set; } = default!;
+
+        public object SyncRoot { get; } = new();
+
+        public DateTime LastAccessUtc { get; set; }
+
+        public bool IsDirty { get; set; }
+
+        public DateTime DirtySinceUtc { get; set; }
+
+        public long DirtyVersion { get; set; }
     }
 
     private static JsonDocument? LoadJsonDocument(string path)

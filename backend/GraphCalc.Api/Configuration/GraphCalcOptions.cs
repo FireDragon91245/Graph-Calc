@@ -18,6 +18,9 @@ public sealed class GraphCalcOptions
 
     [Required]
     public required RateLimitingOptions RateLimiting { get; init; }
+
+    [Required]
+    public required CacheOptions Caching { get; init; }
 }
 
 public sealed class ServerOptions
@@ -132,4 +135,16 @@ public sealed class RateLimitCategoryLimits
 
     [Range(1, 100000)]
     public int CrudRequestsPerMinute { get; init; } = 240;
+}
+
+public sealed class CacheOptions
+{
+    [Range(1, 3600)]
+    public int SweepIntervalSeconds { get; init; } = 15;
+
+    [Range(1, 86400)]
+    public int EntryIdleTtlSeconds { get; init; } = 300;
+
+    [Range(1, 86400)]
+    public int DirtyWriteBackSeconds { get; init; } = 30;
 }

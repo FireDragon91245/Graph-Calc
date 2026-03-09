@@ -68,6 +68,7 @@ public class Program
 		builder.Services.AddSingleton<SessionCookieService>();
 		builder.Services.AddSingleton<SolverQueueService>();
 		builder.Services.AddSingleton<ISolverService, SolverService>();
+		builder.Services.AddHostedService<BackendCacheService>();
 
 		builder.Services.AddRateLimiter(options =>
 		{
@@ -107,6 +108,11 @@ public class Program
 			var store = scope.ServiceProvider.GetRequiredService<BackendStore>();
 			await store.InitializeAsync(CancellationToken.None);
 		}
+
+		app.Lifetime.ApplicationStopping.Register(() =>
+		{
+			app.Services.GetRequiredService<BackendStore>().FlushAllDirtyCacheAsync(CancellationToken.None).GetAwaiter().GetResult();
+		});
 
 		app.UseExceptionHandler(exceptionApp =>
 		{
