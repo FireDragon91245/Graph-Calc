@@ -3,11 +3,11 @@ import path from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-const certDir = path.resolve(__dirname, "../certs");
-const certPath = path.join(certDir, "localhost-cert.pem");
-const keyPath = path.join(certDir, "localhost-key.pem");
 const backendConfigPath = resolveConfigPath();
 const backendConfig = JSON.parse(fs.readFileSync(backendConfigPath, "utf-8"));
+const configDirectory = path.dirname(backendConfigPath);
+const certPath = resolveConfigRelativePath(backendConfig.server.ssl.certFile);
+const keyPath = resolveConfigRelativePath(backendConfig.server.ssl.keyFile);
 const backendTarget = `https://${backendConfig.server.host}:${backendConfig.server.port}`;
 
 function resolveConfigPath(): string {
@@ -21,6 +21,12 @@ function resolveConfigPath(): string {
   }
 
   return path.resolve(__dirname, "../config.json");
+}
+
+function resolveConfigRelativePath(relativeOrAbsolutePath: string): string {
+  return path.isAbsolute(relativeOrAbsolutePath)
+    ? relativeOrAbsolutePath
+    : path.resolve(configDirectory, relativeOrAbsolutePath);
 }
 
 export default defineConfig({
