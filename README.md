@@ -1,23 +1,120 @@
 # GraphCalc
+A node based fully configurable node based factory planer/calculator using a linear solver.
 
-Starter implementation for the node-based factory calculator.
+# Config & Building
+By default you configure runtime and build time in a single `config.json` by default the `config.json` is searched for in the projekt root.
+You can manually override `config.json` location by setting `CONFIG_JSON` environment variable.
 
-## Frontend
-- Location: frontend/
-- ReactFlow canvas with empty-by-default project and graph state
-- API requests go through the Vite `/api` proxy in development
-- Frontend build config is read from `CONFIG_JSON` when set, otherwise `config.json` at the repository root
+example config.json:
+```json
+{
+  "server": {
+    "host": "localhost",
+    "port": 8000,
+    "frontendOrigins": [
+      "https://localhost:5173",
+      "https://127.0.0.1:5173"
+    ],
+    "logRequests": false,
+    "ssl": {
+      "certFile": "../certs/localhost-cert.pem",
+      "keyFile": "../certs/localhost-key.pem"
+    }
+  },
+  "auth": {
+    "jwtAlgorithm": "HS256",
+    "jwtTtlSeconds": 604800,
+    "passwordHashIterations": 200000,
+    "defaultSessionVersion": 1,
+    "cookie": {
+      "name": "graphcalc_session",
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "lax",
+      "path": "/"
+    }
+  },
+  "mongo": {
+    "host": "localhost",
+    "port": 27017,
+    "authenticationMode": "none",
+    "username": "",
+    "password": "",
+    "authDatabase": "graphcalc",
+    "database": "graphcalc",
+    "allowNoAuthFallback": true,
+    "tls": {
+      "enabled": false,
+      "verifyServerCertificate": true,
+      "checkCertificateRevocation": true,
+      "clientCertificate": {
+        "pfxFile": "",
+        "pfxPassword": "",
+        "certFile": "",
+        "keyFile": ""
+      }
+    }
+  },
+  "solver": {
+    "maxConcurrency": 2,
+    "requestTimeoutSeconds": 5,
+    "queueLimit": 32
+  },
+  "caching": {
+    "sweepIntervalSeconds": 15,
+    "entryIdleTtlSeconds": 300,
+    "dirtyWriteBackSeconds": 30
+  },
+  "rateLimiting": {
+    "global": {
+      "authRequestsPerMinute": 120,
+      "solveRequestsPerMinute": 40,
+      "guestSolveRequestsPerMinute": 20,
+      "crudRequestsPerMinute": 2000
+    },
+    "perUserOrIp": {
+      "authRequestsPerMinute": 20,
+      "solveRequestsPerMinute": 8,
+      "guestSolveRequestsPerMinute": 4,
+      "crudRequestsPerMinute": 300
+    }
+  }
+}
+```
+
+### Windows:
+Run backend with:
+```ps1
+./run_backend.ps1
+```
+Run frontent with:
+```ps1
+./run.ps1
+```
+
+### Linux/Mac:
+First generate self signed certificates for dev, make sure to configure the relative or absoulute path in `config.json`
+
+#### Run frontent with:
+```bash
+npm --prefix $PATH_TO_FRONTENT run dev
+```
+so from the project root:
+```bash
+npm --prefix ./frontend run dev
+```
+
+#### Run backend with:
+```bash
+dotnet run --project $PATH_TO_BACKEND_API_PROJECT
+```
+so from the project root:
+```bash
+dotnet run --project ./backend/GraphCalc.Api/GraphCalc.Api.csproj
+```
 
 ## Backend
-- Location: backend/
-- FastAPI solver stub at /solve
-- Runtime configuration is read from `CONFIG_JSON` when set, otherwise `config.json` at the repository root
-- Persistence is stored in MongoDB, using the `graphcalc` database by default
+The backend is written in c# using ASP.NET using a MongoDB database using Google OR-Tools linear solver for solving.
 
-### MongoDB connection modes
-- `mongo.authenticationMode: "none"` for local instances without Mongo auth
-- `mongo.authenticationMode: "password"` for username/password auth, with optional `allowNoAuthFallback` for mixed local setups
-- `mongo.authenticationMode: "x509"` for MongoDB X.509 auth; this requires `mongo.tls.enabled: true`, a configured client certificate, and `mongo.username` set to the certificate subject/username
-- `mongo.tls.enabled: true` uses TLS for the Mongo connection; with `verifyServerCertificate: true`, the backend verifies the remote server certificate and hostname against the machine trust store, so use the real DNS name in `mongo.host`
-- `mongo.tls.clientCertificate` accepts either a `pfxFile`/`pfxPassword` pair or a PEM `certFile`/`keyFile` pair; relative paths are resolved from the directory containing the active config file
-- `CONFIG_JSON` must be an absolute path when set
+## Frontent
+The Frontent is a React + React-Flow Vite app.
