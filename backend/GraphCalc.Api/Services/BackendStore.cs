@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using System.Net.Security;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using GraphCalc.Api.Configuration;
 using GraphCalc.Api.Contracts;
@@ -37,6 +39,8 @@ public sealed class BackendStore
 
     private IMongoDatabase? _database;
     private bool _initialized;
+
+    private sealed record MongoConnectionCandidate(MongoClientSettings Settings, string ConnectionMode);
 
     public BackendStore(IOptions<GraphCalcOptions> options, IWebHostEnvironment environment, ILogger<BackendStore> logger)
     {
@@ -592,55 +596,214 @@ public sealed class BackendStore
 
     private async Task<IMongoDatabase> ConnectAsync(CancellationToken cancellationToken)
     {
-        var candidateUris = BuildCandidateMongoUris();
+        var candidateSettings = BuildCandidateMongoSettings();
         Exception? lastError = null;
 
-        foreach (var uri in candidateUris)
+        foreach (var candidate in candidateSettings)
         {
             try
             {
-                var client = new MongoClient(uri);
+                var client = new MongoClient(candidate.Settings);
                 var database = client.GetDatabase(_options.Mongo.Database);
                 await database.RunCommandAsync((Command<BsonDocument>)"{ ping: 1 }", cancellationToken: cancellationToken);
-                _logger.LogInformation("Connected to MongoDB using {ConnectionMode}", uri.Contains("@", StringComparison.Ordinal) ? "configured-auth" : "no-auth-fallback");
+                _logger.LogInformation("Connected to MongoDB using {ConnectionMode}", candidate.ConnectionMode);
                 return database;
             }
             catch (Exception ex)
             {
                 lastError = ex;
-                _logger.LogWarning(ex, "MongoDB connection attempt failed");
+                _logger.LogWarning(ex, "MongoDB connection attempt failed using {ConnectionMode}", candidate.ConnectionMode);
             }
         }
 
         throw lastError ?? new InvalidOperationException("Unable to connect to MongoDB");
     }
 
-    private string[] BuildCandidateMongoUris()
+    private MongoConnectionCandidate[] BuildCandidateMongoSettings()
     {
-        var uris = new List<string> { BuildMongoUri(includeCredentials: true) };
-        var noAuth = BuildMongoUri(includeCredentials: false);
-        if (_options.Mongo.AllowNoAuthFallback && !uris.Contains(noAuth, StringComparer.Ordinal))
+        var candidates = new List<MongoConnectionCandidate>
         {
-            uris.Add(noAuth);
+            BuildMongoConnectionCandidate(includeCredentials: true)
+        };
+
+        if (_options.Mongo.AllowNoAuthFallback && UsesMongoCredential())
+        {
+            candidates.Add(BuildMongoConnectionCandidate(includeCredentials: false));
         }
-        return uris.ToArray();
+
+        return candidates.ToArray();
     }
 
-    private string BuildMongoUri(bool includeCredentials)
+    private MongoConnectionCandidate BuildMongoConnectionCandidate(bool includeCredentials)
     {
-        var credentials = string.Empty;
-        if (includeCredentials && !string.IsNullOrWhiteSpace(_options.Mongo.Username))
+        var clientCertificate = LoadMongoClientCertificate();
+        var settings = new MongoClientSettings
         {
-            credentials = Uri.EscapeDataString(_options.Mongo.Username);
-            if (!string.IsNullOrWhiteSpace(_options.Mongo.Password))
-            {
-                credentials = $"{credentials}:{Uri.EscapeDataString(_options.Mongo.Password)}";
-            }
-            credentials += "@";
+            Server = new MongoServerAddress(_options.Mongo.Host, _options.Mongo.Port)
+        };
+
+        var credential = BuildMongoCredential(includeCredentials, clientCertificate);
+        if (credential is not null)
+        {
+            settings.Credential = credential;
         }
 
-        var authSuffix = includeCredentials ? $"?authSource={Uri.EscapeDataString(_options.Mongo.AuthDatabase)}" : string.Empty;
-        return $"mongodb://{credentials}{_options.Mongo.Host}:{_options.Mongo.Port}/{_options.Mongo.Database}{authSuffix}";
+        ConfigureMongoTls(settings, clientCertificate);
+
+        var connectionMode = DescribeConnectionMode(includeCredentials, clientCertificate is not null);
+        return new MongoConnectionCandidate(settings, connectionMode);
+    }
+
+    private MongoCredential? BuildMongoCredential(bool includeCredentials, X509Certificate2? clientCertificate)
+    {
+        if (!includeCredentials)
+        {
+            return null;
+        }
+
+        return NormalizeAuthenticationMode() switch
+        {
+            "none" => null,
+            "password" => BuildPasswordCredential(),
+            "x509" => BuildX509Credential(clientCertificate),
+            var mode => throw new InvalidOperationException($"Unsupported mongo.authenticationMode '{mode}'. Expected one of: none, password, x509.")
+        };
+    }
+
+    private MongoCredential BuildPasswordCredential()
+    {
+        if (string.IsNullOrWhiteSpace(_options.Mongo.Username))
+        {
+            throw new InvalidOperationException("MongoDB password authentication requires mongo.username.");
+        }
+
+        return MongoCredential.CreateCredential(
+            _options.Mongo.AuthDatabase,
+            _options.Mongo.Username,
+            _options.Mongo.Password);
+    }
+
+    private MongoCredential BuildX509Credential(X509Certificate2? clientCertificate)
+    {
+        if (!_options.Mongo.Tls.Enabled)
+        {
+            throw new InvalidOperationException("MongoDB X.509 authentication requires mongo.tls.enabled=true.");
+        }
+
+        if (clientCertificate is null)
+        {
+            throw new InvalidOperationException("MongoDB X.509 authentication requires mongo.tls.clientCertificate to be configured.");
+        }
+
+        if (string.IsNullOrWhiteSpace(_options.Mongo.Username))
+        {
+            throw new InvalidOperationException("MongoDB X.509 authentication requires mongo.username to contain the certificate subject/username.");
+        }
+
+        return MongoCredential.CreateMongoX509Credential(_options.Mongo.Username);
+    }
+
+    private void ConfigureMongoTls(MongoClientSettings settings, X509Certificate2? clientCertificate)
+    {
+        if (!_options.Mongo.Tls.Enabled)
+        {
+            return;
+        }
+
+        settings.UseTls = true;
+        settings.SslSettings = new SslSettings
+        {
+            CheckCertificateRevocation = _options.Mongo.Tls.CheckCertificateRevocation,
+            ClientCertificates = BuildMongoClientCertificates(clientCertificate),
+            ServerCertificateValidationCallback = BuildServerCertificateValidationCallback()
+        };
+    }
+
+    private IEnumerable<X509Certificate>? BuildMongoClientCertificates(X509Certificate2? clientCertificate)
+    {
+        return clientCertificate is null ? null : [clientCertificate];
+    }
+
+    private RemoteCertificateValidationCallback? BuildServerCertificateValidationCallback()
+    {
+        if (_options.Mongo.Tls.VerifyServerCertificate)
+        {
+            return null;
+        }
+
+        return static (_, _, _, _) => true;
+    }
+
+    private bool UsesMongoCredential() => NormalizeAuthenticationMode() is "password" or "x509";
+
+    private string NormalizeAuthenticationMode() => _options.Mongo.AuthenticationMode.Trim().ToLowerInvariant();
+
+    private string DescribeConnectionMode(bool includeCredentials, bool hasClientCertificate)
+    {
+        var authMode = includeCredentials ? NormalizeAuthenticationMode() : "none";
+        var transport = _options.Mongo.Tls.Enabled
+            ? _options.Mongo.Tls.VerifyServerCertificate ? "tls-verified" : "tls-unverified"
+            : "plain";
+        var clientCertificate = hasClientCertificate ? "client-cert" : "no-client-cert";
+        return $"{transport}/{authMode}/{clientCertificate}";
+    }
+
+    private X509Certificate2? LoadMongoClientCertificate()
+    {
+        var certificateOptions = _options.Mongo.Tls.ClientCertificate;
+        if (certificateOptions is null)
+        {
+            return null;
+        }
+
+        var hasPfx = !string.IsNullOrWhiteSpace(certificateOptions.PfxFile);
+        var hasPem = !string.IsNullOrWhiteSpace(certificateOptions.CertFile) || !string.IsNullOrWhiteSpace(certificateOptions.KeyFile);
+
+        if (!hasPfx && !hasPem)
+        {
+            return null;
+        }
+
+        if (hasPfx && hasPem)
+        {
+            throw new InvalidOperationException("Configure either mongo.tls.clientCertificate.pfxFile or mongo.tls.clientCertificate.certFile/keyFile, not both.");
+        }
+
+        if (hasPfx)
+        {
+            var pfxPath = ResolveBackendPath(certificateOptions.PfxFile);
+            return LoadPkcs12Certificate(pfxPath, certificateOptions.PfxPassword);
+        }
+
+        if (string.IsNullOrWhiteSpace(certificateOptions.CertFile) || string.IsNullOrWhiteSpace(certificateOptions.KeyFile))
+        {
+            throw new InvalidOperationException("mongo.tls.clientCertificate.certFile and keyFile must both be set when using PEM client certificates.");
+        }
+
+        var certPath = ResolveBackendPath(certificateOptions.CertFile);
+        var keyPath = ResolveBackendPath(certificateOptions.KeyFile);
+        return LoadPemCertificate(certPath, keyPath);
+    }
+
+    private string ResolveBackendPath(string relativeOrAbsolutePath)
+    {
+        return Path.IsPathRooted(relativeOrAbsolutePath)
+            ? relativeOrAbsolutePath
+            : Path.GetFullPath(Path.Combine(_backendRoot, relativeOrAbsolutePath));
+    }
+
+    private static X509Certificate2 LoadPkcs12Certificate(string pfxPath, string password)
+    {
+        var effectivePassword = string.IsNullOrEmpty(password) ? null : password;
+        return X509CertificateLoader.LoadPkcs12FromFile(pfxPath, effectivePassword);
+    }
+
+    private static X509Certificate2 LoadPemCertificate(string certPath, string keyPath)
+    {
+        using var pemCertificate = X509Certificate2.CreateFromPemFile(certPath, keyPath);
+        return OperatingSystem.IsWindows()
+            ? X509CertificateLoader.LoadPkcs12(pemCertificate.Export(X509ContentType.Pfx), password: null)
+            : pemCertificate;
     }
 
     private async Task EnsureIndexesAsync(CancellationToken cancellationToken)

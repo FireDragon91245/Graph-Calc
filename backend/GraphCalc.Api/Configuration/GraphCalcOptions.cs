@@ -91,6 +91,9 @@ public sealed class MongoOptions
     [Range(1, 65535)]
     public required int Port { get; init; }
 
+    [Required]
+    public string AuthenticationMode { get; init; } = "password";
+
     public string Username { get; init; } = string.Empty;
 
     public string Password { get; init; } = string.Empty;
@@ -102,6 +105,31 @@ public sealed class MongoOptions
     public required string Database { get; init; }
 
     public bool AllowNoAuthFallback { get; init; } = true;
+
+    [Required]
+    public MongoTlsOptions Tls { get; init; } = new();
+}
+
+public sealed class MongoTlsOptions
+{
+    public bool Enabled { get; init; }
+
+    public bool VerifyServerCertificate { get; init; } = true;
+
+    public bool CheckCertificateRevocation { get; init; } = true;
+
+    public MongoClientCertificateOptions? ClientCertificate { get; init; }
+}
+
+public sealed class MongoClientCertificateOptions
+{
+    public string PfxFile { get; init; } = string.Empty;
+
+    public string PfxPassword { get; init; } = string.Empty;
+
+    public string CertFile { get; init; } = string.Empty;
+
+    public string KeyFile { get; init; } = string.Empty;
 }
 
 public sealed class SolverOptions
