@@ -7,23 +7,23 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphCalc.Api", "backend\GraphCalc.Api\GraphCalc.Api.csproj", "{5FC3D1B6-A185-8C5C-1CB7-DC482AEA67E9}"
 EndProject
 Global
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Any CPU = Debug|Any CPU
-		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{5FC3D1B6-A185-8C5C-1CB7-DC482AEA67E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5FC3D1B6-A185-8C5C-1CB7-DC482AEA67E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5FC3D1B6-A185-8C5C-1CB7-DC482AEA67E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5FC3D1B6-A185-8C5C-1CB7-DC482AEA67E9}.Release|Any CPU.Build.0 = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{5FC3D1B6-A185-8C5C-1CB7-DC482AEA67E9} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {7076D411-3F73-44F6-9193-48DF7FA75DCD}
-	EndGlobalSection
+    GlobalSection(SolutionConfigurationPlatforms) = preSolution
+        Debug|Any CPU = Debug|Any CPU
+        Release|Any CPU = Release|Any CPU
+    EndGlobalSection
+    GlobalSection(ProjectConfigurationPlatforms) = postSolution
+        {5FC3D1B6-A185-8C5C-1CB7-DC482AEA67E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {5FC3D1B6-A185-8C5C-1CB7-DC482AEA67E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {5FC3D1B6-A185-8C5C-1CB7-DC482AEA67E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {5FC3D1B6-A185-8C5C-1CB7-DC482AEA67E9}.Release|Any CPU.Build.0 = Release|Any CPU
+    EndGlobalSection
+    GlobalSection(SolutionProperties) = preSolution
+        HideSolutionNode = FALSE
+    EndGlobalSection
+    GlobalSection(NestedProjects) = preSolution
+        {5FC3D1B6-A185-8C5C-1CB7-DC482AEA67E9} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
+    EndGlobalSection
+    GlobalSection(ExtensibilityGlobals) = postSolution
+        SolutionGuid = {7076D411-3F73-44F6-9193-48DF7FA75DCD}
+    EndGlobalSection
 EndGlobal
