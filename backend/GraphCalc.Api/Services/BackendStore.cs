@@ -25,6 +25,7 @@ public sealed class BackendStore
     private readonly GraphCalcOptions _options;
     private readonly ILogger<BackendStore> _logger;
     private readonly string _backendRoot;
+    private readonly string _configDirectory;
     private readonly string _dataDir;
     private readonly string _userDataDir;
     private readonly string _legacyProjectsDir;
@@ -47,6 +48,7 @@ public sealed class BackendStore
         _options = options.Value;
         _logger = logger;
         _backendRoot = Path.GetFullPath(Path.Combine(environment.ContentRootPath, ".."));
+        _configDirectory = ResolveConfigDirectory(environment.ContentRootPath);
         _dataDir = Path.Combine(_backendRoot, "data");
         _userDataDir = Path.Combine(_dataDir, "user_data");
         _legacyProjectsDir = Path.Combine(_dataDir, "projects");
@@ -771,7 +773,7 @@ public sealed class BackendStore
 
         if (hasPfx)
         {
-            var pfxPath = ResolveBackendPath(certificateOptions.PfxFile);
+            var pfxPath = ResolveConfigPath(certificateOptions.PfxFile);
             return LoadPkcs12Certificate(pfxPath, certificateOptions.PfxPassword);
         }
 
@@ -780,16 +782,33 @@ public sealed class BackendStore
             throw new InvalidOperationException("mongo.tls.clientCertificate.certFile and keyFile must both be set when using PEM client certificates.");
         }
 
-        var certPath = ResolveBackendPath(certificateOptions.CertFile);
-        var keyPath = ResolveBackendPath(certificateOptions.KeyFile);
+        var certPath = ResolveConfigPath(certificateOptions.CertFile);
+        var keyPath = ResolveConfigPath(certificateOptions.KeyFile);
         return LoadPemCertificate(certPath, keyPath);
     }
 
-    private string ResolveBackendPath(string relativeOrAbsolutePath)
+    private string ResolveConfigPath(string relativeOrAbsolutePath)
     {
         return Path.IsPathRooted(relativeOrAbsolutePath)
             ? relativeOrAbsolutePath
-            : Path.GetFullPath(Path.Combine(_backendRoot, relativeOrAbsolutePath));
+            : Path.GetFullPath(Path.Combine(_configDirectory, relativeOrAbsolutePath));
+    }
+
+    private static string ResolveConfigDirectory(string contentRootPath)
+    {
+        var configuredPath = Environment.GetEnvironmentVariable("CONFIG_JSON");
+        if (!string.IsNullOrWhiteSpace(configuredPath))
+        {
+            if (!Path.IsPathRooted(configuredPath))
+            {
+                throw new InvalidOperationException("CONFIG_JSON must be an absolute path.");
+            }
+
+            return Path.GetDirectoryName(Path.GetFullPath(configuredPath))
+                ?? throw new InvalidOperationException("Could not resolve CONFIG_JSON directory.");
+        }
+
+        return Path.GetFullPath(Path.Combine(contentRootPath, "..", ".."));
     }
 
     private static X509Certificate2 LoadPkcs12Certificate(string pfxPath, string password)

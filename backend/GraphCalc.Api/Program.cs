@@ -14,7 +14,7 @@ public class Program
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        var sharedConfigPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "config.json"));
+        var sharedConfigPath = ResolveConfigPath(builder.Environment.ContentRootPath);
         builder.Configuration.AddJsonFile(sharedConfigPath, optional: false, reloadOnChange: true);
 
         builder.Services
@@ -24,7 +24,7 @@ public class Program
             .ValidateOnStart();
 
         var startupOptions = builder.Configuration.Get<GraphCalcOptions>()
-                             ?? throw new InvalidOperationException("backend/config.json could not be bound to GraphCalcOptions");
+                     ?? throw new InvalidOperationException($"{sharedConfigPath} could not be bound to GraphCalcOptions");
         var backendConfigDirectory = Path.GetDirectoryName(sharedConfigPath)
                                      ?? throw new InvalidOperationException("Could not resolve backend config directory");
         var certPath = Path.GetFullPath(Path.Combine(backendConfigDirectory, startupOptions.Server.Ssl.CertFile));
@@ -177,6 +177,22 @@ public class Program
         app.MapControllers();
 
         app.Run();
+
+        static string ResolveConfigPath(string contentRootPath)
+        {
+            var configuredPath = Environment.GetEnvironmentVariable("CONFIG_JSON");
+            if (!string.IsNullOrWhiteSpace(configuredPath))
+            {
+                if (!Path.IsPathRooted(configuredPath))
+                {
+                    throw new InvalidOperationException("CONFIG_JSON must be an absolute path.");
+                }
+
+                return Path.GetFullPath(configuredPath);
+            }
+
+            return Path.GetFullPath(Path.Combine(contentRootPath, "..", "..", "config.json"));
+        }
 
         static RateLimitPartition<string> CreateFixedWindowPartition(string scope, string key, int permitLimit)
         {
