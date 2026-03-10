@@ -819,10 +819,22 @@ public sealed class BackendStore
 
     private static X509Certificate2 LoadPemCertificate(string certPath, string keyPath)
     {
-        using var pemCertificate = X509Certificate2.CreateFromPemFile(certPath, keyPath);
-        return OperatingSystem.IsWindows()
-            ? X509CertificateLoader.LoadPkcs12(pemCertificate.Export(X509ContentType.Pfx), password: null)
-            : pemCertificate;
+        var pemCertificate = X509Certificate2.CreateFromPemFile(certPath, keyPath);
+        if (!OperatingSystem.IsWindows())
+        {
+            return pemCertificate;
+        }
+
+        try
+        {
+            return X509CertificateLoader.LoadPkcs12(
+                pemCertificate.Export(X509ContentType.Pfx),
+                password: null);
+        }
+        finally
+        {
+            pemCertificate.Dispose();
+        }
     }
 
     private async Task EnsureIndexesAsync(CancellationToken cancellationToken)
