@@ -42,7 +42,8 @@ const normalizeStore = (store: StoreData): StoreData => ({
   items: [...store.items].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
   tags: [...store.tags].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
   recipeTags: [...store.recipeTags].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
-  recipes: [...store.recipes].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name))
+  recipes: [...store.recipes].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
+  recipeBlueprints: [...store.recipeBlueprints].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name))
 });
 
 const normalizeGraph = (graph: GraphData): GraphData => ({

@@ -1215,7 +1215,8 @@ public sealed class BackendStore
             Items = store.Items ?? [],
             Tags = store.Tags ?? [],
             RecipeTags = store.RecipeTags ?? [],
-            Recipes = store.Recipes ?? []
+            Recipes = store.Recipes ?? [],
+            RecipeBlueprints = store.RecipeBlueprints ?? []
         });
     }
 

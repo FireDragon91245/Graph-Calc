@@ -214,6 +214,221 @@ public sealed class RecipeDto
     public List<RecipeOutputDto> Outputs { get; init; } = [];
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter<RecipeTransformTypeDto>))]
+public enum RecipeTransformTypeDto
+{
+    [JsonStringEnumMemberName("addPrefix")]
+    AddPrefix,
+
+    [JsonStringEnumMemberName("addSuffix")]
+    AddSuffix,
+
+    [JsonStringEnumMemberName("removePrefix")]
+    RemovePrefix,
+
+    [JsonStringEnumMemberName("removeSuffix")]
+    RemoveSuffix,
+
+    [JsonStringEnumMemberName("replace")]
+    Replace,
+
+    [JsonStringEnumMemberName("lowercase")]
+    Lowercase,
+
+    [JsonStringEnumMemberName("uppercase")]
+    Uppercase
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<RecipeSourceFilterModeDto>))]
+public enum RecipeSourceFilterModeDto
+{
+    [JsonStringEnumMemberName("any")]
+    Any,
+
+    [JsonStringEnumMemberName("all")]
+    All
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<RecipeSlotResolverDto>))]
+public enum RecipeSlotResolverDto
+{
+    [JsonStringEnumMemberName("source")]
+    Source,
+
+    [JsonStringEnumMemberName("fixedItem")]
+    FixedItem,
+
+    [JsonStringEnumMemberName("fixedTag")]
+    FixedTag,
+
+    [JsonStringEnumMemberName("related")]
+    Related
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<RecipeOutputSlotResolverDto>))]
+public enum RecipeOutputSlotResolverDto
+{
+    [JsonStringEnumMemberName("source")]
+    Source,
+
+    [JsonStringEnumMemberName("fixedItem")]
+    FixedItem,
+
+    [JsonStringEnumMemberName("related")]
+    Related
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<RecipeNameItemDto>))]
+public enum RecipeNameItemDto
+{
+    [JsonStringEnumMemberName("source")]
+    Source,
+
+    [JsonStringEnumMemberName("input1")]
+    Input1,
+
+    [JsonStringEnumMemberName("output1")]
+    Output1,
+
+    [JsonStringEnumMemberName("none")]
+    None
+}
+
+public sealed class RecipeTransformStepDto
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("type")]
+    public required RecipeTransformTypeDto Type { get; init; }
+
+    [JsonPropertyName("value")]
+    public string? Value { get; init; }
+
+    [JsonPropertyName("replaceFrom")]
+    public string? ReplaceFrom { get; init; }
+
+    [JsonPropertyName("replaceTo")]
+    public string? ReplaceTo { get; init; }
+}
+
+public sealed class RecipeSourceRuleDto
+{
+    [JsonPropertyName("filterMode")]
+    public RecipeSourceFilterModeDto FilterMode { get; init; } = RecipeSourceFilterModeDto.Any;
+
+    [JsonPropertyName("tagIds")]
+    public List<string> TagIds { get; init; } = [];
+
+    [JsonPropertyName("categoryIds")]
+    public List<string> CategoryIds { get; init; } = [];
+
+    [JsonPropertyName("itemIds")]
+    public List<string> ItemIds { get; init; } = [];
+
+    [JsonPropertyName("excludeTagIds")]
+    public List<string> ExcludeTagIds { get; init; } = [];
+
+    [JsonPropertyName("excludeCategoryIds")]
+    public List<string> ExcludeCategoryIds { get; init; } = [];
+
+    [JsonPropertyName("excludeItemIds")]
+    public List<string> ExcludeItemIds { get; init; } = [];
+}
+
+public sealed class RecipeSlotRuleDto
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("resolver")]
+    public required RecipeSlotResolverDto Resolver { get; init; }
+
+    [JsonPropertyName("amount")]
+    public required double Amount { get; init; }
+
+    [JsonPropertyName("refId")]
+    public string? RefId { get; init; }
+
+    [JsonPropertyName("targetTagId")]
+    public string? TargetTagId { get; init; }
+
+    [JsonPropertyName("targetCategoryId")]
+    public string? TargetCategoryId { get; init; }
+
+    [JsonPropertyName("nameTransforms")]
+    public List<RecipeTransformStepDto> NameTransforms { get; init; } = [];
+}
+
+public sealed class RecipeOutputSlotRuleDto
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("resolver")]
+    public required RecipeOutputSlotResolverDto Resolver { get; init; }
+
+    [JsonPropertyName("amount")]
+    public required double Amount { get; init; }
+
+    [JsonPropertyName("probability")]
+    public required double Probability { get; init; }
+
+    [JsonPropertyName("refId")]
+    public string? RefId { get; init; }
+
+    [JsonPropertyName("targetTagId")]
+    public string? TargetTagId { get; init; }
+
+    [JsonPropertyName("targetCategoryId")]
+    public string? TargetCategoryId { get; init; }
+
+    [JsonPropertyName("nameTransforms")]
+    public List<RecipeTransformStepDto> NameTransforms { get; init; } = [];
+}
+
+public sealed class RecipeBlueprintDto
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
+
+    [JsonPropertyName("description")]
+    public required string Description { get; init; }
+
+    [JsonPropertyName("source")]
+    public required RecipeSourceRuleDto Source { get; init; }
+
+    [JsonPropertyName("recipeNamePrefix")]
+    public required string RecipeNamePrefix { get; init; }
+
+    [JsonPropertyName("recipeNameItem")]
+    public required RecipeNameItemDto RecipeNameItem { get; init; }
+
+    [JsonPropertyName("recipeNameSuffix")]
+    public required string RecipeNameSuffix { get; init; }
+
+    [JsonPropertyName("timeSeconds")]
+    public required double TimeSeconds { get; init; }
+
+    [JsonPropertyName("inputs")]
+    public List<RecipeSlotRuleDto> Inputs { get; init; } = [];
+
+    [JsonPropertyName("outputs")]
+    public List<RecipeOutputSlotRuleDto> Outputs { get; init; } = [];
+
+    [JsonPropertyName("recipeTagIds")]
+    public List<string> RecipeTagIds { get; init; } = [];
+
+    [JsonPropertyName("createdAt")]
+    public required long CreatedAt { get; init; }
+
+    [JsonPropertyName("updatedAt")]
+    public required long UpdatedAt { get; init; }
+}
+
 public sealed class StoreData
 {
     [JsonPropertyName("categories")]
@@ -230,6 +445,9 @@ public sealed class StoreData
 
     [JsonPropertyName("recipes")]
     public List<RecipeDto> Recipes { get; init; } = [];
+
+    [JsonPropertyName("recipeBlueprints")]
+    public List<RecipeBlueprintDto> RecipeBlueprints { get; init; } = [];
 }
 
 public sealed class SolveTargets

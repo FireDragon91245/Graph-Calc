@@ -6,6 +6,7 @@ interface ItemSuggestion {
   name: string;
   itemId: string;
   categoryId?: string;
+  targetTagIds: string[];
   approved: boolean;
   sourceItem: Item;
 }
@@ -35,12 +36,15 @@ export default function ItemGenerator() {
   const tags = useGraphStore((state) => state.tags);
   const categories = useGraphStore((state) => state.categories);
   const addItem = useGraphStore((state) => state.addItem);
+  const addTag = useGraphStore((state) => state.addTag);
 
   const [suggestions, setSuggestions] = useState<ItemSuggestion[]>([]);
   const [selectedTagId, setSelectedTagId] = useState<string>("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [steps, setSteps] = useState<TransformStep[]>([]);
   const [targetCategoryId, setTargetCategoryId] = useState<string>("");
+  const [targetTagIds, setTargetTagIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredItems = useMemo(() => {
@@ -69,7 +73,22 @@ export default function ItemGenerator() {
         return items.filter((item) => tag.memberItemIds.includes(item.id));
       }
     }
+    if (selectedCategoryId) {
+      return items.filter((item) =>
+        selectedCategoryId === NO_CATEGORY_VALUE
+          ? !item.categoryId
+          : item.categoryId === selectedCategoryId
+      );
+    }
     return items.filter((item) => selectedItemIds.includes(item.id));
+  };
+
+  const toggleTargetTag = (tagId: string) => {
+    setTargetTagIds((previous) =>
+      previous.includes(tagId)
+        ? previous.filter((id) => id !== tagId)
+        : [...previous, tagId]
+    );
   };
 
   const slugify = (text: string) => text.toLowerCase().trim().replace(/\s+/g, "_");
@@ -225,6 +244,7 @@ export default function ItemGenerator() {
             targetCategoryId === NO_CATEGORY_VALUE
               ? undefined
               : targetCategoryId || sourceItem.categoryId,
+          targetTagIds: [...targetTagIds],
           approved: true,
           sourceItem,
         });
@@ -273,14 +293,30 @@ export default function ItemGenerator() {
       });
     });
 
+    const createdItemIds = approved.map((suggestion) => suggestion.itemId);
+    const approvedTargetTagIds = new Set(
+      approved.flatMap((suggestion) => suggestion.targetTagIds)
+    );
+    tags.forEach((tag) => {
+      if (!approvedTargetTagIds.has(tag.id)) return;
+      addTag({
+        ...tag,
+        memberItemIds: Array.from(new Set([...tag.memberItemIds, ...createdItemIds])),
+      });
+    });
+
     alert(`✅ Created ${approved.length} items!`);
     setSuggestions([]);
   };
 
   const clearForm = () => {
     setSelectedTagId("");
+    setSelectedCategoryId("");
     setSelectedItemIds([]);
     setSteps([]);
+    setTargetCategoryId("");
+    setTargetTagIds([]);
+    setSearchTerm("");
     setSuggestions([]);
   };
 
@@ -298,16 +334,17 @@ export default function ItemGenerator() {
           <h3>Select Source Items</h3>
           
           <div className="form-row">
-            <label>Select Tag (Optional)</label>
+            <label>Source Tag</label>
             <select
               value={selectedTagId}
               onChange={(e) => {
                 setSelectedTagId(e.target.value);
+                setSelectedCategoryId("");
                 setSelectedItemIds([]);
               }}
               className="config-input"
             >
-              <option value="">-- Or select items manually --</option>
+              <option value="">-- Not using a tag --</option>
               {tags.map((tag) => (
                 <option key={tag.id} value={tag.id}>
                   {tag.name} ({tag.memberItemIds.length} items)
@@ -316,7 +353,28 @@ export default function ItemGenerator() {
             </select>
           </div>
 
-          {!selectedTagId && (
+          <div className="form-row">
+            <label>Source Category</label>
+            <select
+              value={selectedCategoryId}
+              onChange={(e) => {
+                setSelectedCategoryId(e.target.value);
+                setSelectedTagId("");
+                setSelectedItemIds([]);
+              }}
+              className="config-input"
+            >
+              <option value="">-- Or select items manually --</option>
+              <option value={NO_CATEGORY_VALUE}>-- None --</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name} ({items.filter((item) => item.categoryId === category.id).length} items)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {!selectedTagId && !selectedCategoryId && (
             <>
               <input
                 type="text"
@@ -361,7 +419,21 @@ export default function ItemGenerator() {
             </div>
           )}
 
-          {!selectedTagId && selectedItemIds.length > 0 && (
+          {selectedCategoryId && (
+            <div className="selected-tag-info">
+              ✓ Using category:{" "}
+              <strong>
+                {selectedCategoryId === NO_CATEGORY_VALUE
+                  ? "-- None --"
+                  : categories.find((category) => category.id === selectedCategoryId)?.name}
+              </strong>
+              <div className="help-text" style={{ marginTop: "0.25rem" }}>
+                {getSourceItems().length} items selected
+              </div>
+            </div>
+          )}
+
+          {!selectedTagId && !selectedCategoryId && selectedItemIds.length > 0 && (
             <div className="selected-items-count">
               ✓ {selectedItemIds.length} items selected
             </div>
@@ -491,6 +563,29 @@ export default function ItemGenerator() {
             </select>
           </div>
 
+          <div className="form-row item-generator-target-tags">
+            <div className="item-generator-setting-heading">
+              <label>Target Tags (Optional)</label>
+              <span className="help-text">Generated items will be added to every selected tag.</span>
+            </div>
+            {tags.length > 0 ? (
+              <div className="item-generator-tag-grid">
+                {tags.map((tag) => (
+                  <label key={tag.id} className="item-generator-tag-option">
+                    <input
+                      type="checkbox"
+                      checked={targetTagIds.includes(tag.id)}
+                      onChange={() => toggleTargetTag(tag.id)}
+                    />
+                    <span>{tag.name}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <span className="help-text">Create an item tag first to assign generated items.</span>
+            )}
+          </div>
+
           <div className="form-row">
             <div className="form-actions">
               <button onClick={generateSuggestions} className="btn-primary btn-large">
@@ -538,6 +633,11 @@ export default function ItemGenerator() {
                               {categories.find(c => c.id === suggestion.categoryId)?.name}
                             </span>
                           )}
+                          {suggestion.targetTagIds.map((tagId) => (
+                            <span key={tagId} className="tag-badge-mini">
+                              {tags.find((tag) => tag.id === tagId)?.name}
+                            </span>
+                          ))}
                         </div>
                       </div>
                       <button

@@ -1208,6 +1208,7 @@ function AppContent() {
                         tags,
                         recipeTags,
                         recipes,
+                        recipeBlueprints: [],
                     }
                 });
             console.log("Solve result:", result);

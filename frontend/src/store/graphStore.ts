@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { saveStore, StoreData } from "../api/persistence";
+import type { RecipeBlueprint } from "../domain/recipeBlueprint";
 
 type Category = {
   id: string;
@@ -56,6 +57,7 @@ type GraphStore = {
   tags: Tag[];
   recipeTags: RecipeTag[];
   recipes: Recipe[];
+  recipeBlueprints: RecipeBlueprint[];
   addCategory: (name: string) => void;
   deleteCategory: (categoryId: string) => void;
   renameCategory: (categoryId: string, newName: string) => void;
@@ -69,8 +71,11 @@ type GraphStore = {
   deleteRecipeTag: (recipeTagId: string) => void;
   renameRecipeTag: (recipeTagId: string, newName: string) => void;
   addRecipe: (recipe: Omit<Recipe, "id"> & { id?: string }) => void;
+  addRecipesBatch: (recipes: Recipe[], recipeTagIds: string[]) => { added: number; skipped: number };
   deleteRecipe: (recipeId: string) => void;
   renameRecipe: (recipeId: string, newName: string) => void;
+  upsertRecipeBlueprint: (blueprint: RecipeBlueprint) => void;
+  deleteRecipeBlueprint: (blueprintId: string) => void;
   loadStoreData: (data: StoreData) => void;
 };
 
@@ -80,17 +85,30 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 
+const getRecipeSignature = (recipe: Recipe) => {
+  const inputs = recipe.inputs
+    .map((input) => `${input.refType}:${input.refId}:${input.amount}`)
+    .sort()
+    .join("|");
+  const outputs = recipe.outputs
+    .map((output) => `${output.itemId}:${output.amount}:${output.probability}`)
+    .sort()
+    .join("|");
+  return `${recipe.timeSeconds}::${inputs}=>${outputs}`;
+};
+
 // Debounced save function
 let saveTimeout: number | null = null;
 let storeSaveInFlight: Promise<void> | null = null;
 let pendingStoreSave: { data: StoreData; projectId: string } | null = null;
 
-const buildStoreData = (state: Pick<GraphStore, "categories" | "items" | "tags" | "recipeTags" | "recipes">): StoreData => ({
+const buildStoreData = (state: Pick<GraphStore, "categories" | "items" | "tags" | "recipeTags" | "recipes" | "recipeBlueprints">): StoreData => ({
   categories: state.categories,
   items: state.items,
   tags: state.tags,
   recipeTags: state.recipeTags,
-  recipes: state.recipes
+  recipes: state.recipes,
+  recipeBlueprints: state.recipeBlueprints
 });
 
 const flushStoreSave = async (): Promise<void> => {
@@ -161,6 +179,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
   tags: [],
   recipeTags: [],
   recipes: [],
+  recipeBlueprints: [],
   addCategory: (name) =>
     set((state) => {
       const newState = {
@@ -431,6 +450,40 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       debouncedSave({ ...state, ...newState });
       return newState;
     }),
+  addRecipesBatch: (incomingRecipes, recipeTagIds) => {
+    let result = { added: 0, skipped: 0 };
+    set((state) => {
+      const existingIds = new Set(state.recipes.map((recipe) => recipe.id));
+      const existingNames = new Set(state.recipes.map((recipe) => recipe.name.toLowerCase()));
+      const existingSignatures = new Set(state.recipes.map(getRecipeSignature));
+      const accepted: Recipe[] = [];
+      for (const recipe of incomingRecipes) {
+        const signature = getRecipeSignature(recipe);
+        if (existingIds.has(recipe.id) || existingNames.has(recipe.name.toLowerCase()) || existingSignatures.has(signature)) {
+          result.skipped += 1;
+          continue;
+        }
+        existingIds.add(recipe.id);
+        existingNames.add(recipe.name.toLowerCase());
+        existingSignatures.add(signature);
+        accepted.push(recipe);
+      }
+      result.added = accepted.length;
+      if (accepted.length === 0) return state;
+      const acceptedIds = accepted.map((recipe) => recipe.id);
+      const newState = {
+        recipes: [...state.recipes, ...accepted],
+        recipeTags: state.recipeTags.map((tag) =>
+          recipeTagIds.includes(tag.id)
+            ? { ...tag, memberRecipeIds: Array.from(new Set([...tag.memberRecipeIds, ...acceptedIds])) }
+            : tag
+        ),
+      };
+      debouncedSave({ ...state, ...newState });
+      return newState;
+    });
+    return result;
+  },
   deleteRecipe: (recipeId) =>
     set((state) => {
       const newState = {
@@ -463,14 +516,32 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       debouncedSave({ ...state, ...newState });
       return newState;
     }),
+  upsertRecipeBlueprint: (blueprint) =>
+    set((state) => {
+      const exists = state.recipeBlueprints.some((entry) => entry.id === blueprint.id);
+      const newState = {
+        recipeBlueprints: exists
+          ? state.recipeBlueprints.map((entry) => (entry.id === blueprint.id ? blueprint : entry))
+          : [...state.recipeBlueprints, blueprint]
+      };
+      debouncedSave({ ...state, ...newState });
+      return newState;
+    }),
+  deleteRecipeBlueprint: (blueprintId) =>
+    set((state) => {
+      const newState = { recipeBlueprints: state.recipeBlueprints.filter((entry) => entry.id !== blueprintId) };
+      debouncedSave({ ...state, ...newState });
+      return newState;
+    }),
   loadStoreData: (data) =>
     set(() => ({
       categories: data.categories,
       items: data.items,
       tags: data.tags,
       recipeTags: data.recipeTags,
-      recipes: data.recipes
+      recipes: data.recipes,
+      recipeBlueprints: data.recipeBlueprints ?? []
     }))
 }));
 
-export type { Category, Item, Tag, RecipeTag, Recipe, RecipeInput, RecipeOutput };
+export type { Category, Item, Tag, RecipeTag, Recipe, RecipeInput, RecipeOutput, RecipeBlueprint };

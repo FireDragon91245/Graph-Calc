@@ -1,4 +1,5 @@
 import { apiFetch, getErrorMessage } from "./client";
+import type { RecipeBlueprint } from "../domain/recipeBlueprint";
 
 export interface GraphData {
   nodes: any[];
@@ -56,6 +57,7 @@ export interface StoreData {
   tags: Tag[];
   recipeTags: RecipeTag[];
   recipes: Recipe[];
+  recipeBlueprints: RecipeBlueprint[];
 }
 
 // ── Project types ──────────────────────────────────────────────
@@ -137,7 +139,8 @@ export function createEmptyStoreData(): StoreData {
     items: [],
     tags: [],
     recipeTags: [],
-    recipes: []
+    recipes: [],
+    recipeBlueprints: []
   };
 }
 
@@ -187,7 +190,8 @@ function normalizeStoreData(value: unknown): StoreData {
     items: Array.isArray(candidate?.items) ? cloneData(candidate.items) : [],
     tags: Array.isArray(candidate?.tags) ? cloneData(candidate.tags) : [],
     recipeTags: Array.isArray(candidate?.recipeTags) ? cloneData(candidate.recipeTags) : [],
-    recipes: Array.isArray(candidate?.recipes) ? cloneData(candidate.recipes) : []
+    recipes: Array.isArray(candidate?.recipes) ? cloneData(candidate.recipes) : [],
+    recipeBlueprints: Array.isArray(candidate?.recipeBlueprints) ? cloneData(candidate.recipeBlueprints) : []
   };
 }
 
@@ -321,7 +325,8 @@ function isStoreDataEmpty(store: StoreData): boolean {
     && store.items.length === 0
     && store.tags.length === 0
     && store.recipeTags.length === 0
-    && store.recipes.length === 0;
+    && store.recipes.length === 0
+    && store.recipeBlueprints.length === 0;
 }
 
 function isGraphDataEmpty(graph: GraphData): boolean {
@@ -341,7 +346,8 @@ function normalizeSnapshotStoreData(store: StoreData): StoreData {
     items: cloneData(store.items).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
     tags: cloneData(store.tags).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
     recipeTags: cloneData(store.recipeTags).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
-    recipes: cloneData(store.recipes).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name))
+    recipes: cloneData(store.recipes).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
+    recipeBlueprints: cloneData(store.recipeBlueprints).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name))
   };
 }
 
