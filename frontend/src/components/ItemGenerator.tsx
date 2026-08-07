@@ -333,7 +333,7 @@ export default function ItemGenerator() {
                       <input
                         type="checkbox"
                         checked={selectedItemIds.includes(item.id)}
-                        onChange={() => {}}
+                        onChange={() => toggleItemSelection(item.id)}
                         onClick={(e) => e.stopPropagation()}
                       />
                       <div className="item-info">
