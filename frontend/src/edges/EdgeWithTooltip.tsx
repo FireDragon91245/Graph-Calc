@@ -107,6 +107,7 @@ export default function EdgeWithTooltip({
               fontSize: 11,
               fontWeight: 600,
               pointerEvents: "none",
+              zIndex: isHovered ? 1001 : 0,
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
@@ -138,7 +139,8 @@ export default function EdgeWithTooltip({
                   border: "1px solid rgba(255, 255, 255, 0.12)",
                   borderRadius: "8px",
                   padding: "8px 12px",
-                  minWidth: "150px",
+                  minWidth: "180px",
+                  width: "max-content",
                   zIndex: 1000,
                   boxShadow: "0 8px 24px rgba(0, 0, 0, 0.5)",
                 }}
@@ -167,8 +169,17 @@ export default function EdgeWithTooltip({
                       gap: "16px",
                     }}
                   >
-                    <span style={{ color: "#e5e7eb" }}>{itemNameById.get(itemId) ?? itemId}</span>
-                    <span style={{ color: "#10b981", fontWeight: 600 }}>
+                    <span style={{ color: "#e5e7eb", whiteSpace: "nowrap" }}>
+                      {itemNameById.get(itemId) ?? itemId}
+                    </span>
+                    <span
+                      style={{
+                        color: "#10b981",
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                      }}
+                    >
                       {rate.toFixed(2)}/s
                     </span>
                   </div>
