@@ -29,9 +29,10 @@ export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeD
   const multiplier = typeof data.multiplier === "number" && Number.isFinite(data.multiplier) ? data.multiplier : 1;
   const hasSolveData = Boolean(data.solveData);
   const itemNameById = useMemo(() => new Map(items.map((item) => [item.id, item.name])), [items]);
+  const itemIdByName = useMemo(() => new Map(items.map((item) => [item.name, item.id])), [items]);
   const recipeTitle = recipes.find((recipe) => recipe.id === data.recipeId)?.name ?? data.title;
 
-  const resolveItemId = (output: Port) => output.itemId ?? output.name;
+  const resolveItemId = (output: Port) => output.itemId ?? itemIdByName.get(output.name) ?? output.name;
   const getOutputLabel = (output: Port) => {
     const itemId = output.itemId;
     return itemId ? itemNameById.get(itemId) ?? output.name : output.name;
