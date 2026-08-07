@@ -10,6 +10,8 @@ interface ItemSuggestion {
   sourceItem: Item;
 }
 
+const NO_CATEGORY_VALUE = "__none__";
+
 type TransformType =
   | "addPrefix"
   | "addSuffix"
@@ -219,7 +221,10 @@ export default function ItemGenerator() {
           id: `gen_${transformed.id}_${timestamp + index}`,
           name: transformed.name,
           itemId: transformed.id,
-          categoryId: targetCategoryId || sourceItem.categoryId,
+          categoryId:
+            targetCategoryId === NO_CATEGORY_VALUE
+              ? undefined
+              : targetCategoryId || sourceItem.categoryId,
           approved: true,
           sourceItem,
         });
@@ -477,6 +482,7 @@ export default function ItemGenerator() {
               className="config-input"
             >
               <option value="">-- Keep source category --</option>
+              <option value={NO_CATEGORY_VALUE}>-- None --</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
