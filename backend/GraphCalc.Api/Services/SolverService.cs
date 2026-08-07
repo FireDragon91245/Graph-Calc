@@ -138,10 +138,20 @@ internal static class GraphLpSolver
                 };
             }
 
+            var nodesWithOutgoingEdges = parsedGraph.Edges
+                .Select(edge => edge.Source)
+                .ToHashSet(StringComparer.Ordinal);
             var recipeVars = new Dictionary<string, Variable>(StringComparer.Ordinal);
             foreach (var recipe in recipes)
             {
-                recipeVars[recipe.NodeId] = solver.MakeNumVar(0.0, recipe.MaxMachines ?? double.PositiveInfinity, $"m_{recipe.NodeId}");
+                var visualNodeId = recipe.ParentTagNodeId ?? recipe.NodeId;
+                // A recipe with no consumer must not run. Otherwise its unconnected output acts as
+                // a material sink and lets the LP assign flow to a product that goes nowhere.
+                // Unconnected byproducts remain allowed when the node has another outgoing edge.
+                var upperBound = nodesWithOutgoingEdges.Contains(visualNodeId)
+                    ? recipe.MaxMachines ?? double.PositiveInfinity
+                    : 0.0;
+                recipeVars[recipe.NodeId] = solver.MakeNumVar(0.0, upperBound, $"m_{recipe.NodeId}");
             }
 
             var portProd = new Dictionary<(string NodeId, string Handle), List<PortItemContribution>>();
