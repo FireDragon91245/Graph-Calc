@@ -183,6 +183,12 @@ public sealed class BackendStore
     {
         await InitializeAsync(cancellationToken);
         var existingUser = await GetUserByIdAsync(userId, cancellationToken);
+        var thumbnailIds = (await Projects().Find(x => x.UserId == userId).Project(x => x.ThumbnailId).ToListAsync(cancellationToken))
+            .Concat(await Graphs().Find(x => x.UserId == userId).Project(x => x.ThumbnailId).ToListAsync(cancellationToken))
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
         await Graphs().DeleteManyAsync(x => x.UserId == userId, cancellationToken);
         await Projects().DeleteManyAsync(x => x.UserId == userId, cancellationToken);
         await Workspaces().DeleteOneAsync(x => x.Id == userId, cancellationToken);
@@ -197,6 +203,10 @@ public sealed class BackendStore
         _workspaceCache.TryRemove(userId, out _);
         RemoveProjectCacheEntries(userId);
         RemoveGraphCacheEntries(userId);
+        foreach (var thumbnailId in thumbnailIds)
+        {
+            await DeleteImageIfUnreferencedAsync(thumbnailId, cancellationToken);
+        }
     }
 
     public async Task<int> CountProjectsAsync(string userId, CancellationToken cancellationToken)
@@ -301,6 +311,7 @@ public sealed class BackendStore
         var sortOrder = await NextSortOrderAsync(Projects().Find(x => x.UserId == userId).Project(x => x.SortOrder), cancellationToken);
         var copy = DefaultProjectDocument(userId, newProjectId, newName, sortOrder);
         copy.ActiveGraphId = sourceProject.ActiveGraphId ?? DefaultGraphId;
+        copy.ThumbnailId = sourceProject.ThumbnailId;
         copy.Store = NormalizeStoreDocument(sourceProject.Store);
         await Projects().InsertOneAsync(copy, cancellationToken: cancellationToken);
         CacheProject(copy);
@@ -327,6 +338,7 @@ public sealed class BackendStore
                 GraphId = graph.GraphId,
                 Name = graph.Name,
                 SortOrder = graph.SortOrder,
+                ThumbnailId = graph.ThumbnailId,
                 Data = NormalizeGraphDocument(graph.Data)
             }).ToList();
             await Graphs().InsertManyAsync(copies, cancellationToken: cancellationToken);
@@ -342,6 +354,17 @@ public sealed class BackendStore
     public async Task<bool> DeleteProjectAsync(string userId, string projectId, CancellationToken cancellationToken)
     {
         await InitializeAsync(cancellationToken);
+        var project = await Projects().Find(x => x.UserId == userId && x.ProjectId == projectId).FirstOrDefaultAsync(cancellationToken);
+        if (project is null)
+        {
+            return false;
+        }
+        var thumbnailIds = (await Graphs().Find(x => x.UserId == userId && x.ProjectId == projectId).Project(x => x.ThumbnailId).ToListAsync(cancellationToken))
+            .Append(project.ThumbnailId)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
         var result = await Projects().DeleteOneAsync(x => x.UserId == userId && x.ProjectId == projectId, cancellationToken);
         if (result.DeletedCount == 0)
         {
@@ -360,6 +383,11 @@ public sealed class BackendStore
                 Builders<WorkspaceDocument>.Update.Set(x => x.ActiveProjectId, fallback?.ProjectId),
                 cancellationToken: cancellationToken);
             UpdateCachedWorkspace(userId, cached => cached.ActiveProjectId = fallback?.ProjectId);
+        }
+
+        foreach (var thumbnailId in thumbnailIds)
+        {
+            await DeleteImageIfUnreferencedAsync(thumbnailId, cancellationToken);
         }
 
         return true;
@@ -409,6 +437,113 @@ public sealed class BackendStore
         {
             throw new ApiException(StatusCodes.Status404NotFound, "Project not found");
         }
+    }
+
+    public async Task<ImageDocument?> GetProjectThumbnailAsync(string userId, string projectId, CancellationToken cancellationToken)
+    {
+        var project = await GetProjectAsync(userId, projectId, cancellationToken)
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "Project not found");
+        return string.IsNullOrWhiteSpace(project.ThumbnailId)
+            ? null
+            : await Images().Find(x => x.Id == project.ThumbnailId).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<string> SetProjectThumbnailAsync(string userId, string projectId, ValidatedThumbnailImage image, CancellationToken cancellationToken)
+    {
+        var project = await GetProjectAsync(userId, projectId, cancellationToken)
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "Project not found");
+        var storedImage = await GetOrCreateImageAsync(image, cancellationToken);
+        var result = await Projects().UpdateOneAsync(
+            x => x.UserId == userId && x.ProjectId == projectId,
+            Builders<ProjectDocument>.Update.Set(x => x.ThumbnailId, storedImage.Id),
+            cancellationToken: cancellationToken);
+        if (result.MatchedCount == 0)
+        {
+            await DeleteImageIfUnreferencedAsync(storedImage.Id, cancellationToken);
+            throw new ApiException(StatusCodes.Status404NotFound, "Project not found");
+        }
+
+        UpdateCachedProject(userId, projectId, cached => cached.ThumbnailId = storedImage.Id, markDirty: false);
+        if (!string.IsNullOrWhiteSpace(project.ThumbnailId) && project.ThumbnailId != storedImage.Id)
+        {
+            await DeleteImageIfUnreferencedAsync(project.ThumbnailId, cancellationToken);
+        }
+        return storedImage.Id;
+    }
+
+    public async Task<bool> DeleteProjectThumbnailAsync(string userId, string projectId, CancellationToken cancellationToken)
+    {
+        var project = await GetProjectAsync(userId, projectId, cancellationToken);
+        if (project is null)
+        {
+            return false;
+        }
+
+        await Projects().UpdateOneAsync(
+            x => x.UserId == userId && x.ProjectId == projectId,
+            Builders<ProjectDocument>.Update.Unset(x => x.ThumbnailId),
+            cancellationToken: cancellationToken);
+        UpdateCachedProject(userId, projectId, cached => cached.ThumbnailId = null, markDirty: false);
+        if (!string.IsNullOrWhiteSpace(project.ThumbnailId))
+        {
+            await DeleteImageIfUnreferencedAsync(project.ThumbnailId, cancellationToken);
+        }
+        return true;
+    }
+
+    public async Task<ImageDocument?> GetGraphThumbnailAsync(string userId, string projectId, string graphId, CancellationToken cancellationToken)
+    {
+        await InitializeAsync(cancellationToken);
+        var graph = await Graphs().Find(x => x.UserId == userId && x.ProjectId == projectId && x.GraphId == graphId).FirstOrDefaultAsync(cancellationToken)
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "Graph not found");
+        return string.IsNullOrWhiteSpace(graph.ThumbnailId)
+            ? null
+            : await Images().Find(x => x.Id == graph.ThumbnailId).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<string> SetGraphThumbnailAsync(string userId, string projectId, string graphId, ValidatedThumbnailImage image, CancellationToken cancellationToken)
+    {
+        await InitializeAsync(cancellationToken);
+        var graph = await Graphs().Find(x => x.UserId == userId && x.ProjectId == projectId && x.GraphId == graphId).FirstOrDefaultAsync(cancellationToken)
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "Graph not found");
+        var storedImage = await GetOrCreateImageAsync(image, cancellationToken);
+        var result = await Graphs().UpdateOneAsync(
+            x => x.UserId == userId && x.ProjectId == projectId && x.GraphId == graphId,
+            Builders<GraphDocument>.Update.Set(x => x.ThumbnailId, storedImage.Id),
+            cancellationToken: cancellationToken);
+        if (result.MatchedCount == 0)
+        {
+            await DeleteImageIfUnreferencedAsync(storedImage.Id, cancellationToken);
+            throw new ApiException(StatusCodes.Status404NotFound, "Graph not found");
+        }
+
+        UpdateCachedGraph(userId, projectId, graphId, cached => cached.ThumbnailId = storedImage.Id, markDirty: false);
+        if (!string.IsNullOrWhiteSpace(graph.ThumbnailId) && graph.ThumbnailId != storedImage.Id)
+        {
+            await DeleteImageIfUnreferencedAsync(graph.ThumbnailId, cancellationToken);
+        }
+        return storedImage.Id;
+    }
+
+    public async Task<bool> DeleteGraphThumbnailAsync(string userId, string projectId, string graphId, CancellationToken cancellationToken)
+    {
+        await InitializeAsync(cancellationToken);
+        var graph = await Graphs().Find(x => x.UserId == userId && x.ProjectId == projectId && x.GraphId == graphId).FirstOrDefaultAsync(cancellationToken);
+        if (graph is null)
+        {
+            return false;
+        }
+
+        await Graphs().UpdateOneAsync(
+            x => x.UserId == userId && x.ProjectId == projectId && x.GraphId == graphId,
+            Builders<GraphDocument>.Update.Unset(x => x.ThumbnailId),
+            cancellationToken: cancellationToken);
+        UpdateCachedGraph(userId, projectId, graphId, cached => cached.ThumbnailId = null, markDirty: false);
+        if (!string.IsNullOrWhiteSpace(graph.ThumbnailId))
+        {
+            await DeleteImageIfUnreferencedAsync(graph.ThumbnailId, cancellationToken);
+        }
+        return true;
     }
 
     public async Task<GraphsResponse> ListGraphsAsync(string userId, string projectId, CancellationToken cancellationToken)
@@ -478,6 +613,7 @@ public sealed class BackendStore
         var sortOrder = await NextSortOrderAsync(Graphs().Find(x => x.UserId == userId && x.ProjectId == projectId).Project(x => x.SortOrder), cancellationToken);
         var graph = DefaultGraphDocument(userId, projectId, newGraphId, newName, sortOrder);
         graph.Data = NormalizeGraphDocument(sourceGraph.Data);
+        graph.ThumbnailId = sourceGraph.ThumbnailId;
         await Graphs().InsertOneAsync(graph, cancellationToken: cancellationToken);
         CacheGraph(graph);
         return ToSummary(graph);
@@ -486,6 +622,11 @@ public sealed class BackendStore
     public async Task<bool> DeleteGraphAsync(string userId, string projectId, string graphId, CancellationToken cancellationToken)
     {
         await InitializeAsync(cancellationToken);
+        var graph = await Graphs().Find(x => x.UserId == userId && x.ProjectId == projectId && x.GraphId == graphId).FirstOrDefaultAsync(cancellationToken);
+        if (graph is null)
+        {
+            return false;
+        }
         var result = await Graphs().DeleteOneAsync(x => x.UserId == userId && x.ProjectId == projectId && x.GraphId == graphId, cancellationToken);
         if (result.DeletedCount == 0)
         {
@@ -503,6 +644,11 @@ public sealed class BackendStore
                 Builders<ProjectDocument>.Update.Set(x => x.ActiveGraphId, fallback?.GraphId),
                 cancellationToken: cancellationToken);
             UpdateCachedProject(userId, projectId, cached => cached.ActiveGraphId = fallback?.GraphId, markDirty: false);
+        }
+
+        if (!string.IsNullOrWhiteSpace(graph.ThumbnailId))
+        {
+            await DeleteImageIfUnreferencedAsync(graph.ThumbnailId, cancellationToken);
         }
 
         return true;
@@ -843,13 +989,18 @@ public sealed class BackendStore
         await Projects().Indexes.CreateManyAsync(
         [
             new CreateIndexModel<ProjectDocument>(Builders<ProjectDocument>.IndexKeys.Ascending(x => x.UserId).Ascending(x => x.ProjectId), new CreateIndexOptions { Unique = true }),
-            new CreateIndexModel<ProjectDocument>(Builders<ProjectDocument>.IndexKeys.Ascending(x => x.UserId).Ascending(x => x.SortOrder))
+            new CreateIndexModel<ProjectDocument>(Builders<ProjectDocument>.IndexKeys.Ascending(x => x.UserId).Ascending(x => x.SortOrder)),
+            new CreateIndexModel<ProjectDocument>(Builders<ProjectDocument>.IndexKeys.Ascending(x => x.ThumbnailId))
         ], cancellationToken);
         await Graphs().Indexes.CreateManyAsync(
         [
             new CreateIndexModel<GraphDocument>(Builders<GraphDocument>.IndexKeys.Ascending(x => x.UserId).Ascending(x => x.ProjectId).Ascending(x => x.GraphId), new CreateIndexOptions { Unique = true }),
-            new CreateIndexModel<GraphDocument>(Builders<GraphDocument>.IndexKeys.Ascending(x => x.UserId).Ascending(x => x.ProjectId).Ascending(x => x.SortOrder))
+            new CreateIndexModel<GraphDocument>(Builders<GraphDocument>.IndexKeys.Ascending(x => x.UserId).Ascending(x => x.ProjectId).Ascending(x => x.SortOrder)),
+            new CreateIndexModel<GraphDocument>(Builders<GraphDocument>.IndexKeys.Ascending(x => x.ThumbnailId))
         ], cancellationToken);
+        await Images().Indexes.CreateOneAsync(
+            new CreateIndexModel<ImageDocument>(Builders<ImageDocument>.IndexKeys.Ascending(x => x.Sha256), new CreateIndexOptions { Unique = true }),
+            cancellationToken: cancellationToken);
     }
 
     private async Task MigrateLegacyDataIfNeededAsync(CancellationToken cancellationToken)
@@ -1139,6 +1290,53 @@ public sealed class BackendStore
         return CloneProjectDocument(project);
     }
 
+    private async Task<ImageDocument> GetOrCreateImageAsync(ValidatedThumbnailImage image, CancellationToken cancellationToken)
+    {
+        await InitializeAsync(cancellationToken);
+        var existing = await Images().Find(x => x.Sha256 == image.Sha256).FirstOrDefaultAsync(cancellationToken);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var document = new ImageDocument
+        {
+            Id = GenerateId(),
+            Data = image.Data,
+            ContentType = image.ContentType,
+            Sha256 = image.Sha256
+        };
+        try
+        {
+            await Images().InsertOneAsync(document, cancellationToken: cancellationToken);
+            return document;
+        }
+        catch (MongoWriteException exception) when (exception.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return await Images().Find(x => x.Sha256 == image.Sha256).FirstAsync(cancellationToken);
+        }
+    }
+
+    private async Task DeleteImageIfUnreferencedAsync(string imageId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(imageId))
+        {
+            return;
+        }
+
+        var referencedByProject = await Projects().Find(x => x.ThumbnailId == imageId).AnyAsync(cancellationToken);
+        if (referencedByProject)
+        {
+            return;
+        }
+
+        var referencedByGraph = await Graphs().Find(x => x.ThumbnailId == imageId).AnyAsync(cancellationToken);
+        if (!referencedByGraph)
+        {
+            await Images().DeleteOneAsync(x => x.Id == imageId, cancellationToken);
+        }
+    }
+
     private static async Task<int> NextSortOrderAsync<TDocument>(IFindFluent<TDocument, int> sortProjection, CancellationToken cancellationToken)
     {
         var sortOrders = await sortProjection.SortByDescending(x => x).Limit(1).ToListAsync(cancellationToken);
@@ -1147,12 +1345,12 @@ public sealed class BackendStore
 
     private static EntitySummaryResponse ToSummary(ProjectDocument project)
     {
-        return new EntitySummaryResponse { Id = project.ProjectId, Name = project.Name };
+        return new EntitySummaryResponse { Id = project.ProjectId, Name = project.Name, ThumbnailId = project.ThumbnailId };
     }
 
     private static EntitySummaryResponse ToSummary(GraphDocument graph)
     {
-        return new EntitySummaryResponse { Id = graph.GraphId, Name = graph.Name };
+        return new EntitySummaryResponse { Id = graph.GraphId, Name = graph.Name, ThumbnailId = graph.ThumbnailId };
     }
 
     private static string GenerateId()
@@ -1170,6 +1368,7 @@ public sealed class BackendStore
             Name = name,
             SortOrder = sortOrder,
             ActiveGraphId = DefaultGraphId,
+            ThumbnailId = null,
             Store = NormalizeStoreData(DefaultStoreData())
         };
     }
@@ -1184,6 +1383,7 @@ public sealed class BackendStore
             GraphId = graphId,
             Name = name,
             SortOrder = sortOrder,
+            ThumbnailId = null,
             Data = NormalizeGraphData(DefaultGraphData())
         };
     }
@@ -1541,6 +1741,7 @@ public sealed class BackendStore
             Name = project.Name,
             SortOrder = project.SortOrder,
             ActiveGraphId = project.ActiveGraphId,
+            ThumbnailId = project.ThumbnailId,
             Store = (BsonDocument)project.Store.DeepClone()
         };
     }
@@ -1555,6 +1756,7 @@ public sealed class BackendStore
             GraphId = graph.GraphId,
             Name = graph.Name,
             SortOrder = graph.SortOrder,
+            ThumbnailId = graph.ThumbnailId,
             Data = (BsonDocument)graph.Data.DeepClone()
         };
     }
@@ -1615,6 +1817,8 @@ public sealed class BackendStore
     private IMongoCollection<ProjectDocument> Projects() => (_database ?? throw new InvalidOperationException("Store not initialized")).GetCollection<ProjectDocument>("projects");
 
     private IMongoCollection<GraphDocument> Graphs() => (_database ?? throw new InvalidOperationException("Store not initialized")).GetCollection<GraphDocument>("graphs");
+
+    private IMongoCollection<ImageDocument> Images() => (_database ?? throw new InvalidOperationException("Store not initialized")).GetCollection<ImageDocument>("images");
 
     private IMongoCollection<BsonDocument> Settings() => (_database ?? throw new InvalidOperationException("Store not initialized")).GetCollection<BsonDocument>("settings");
 }

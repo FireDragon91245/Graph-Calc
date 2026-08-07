@@ -65,6 +65,7 @@ export interface StoreData {
 export interface Project {
   id: string;
   name: string;
+  thumbnailId: string | null;
 }
 
 export interface ProjectsResponse {
@@ -77,6 +78,13 @@ export interface ProjectsResponse {
 export interface GraphInfo {
   id: string;
   name: string;
+  thumbnailId: string | null;
+}
+
+export interface WorkspaceThumbnailSnapshot {
+  contentType: string;
+  sha256: string;
+  dataUrl: string;
 }
 
 export interface GraphsResponse {
@@ -87,6 +95,7 @@ export interface GraphsResponse {
 export interface WorkspaceGraphSnapshot {
   name: string;
   data: GraphData;
+  thumbnail: WorkspaceThumbnailSnapshot | null;
 }
 
 export interface WorkspaceProjectSnapshot {
@@ -94,6 +103,7 @@ export interface WorkspaceProjectSnapshot {
   activeGraphName: string | null;
   store: StoreData;
   graphs: WorkspaceGraphSnapshot[];
+  thumbnail: WorkspaceThumbnailSnapshot | null;
 }
 
 export interface WorkspaceSnapshot {
@@ -107,6 +117,7 @@ type LocalGraphRecord = {
   id: string;
   name: string;
   data: GraphData;
+  thumbnailId: string | null;
 };
 
 type LocalProjectRecord = {
@@ -115,6 +126,19 @@ type LocalProjectRecord = {
   activeGraphId: string | null;
   store: StoreData;
   graphs: LocalGraphRecord[];
+  thumbnailId: string | null;
+};
+
+type LocalImageRecord = {
+  id: string;
+  contentType: string;
+  sha256: string;
+  dataUrl: string;
+};
+
+type LocalImageStore = {
+  version: number;
+  images: LocalImageRecord[];
 };
 
 type LocalWorkspaceRecord = {
@@ -124,12 +148,14 @@ type LocalWorkspaceRecord = {
 };
 
 const LOCAL_WORKSPACE_STORAGE_KEY = "graphcalc.local-workspace.v1";
+const LOCAL_IMAGES_STORAGE_KEY = "graphcalc.local-images.v1";
 const LOCAL_WORKSPACE_VERSION = 1;
 const DEFAULT_LOCAL_PROJECT_NAME = "Guest Project";
 const DEFAULT_LOCAL_GRAPH_NAME = "Main Graph";
 
 let persistenceMode: PersistenceMode = "local";
 let localWorkspaceFallback: LocalWorkspaceRecord | null = null;
+let localImagesFallback: LocalImageStore = { version: 1, images: [] };
 
 const cloneData = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -159,7 +185,8 @@ function createDefaultLocalGraph(name = DEFAULT_LOCAL_GRAPH_NAME): LocalGraphRec
   return {
     id: createLocalId("graph"),
     name,
-    data: createEmptyGraphData()
+    data: createEmptyGraphData(),
+    thumbnailId: null
   };
 }
 
@@ -170,7 +197,8 @@ function createDefaultLocalProject(name = DEFAULT_LOCAL_PROJECT_NAME): LocalProj
     name,
     activeGraphId: graph.id,
     store: createEmptyStoreData(),
-    graphs: [graph]
+    graphs: [graph],
+    thumbnailId: null
   };
 }
 
@@ -212,7 +240,8 @@ function normalizeLocalGraph(value: unknown): LocalGraphRecord | null {
   return {
     id: typeof candidate.id === "string" && candidate.id ? candidate.id : createLocalId("graph"),
     name: typeof candidate.name === "string" && candidate.name.trim() ? candidate.name : DEFAULT_LOCAL_GRAPH_NAME,
-    data: normalizeGraphData(candidate.data)
+    data: normalizeGraphData(candidate.data),
+    thumbnailId: typeof candidate.thumbnailId === "string" && candidate.thumbnailId ? candidate.thumbnailId : null
   };
 }
 
@@ -235,7 +264,8 @@ function normalizeLocalProject(value: unknown): LocalProjectRecord | null {
     name: typeof candidate.name === "string" && candidate.name.trim() ? candidate.name : DEFAULT_LOCAL_PROJECT_NAME,
     activeGraphId,
     store: normalizeStoreData(candidate.store),
-    graphs: ensuredGraphs
+    graphs: ensuredGraphs,
+    thumbnailId: typeof candidate.thumbnailId === "string" && candidate.thumbnailId ? candidate.thumbnailId : null
   };
 }
 
@@ -357,10 +387,12 @@ function normalizeWorkspaceSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnaps
       name: project.name,
       activeGraphName: project.activeGraphName,
       store: normalizeSnapshotStoreData(project.store),
+      thumbnail: project.thumbnail ? cloneData(project.thumbnail) : null,
       graphs: cloneData(project.graphs)
         .map((graph) => ({
           name: graph.name,
-          data: normalizeSnapshotGraphData(graph.data)
+          data: normalizeSnapshotGraphData(graph.data),
+          thumbnail: graph.thumbnail ? cloneData(graph.thumbnail) : null
         }))
         .sort((left, right) => left.name.localeCompare(right.name))
     }))
@@ -383,9 +415,11 @@ function workspaceToSnapshot(workspace: LocalWorkspaceRecord): WorkspaceSnapshot
         name: project.name,
         activeGraphName: activeGraph?.name ?? null,
         store: normalizeStoreData(project.store),
+        thumbnail: getLocalThumbnailSnapshot(project.thumbnailId),
         graphs: project.graphs.map((graph) => ({
           name: graph.name,
-          data: normalizeGraphData(graph.data)
+          data: normalizeGraphData(graph.data),
+          thumbnail: getLocalThumbnailSnapshot(graph.thumbnailId)
         }))
       };
     })
@@ -393,12 +427,22 @@ function workspaceToSnapshot(workspace: LocalWorkspaceRecord): WorkspaceSnapshot
 }
 
 function snapshotToWorkspace(snapshot: WorkspaceSnapshot): LocalWorkspaceRecord {
+  const imageStore = readLocalImages();
+  const ensureImage = (thumbnail: WorkspaceThumbnailSnapshot | null | undefined): string | null => {
+    if (!thumbnail) return null;
+    const existing = imageStore.images.find((image) => image.sha256 === thumbnail.sha256);
+    if (existing) return existing.id;
+    const image: LocalImageRecord = { id: createLocalId("image"), ...thumbnail };
+    imageStore.images.push(image);
+    return image.id;
+  };
   const projects = snapshot.projects.map((project) => {
-    const graphs = (project.graphs.length > 0 ? project.graphs : [{ name: DEFAULT_LOCAL_GRAPH_NAME, data: createEmptyGraphData() }])
+    const graphs = (project.graphs.length > 0 ? project.graphs : [{ name: DEFAULT_LOCAL_GRAPH_NAME, data: createEmptyGraphData(), thumbnail: null }])
       .map((graph) => ({
         id: createLocalId("graph"),
         name: graph.name,
-        data: normalizeGraphData(graph.data)
+        data: normalizeGraphData(graph.data),
+        thumbnailId: ensureImage(graph.thumbnail)
       }));
     const activeGraph = graphs.find((graph) => graph.name === project.activeGraphName) ?? graphs[0] ?? null;
 
@@ -407,9 +451,11 @@ function snapshotToWorkspace(snapshot: WorkspaceSnapshot): LocalWorkspaceRecord 
       name: project.name,
       activeGraphId: activeGraph?.id ?? null,
       store: normalizeStoreData(project.store),
-      graphs
+      graphs,
+      thumbnailId: ensureImage(project.thumbnail)
     };
   });
+  writeLocalImages(imageStore);
   const activeProject = projects.find((project) => project.name === snapshot.activeProjectName) ?? projects[0] ?? null;
 
   return {
@@ -444,7 +490,9 @@ function hasMeaningfulLocalWorkspace(workspace: LocalWorkspaceRecord): boolean {
 
   return graph.name !== DEFAULT_LOCAL_GRAPH_NAME
     || !isStoreDataEmpty(project.store)
-    || !isGraphDataEmpty(graph.data);
+    || !isGraphDataEmpty(graph.data)
+    || Boolean(project.thumbnailId)
+    || Boolean(graph.thumbnailId);
 }
 
 export function hasMeaningfulWorkspaceSnapshot(snapshot: WorkspaceSnapshot): boolean {
@@ -458,14 +506,16 @@ export function areWorkspaceSnapshotsEqual(left: WorkspaceSnapshot, right: Works
 function toProjectSummary(project: LocalProjectRecord): Project {
   return {
     id: project.id,
-    name: project.name
+    name: project.name,
+    thumbnailId: project.thumbnailId
   };
 }
 
 function toGraphSummary(graph: LocalGraphRecord): GraphInfo {
   return {
     id: graph.id,
-    name: graph.name
+    name: graph.name,
+    thumbnailId: graph.thumbnailId
   };
 }
 
@@ -477,7 +527,8 @@ function createProjectCopy(project: LocalProjectRecord, name: string): LocalProj
     return {
       id: newId,
       name: graph.name,
-      data: cloneData(graph.data)
+      data: cloneData(graph.data),
+      thumbnailId: graph.thumbnailId
     };
   });
 
@@ -486,7 +537,8 @@ function createProjectCopy(project: LocalProjectRecord, name: string): LocalProj
     name,
     activeGraphId: graphIdMap.get(project.activeGraphId ?? "") ?? graphs[0]?.id ?? null,
     store: cloneData(project.store),
-    graphs
+    graphs,
+    thumbnailId: project.thumbnailId
   };
 }
 
@@ -707,13 +759,16 @@ async function localCopyProject(projectId: string, name: string): Promise<Projec
 }
 
 async function localDeleteProject(projectId: string): Promise<void> {
+  const releasedImageIds: string[] = [];
   updateLocalWorkspace((workspace) => {
     const index = workspace.projects.findIndex((project) => project.id === projectId);
     if (index < 0) {
       throw new Error("Project not found");
     }
 
-    workspace.projects.splice(index, 1);
+    const [removed] = workspace.projects.splice(index, 1);
+    if (removed?.thumbnailId) releasedImageIds.push(removed.thumbnailId);
+    removed?.graphs.forEach((graph) => { if (graph.thumbnailId) releasedImageIds.push(graph.thumbnailId); });
 
     if (workspace.projects.length === 0) {
       const defaultProject = createDefaultLocalProject();
@@ -726,6 +781,7 @@ async function localDeleteProject(projectId: string): Promise<void> {
       workspace.activeProjectId = workspace.projects[0].id;
     }
   });
+  releasedImageIds.forEach(deleteUnreferencedLocalImage);
 }
 
 // ── Local Graph management API (per-project) ───────────────────
@@ -745,7 +801,8 @@ async function localCreateGraph(projectId: string, name: string): Promise<GraphI
     const graph: LocalGraphRecord = {
       id: createLocalId("graph"),
       name: name.trim() || DEFAULT_LOCAL_GRAPH_NAME,
-      data: createEmptyGraphData()
+      data: createEmptyGraphData(),
+      thumbnailId: null
     };
     project.graphs.push(graph);
     if (!project.activeGraphId) {
@@ -778,7 +835,8 @@ async function localCopyGraph(projectId: string, graphId: string, name: string):
     const graphCopy: LocalGraphRecord = {
       id: createLocalId("graph"),
       name: name.trim() || `${source.name} (copy)`,
-      data: cloneData(source.data)
+      data: cloneData(source.data),
+      thumbnailId: source.thumbnailId
     };
     project.graphs.push(graphCopy);
     return toGraphSummary(graphCopy);
@@ -786,6 +844,7 @@ async function localCopyGraph(projectId: string, graphId: string, name: string):
 }
 
 async function localDeleteGraph(projectId: string, graphId: string): Promise<void> {
+  let releasedImageId: string | null = null;
   updateLocalWorkspace((workspace) => {
     const project = getLocalProjectOrThrow(workspace, projectId);
     const index = project.graphs.findIndex((graph) => graph.id === graphId);
@@ -793,7 +852,8 @@ async function localDeleteGraph(projectId: string, graphId: string): Promise<voi
       throw new Error("Graph not found");
     }
 
-    project.graphs.splice(index, 1);
+    const [removed] = project.graphs.splice(index, 1);
+    releasedImageId = removed?.thumbnailId ?? null;
 
     if (project.graphs.length === 0) {
       const fallbackGraph = createDefaultLocalGraph();
@@ -806,6 +866,7 @@ async function localDeleteGraph(projectId: string, graphId: string): Promise<voi
       project.activeGraphId = project.graphs[0].id;
     }
   });
+  deleteUnreferencedLocalImage(releasedImageId);
 }
 
 // ── Local Graph / Store (project-scoped) ───────────────────────
@@ -836,6 +897,60 @@ async function localSaveStore(store: StoreData, projectId: string): Promise<void
     const project = getLocalProjectOrThrow(workspace, projectId);
     project.store = normalizeStoreData(store);
   });
+}
+
+async function storeLocalThumbnail(file: File, prevalidated?: Awaited<ReturnType<typeof validateThumbnailFile>>): Promise<string> {
+  const validated = prevalidated ?? await validateThumbnailFile(file);
+  const store = readLocalImages();
+  const existing = store.images.find((image) => image.sha256 === validated.sha256);
+  if (existing) return existing.id;
+  const image: LocalImageRecord = { id: createLocalId("image"), ...validated };
+  writeLocalImages({ version: 1, images: [...store.images, image] });
+  return image.id;
+}
+
+async function localPutProjectThumbnail(projectId: string, file: File, validated?: Awaited<ReturnType<typeof validateThumbnailFile>>): Promise<string> {
+  const thumbnailId = await storeLocalThumbnail(file, validated);
+  let previousThumbnailId: string | null = null;
+  updateLocalWorkspace((workspace) => {
+    const project = getLocalProjectOrThrow(workspace, projectId);
+    previousThumbnailId = project.thumbnailId;
+    project.thumbnailId = thumbnailId;
+  });
+  deleteUnreferencedLocalImage(previousThumbnailId);
+  return thumbnailId;
+}
+
+async function localPutGraphThumbnail(projectId: string, graphId: string, file: File, validated?: Awaited<ReturnType<typeof validateThumbnailFile>>): Promise<string> {
+  const thumbnailId = await storeLocalThumbnail(file, validated);
+  let previousThumbnailId: string | null = null;
+  updateLocalWorkspace((workspace) => {
+    const graph = getLocalGraphOrThrow(getLocalProjectOrThrow(workspace, projectId), graphId);
+    previousThumbnailId = graph.thumbnailId;
+    graph.thumbnailId = thumbnailId;
+  });
+  deleteUnreferencedLocalImage(previousThumbnailId);
+  return thumbnailId;
+}
+
+async function localDeleteProjectThumbnail(projectId: string): Promise<void> {
+  let previousThumbnailId: string | null = null;
+  updateLocalWorkspace((workspace) => {
+    const project = getLocalProjectOrThrow(workspace, projectId);
+    previousThumbnailId = project.thumbnailId;
+    project.thumbnailId = null;
+  });
+  deleteUnreferencedLocalImage(previousThumbnailId);
+}
+
+async function localDeleteGraphThumbnail(projectId: string, graphId: string): Promise<void> {
+  let previousThumbnailId: string | null = null;
+  updateLocalWorkspace((workspace) => {
+    const graph = getLocalGraphOrThrow(getLocalProjectOrThrow(workspace, projectId), graphId);
+    previousThumbnailId = graph.thumbnailId;
+    graph.thumbnailId = null;
+  });
+  deleteUnreferencedLocalImage(previousThumbnailId);
 }
 
 // ── Persistence mode helpers ───────────────────────────────────
@@ -912,6 +1027,158 @@ export async function saveStore(store: StoreData, projectId: string): Promise<vo
   return persistenceMode === "remote" ? apiSaveStore(store, projectId) : localSaveStore(store, projectId);
 }
 
+export function getProjectThumbnailUrl(projectId: string, thumbnailId: string | null): string | null {
+  if (!thumbnailId) return null;
+  if (persistenceMode === "remote") return `/api/projects/${encodeURIComponent(projectId)}/thumbnail?v=${encodeURIComponent(thumbnailId)}`;
+  return getLocalImage(thumbnailId)?.dataUrl ?? null;
+}
+
+export function getGraphThumbnailUrl(projectId: string, graphId: string, thumbnailId: string | null): string | null {
+  if (!thumbnailId) return null;
+  if (persistenceMode === "remote") return `/api/projects/${encodeURIComponent(projectId)}/graphs/${encodeURIComponent(graphId)}/thumbnail?v=${encodeURIComponent(thumbnailId)}`;
+  return getLocalImage(thumbnailId)?.dataUrl ?? null;
+}
+
+export async function putProjectThumbnail(projectId: string, file: File): Promise<string> {
+  const validated = await validateThumbnailFile(file);
+  return persistenceMode === "remote"
+    ? apiPutThumbnail(`/projects/${encodeURIComponent(projectId)}/thumbnail`, file)
+    : localPutProjectThumbnail(projectId, file, validated);
+}
+
+export async function deleteProjectThumbnail(projectId: string): Promise<void> {
+  return persistenceMode === "remote"
+    ? apiDeleteThumbnail(`/projects/${encodeURIComponent(projectId)}/thumbnail`)
+    : localDeleteProjectThumbnail(projectId);
+}
+
+export async function putGraphThumbnail(projectId: string, graphId: string, file: File): Promise<string> {
+  const validated = await validateThumbnailFile(file);
+  return persistenceMode === "remote"
+    ? apiPutThumbnail(`/projects/${encodeURIComponent(projectId)}/graphs/${encodeURIComponent(graphId)}/thumbnail`, file)
+    : localPutGraphThumbnail(projectId, graphId, file, validated);
+}
+
+export async function deleteGraphThumbnail(projectId: string, graphId: string): Promise<void> {
+  return persistenceMode === "remote"
+    ? apiDeleteThumbnail(`/projects/${encodeURIComponent(projectId)}/graphs/${encodeURIComponent(graphId)}/thumbnail`)
+    : localDeleteGraphThumbnail(projectId, graphId);
+}
+
+async function apiPutThumbnail(path: string, file: File): Promise<string> {
+  const form = new FormData();
+  form.append("image", file);
+  const response = await apiFetch(path, { method: "PUT", body: form });
+  if (!response.ok) throw new Error(await getErrorMessage(response, "Failed to save thumbnail"));
+  const result = await response.json() as { thumbnailId: string };
+  return result.thumbnailId;
+}
+
+async function apiDeleteThumbnail(path: string): Promise<void> {
+  const response = await apiFetch(path, { method: "DELETE" });
+  if (!response.ok) throw new Error(await getErrorMessage(response, "Failed to remove thumbnail"));
+}
+
+async function fetchRemoteThumbnail(path: string, thumbnailId: string | null): Promise<WorkspaceThumbnailSnapshot | null> {
+  if (!thumbnailId) return null;
+  const response = await apiFetch(path);
+  if (!response.ok) return null;
+  const blob = await response.blob();
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Failed to read thumbnail data."));
+    reader.readAsDataURL(blob);
+  });
+  const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+  const sha256 = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return { contentType: blob.type, sha256, dataUrl };
+}
+
+function readLocalImages(): LocalImageStore {
+  try {
+    const raw = window.localStorage.getItem(LOCAL_IMAGES_STORAGE_KEY);
+    if (!raw) return cloneData(localImagesFallback);
+    const parsed = JSON.parse(raw) as Partial<LocalImageStore>;
+    const images = Array.isArray(parsed.images)
+      ? parsed.images.filter((image): image is LocalImageRecord => Boolean(
+        image && typeof image.id === "string" && typeof image.contentType === "string"
+        && typeof image.sha256 === "string" && typeof image.dataUrl === "string"
+      ))
+      : [];
+    localImagesFallback = { version: 1, images };
+    return cloneData(localImagesFallback);
+  } catch {
+    return cloneData(localImagesFallback);
+  }
+}
+
+function writeLocalImages(store: LocalImageStore): void {
+  const serialized = JSON.stringify(store);
+  window.localStorage.setItem(LOCAL_IMAGES_STORAGE_KEY, serialized);
+  localImagesFallback = cloneData(store);
+}
+
+function getLocalImage(imageId: string | null): LocalImageRecord | null {
+  if (!imageId) return null;
+  return readLocalImages().images.find((image) => image.id === imageId) ?? null;
+}
+
+function getLocalThumbnailSnapshot(imageId: string | null): WorkspaceThumbnailSnapshot | null {
+  const image = getLocalImage(imageId);
+  return image ? { contentType: image.contentType, sha256: image.sha256, dataUrl: image.dataUrl } : null;
+}
+
+function isLocalImageReferenced(imageId: string): boolean {
+  const workspace = readLocalWorkspace();
+  return workspace.projects.some((project) => project.thumbnailId === imageId || project.graphs.some((graph) => graph.thumbnailId === imageId));
+}
+
+function deleteUnreferencedLocalImage(imageId: string | null): void {
+  if (!imageId || isLocalImageReferenced(imageId)) return;
+  const store = readLocalImages();
+  const images = store.images.filter((image) => image.id !== imageId);
+  if (images.length !== store.images.length) writeLocalImages({ version: 1, images });
+}
+
+async function validateThumbnailFile(file: File): Promise<{ contentType: string; sha256: string; dataUrl: string }> {
+  if (file.size === 0) throw new Error("Choose an image file.");
+  if (file.size > 5 * 1024 * 1024) throw new Error("Image files must not exceed 5 MB.");
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) throw new Error("Only PNG, JPEG, and WebP images are supported.");
+
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    throw new Error("The selected file is not a valid image.");
+  }
+  const { width, height } = bitmap;
+  bitmap.close();
+  if (width < 16 || height < 16 || width > 1024 || height > 1024) {
+    throw new Error("Image dimensions must be between 16x16 and 1024x1024 pixels.");
+  }
+
+  const bytes = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const sha256 = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Failed to read the selected image."));
+    reader.readAsDataURL(file);
+  });
+  return { contentType: file.type, sha256, dataUrl };
+}
+
+function dataUrlToFile(thumbnail: WorkspaceThumbnailSnapshot): File {
+  const [header, encoded] = thumbnail.dataUrl.split(",", 2);
+  if (!header || encoded === undefined) throw new Error("Invalid thumbnail data.");
+  const binary = atob(encoded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return new File([bytes], "thumbnail", { type: thumbnail.contentType });
+}
+
 export async function getProjectSnapshot(projectId: string): Promise<WorkspaceProjectSnapshot> {
   const [projectsResponse, store, graphsResponse] = await Promise.all([
     listProjects(),
@@ -926,7 +1193,10 @@ export async function getProjectSnapshot(projectId: string): Promise<WorkspacePr
   const graphs = await Promise.all(
     graphsResponse.graphs.map(async (graph) => ({
       name: graph.name,
-      data: await loadGraph(projectId, graph.id)
+      data: await loadGraph(projectId, graph.id),
+      thumbnail: persistenceMode === "remote"
+        ? await fetchRemoteThumbnail(`/projects/${encodeURIComponent(projectId)}/graphs/${encodeURIComponent(graph.id)}/thumbnail`, graph.thumbnailId)
+        : getLocalThumbnailSnapshot(graph.thumbnailId)
     }))
   );
 
@@ -937,7 +1207,10 @@ export async function getProjectSnapshot(projectId: string): Promise<WorkspacePr
       ?? graphs[0]?.name
       ?? null,
     store,
-    graphs
+    graphs,
+    thumbnail: persistenceMode === "remote"
+      ? await fetchRemoteThumbnail(`/projects/${encodeURIComponent(projectId)}/thumbnail`, project.thumbnailId)
+      : getLocalThumbnailSnapshot(project.thumbnailId)
   };
 }
 
@@ -954,14 +1227,16 @@ export async function getRemoteWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
     ]);
     const graphs = await Promise.all(graphsResponse.graphs.map(async (graph) => ({
       name: graph.name,
-      data: await apiLoadGraph(remoteProject.id, graph.id)
+      data: await apiLoadGraph(remoteProject.id, graph.id),
+      thumbnail: await fetchRemoteThumbnail(`/projects/${encodeURIComponent(remoteProject.id)}/graphs/${encodeURIComponent(graph.id)}/thumbnail`, graph.thumbnailId)
     })));
 
     return {
       name: remoteProject.name,
       activeGraphName: graphsResponse.graphs.find((graph) => graph.id === graphsResponse.activeGraphId)?.name ?? graphs[0]?.name ?? null,
       store,
-      graphs
+      graphs,
+      thumbnail: await fetchRemoteThumbnail(`/projects/${encodeURIComponent(remoteProject.id)}/thumbnail`, remoteProject.thumbnailId)
     };
   }));
 
@@ -986,6 +1261,9 @@ async function importSnapshotToRemote(snapshot: WorkspaceSnapshot): Promise<void
     const remoteProject = await apiCreateProject(ensureUniqueProjectName(project.name));
     activeProjectIdsByName.set(project.name, remoteProject.id);
     await apiSaveStore(project.store, remoteProject.id);
+    if (project.thumbnail) {
+      await apiPutThumbnail(`/projects/${encodeURIComponent(remoteProject.id)}/thumbnail`, dataUrlToFile(project.thumbnail));
+    }
 
     const remoteGraphs = await apiListGraphs(remoteProject.id);
     const graphNameCounts = new Map<string, number>();
@@ -996,7 +1274,7 @@ async function importSnapshotToRemote(snapshot: WorkspaceSnapshot): Promise<void
       return currentCount === 0 ? normalized : `${normalized} (${currentCount + 1})`;
     };
     const remoteGraphIdsByName = new Map<string, string>();
-    const sourceGraphs = project.graphs.length > 0 ? project.graphs : [{ name: DEFAULT_LOCAL_GRAPH_NAME, data: createEmptyGraphData() }];
+    const sourceGraphs = project.graphs.length > 0 ? project.graphs : [{ name: DEFAULT_LOCAL_GRAPH_NAME, data: createEmptyGraphData(), thumbnail: null }];
     const firstSourceGraph = sourceGraphs[0];
     const defaultRemoteGraphId = remoteGraphs.activeGraphId ?? remoteGraphs.graphs[0]?.id ?? null;
 
@@ -1005,10 +1283,12 @@ async function importSnapshotToRemote(snapshot: WorkspaceSnapshot): Promise<void
       if (defaultRemoteGraphId) {
         await apiRenameGraph(remoteProject.id, defaultRemoteGraphId, firstGraphName);
         await apiSaveGraph(firstSourceGraph.data, remoteProject.id, defaultRemoteGraphId);
+        if (firstSourceGraph.thumbnail) await apiPutThumbnail(`/projects/${encodeURIComponent(remoteProject.id)}/graphs/${encodeURIComponent(defaultRemoteGraphId)}/thumbnail`, dataUrlToFile(firstSourceGraph.thumbnail));
         remoteGraphIdsByName.set(firstGraphName, defaultRemoteGraphId);
       } else {
         const createdGraph = await apiCreateGraph(remoteProject.id, firstGraphName);
         await apiSaveGraph(firstSourceGraph.data, remoteProject.id, createdGraph.id);
+        if (firstSourceGraph.thumbnail) await apiPutThumbnail(`/projects/${encodeURIComponent(remoteProject.id)}/graphs/${encodeURIComponent(createdGraph.id)}/thumbnail`, dataUrlToFile(firstSourceGraph.thumbnail));
         remoteGraphIdsByName.set(firstGraphName, createdGraph.id);
       }
     }
@@ -1017,6 +1297,7 @@ async function importSnapshotToRemote(snapshot: WorkspaceSnapshot): Promise<void
       const graphName = ensureUniqueGraphName(graph.name);
       const createdGraph = await apiCreateGraph(remoteProject.id, graphName);
       await apiSaveGraph(graph.data, remoteProject.id, createdGraph.id);
+      if (graph.thumbnail) await apiPutThumbnail(`/projects/${encodeURIComponent(remoteProject.id)}/graphs/${encodeURIComponent(createdGraph.id)}/thumbnail`, dataUrlToFile(graph.thumbnail));
       remoteGraphIdsByName.set(graphName, createdGraph.id);
     }
 

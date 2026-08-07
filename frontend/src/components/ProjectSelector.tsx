@@ -6,8 +6,12 @@ import {
   activateProject,
   renameProject as apiRenameProject,
   copyProject as apiCopyProject,
-  deleteProject as apiDeleteProject
+  deleteProject as apiDeleteProject,
+  deleteProjectThumbnail,
+  getProjectThumbnailUrl,
+  putProjectThumbnail
 } from "../api/persistence";
+import EntityThumbnail from "./EntityThumbnail";
 
 type ProjectSelectorProps = {
   activeProjectId: string | null;
@@ -208,22 +212,45 @@ export default function ProjectSelector({
     setContextMenu({ id, x: e.clientX, y: e.clientY });
   };
 
+  const handleThumbnailUpload = async (id: string, file: File) => {
+    const thumbnailId = await putProjectThumbnail(id, file);
+    setProjects((current) => current.map((project) => project.id === id ? { ...project, thumbnailId } : project));
+  };
+
+  const handleThumbnailDelete = async (id: string) => {
+    await deleteProjectThumbnail(id);
+    setProjects((current) => current.map((project) => project.id === id ? { ...project, thumbnailId: null } : project));
+    setContextMenu(null);
+  };
+
   return (
     <div className="project-selector" ref={dropdownRef}>
-      <button
+      <div
         className="project-selector-btn"
         onClick={() => {
-          setIsOpen((o) => !o);
+          setIsOpen((open) => !open);
           setContextMenu(null);
         }}
-        title={activeProject?.name ?? "Select project"}
       >
-        <span className="project-selector-icon">📁</span>
-        <span className="project-selector-label">
-          {activeProject?.name ?? "Loading..."}
-        </span>
-        <span className="project-selector-chevron">{isOpen ? "▲" : "▼"}</span>
-      </button>
+        {activeProject && (
+          <EntityThumbnail
+            compact
+            src={getProjectThumbnailUrl(activeProject.id, activeProject.thumbnailId)}
+            label={activeProject.name}
+            onUpload={(file) => handleThumbnailUpload(activeProject.id, file)}
+          />
+        )}
+        <button
+          type="button"
+          className="project-selector-toggle"
+          title={activeProject?.name ?? "Select project"}
+        >
+          <span className="project-selector-label">
+            {activeProject?.name ?? "Loading..."}
+          </span>
+          <span className="project-selector-chevron">{isOpen ? "▲" : "▼"}</span>
+        </button>
+      </div>
 
       {isOpen && (
         <div className="project-dropdown">
@@ -238,6 +265,11 @@ export default function ProjectSelector({
                 }}
                 onContextMenu={(e) => handleContextMenu(e, p.id)}
               >
+                <EntityThumbnail
+                  src={getProjectThumbnailUrl(p.id, p.thumbnailId)}
+                  label={p.name}
+                  onUpload={(file) => handleThumbnailUpload(p.id, file)}
+                />
                 {editingId === p.id ? (
                   <input
                     ref={inputRef}
@@ -324,6 +356,9 @@ export default function ProjectSelector({
             ✏️ Rename
           </button>
           <button onClick={() => handleCopy(contextMenu.id)}>📋 Copy</button>
+          {projects.find((project) => project.id === contextMenu.id)?.thumbnailId && (
+            <button onClick={() => void handleThumbnailDelete(contextMenu.id)}>Remove thumbnail</button>
+          )}
           <button
             className="danger"
             onClick={() => handleDelete(contextMenu.id)}

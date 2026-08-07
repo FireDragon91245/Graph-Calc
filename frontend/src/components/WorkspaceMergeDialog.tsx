@@ -55,6 +55,7 @@ const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 const areStoresEqual = (left: StoreData, right: StoreData): boolean => JSON.stringify(normalizeStore(left)) === JSON.stringify(normalizeStore(right));
 const areGraphsEqual = (left: GraphData, right: GraphData): boolean => JSON.stringify(normalizeGraph(left)) === JSON.stringify(normalizeGraph(right));
+const areThumbnailsEqual = (left: WorkspaceGraphSnapshot["thumbnail"], right: WorkspaceGraphSnapshot["thumbnail"]): boolean => left?.sha256 === right?.sha256;
 
 const lowerName = (value: string): string => value.trim().toLowerCase();
 
@@ -123,14 +124,14 @@ const compareProjects = (localSnapshot: WorkspaceSnapshot, remoteSnapshot: Works
       return {
         key: `${name}::${graphName}`,
         name: displayGraphName,
-        status: areGraphsEqual(localGraph.data, remoteGraph.data) ? "same" : "different",
+        status: areGraphsEqual(localGraph.data, remoteGraph.data) && areThumbnailsEqual(localGraph.thumbnail, remoteGraph.thumbnail) ? "same" : "different",
         localGraph,
         remoteGraph
       } satisfies GraphComparison;
     });
 
     const storeDifferent = !areStoresEqual(localProject.store, remoteProject.store);
-    const status = !storeDifferent && graphs.every((graph) => graph.status === "same") ? "same" : "different";
+    const status = !storeDifferent && areThumbnailsEqual(localProject.thumbnail, remoteProject.thumbnail) && graphs.every((graph) => graph.status === "same") ? "same" : "different";
 
     return {
       key: name,
@@ -268,7 +269,7 @@ function buildMergedSnapshot(
       }
     }
 
-    const firstFallbackGraph = mergedGraphs[0] ?? clone(remoteProject.graphs[0] ?? localProject.graphs[0] ?? { name: "Main Graph", data: { nodes: [], edges: [] } });
+    const firstFallbackGraph = mergedGraphs[0] ?? clone(remoteProject.graphs[0] ?? localProject.graphs[0] ?? { name: "Main Graph", data: { nodes: [], edges: [] }, thumbnail: null });
     if (mergedGraphs.length === 0) {
       mergedGraphs.push(firstFallbackGraph);
     }
@@ -282,7 +283,8 @@ function buildMergedSnapshot(
       name: projectName,
       activeGraphName,
       store,
-      graphs: mergedGraphs
+      graphs: mergedGraphs,
+      thumbnail: clone(remoteProject.thumbnail)
     });
   }
 

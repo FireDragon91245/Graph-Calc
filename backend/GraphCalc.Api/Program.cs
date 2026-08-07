@@ -66,6 +66,7 @@ public class Program
         builder.Services.AddSingleton<PasswordService>();
         builder.Services.AddSingleton<SessionTokenService>();
         builder.Services.AddSingleton<SessionCookieService>();
+        builder.Services.AddSingleton<ThumbnailImageService>();
         builder.Services.AddSingleton<SolverQueueService>();
         builder.Services.AddSingleton<ISolverService, SolverService>();
         builder.Services.AddHostedService<BackendCacheService>();

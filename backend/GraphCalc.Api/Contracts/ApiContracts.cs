@@ -74,6 +74,15 @@ public sealed class EntitySummaryResponse
 
     [JsonPropertyName("name")]
     public required string Name { get; init; }
+
+    [JsonPropertyName("thumbnailId")]
+    public string? ThumbnailId { get; init; }
+}
+
+public sealed class ThumbnailUpdateResponse
+{
+    [JsonPropertyName("thumbnailId")]
+    public required string ThumbnailId { get; init; }
 }
 
 public sealed class ProjectsResponse

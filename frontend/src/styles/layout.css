@@ -13,6 +13,7 @@
 
 /* Top Bar */
 .top-bar {
+  --top-bar-control-height: 42px;
   position: relative;
   z-index: 1000;
   min-height: 56px;
@@ -24,6 +25,12 @@
   background: var(--panel);
   border-bottom: 1px solid var(--panel-border);
   backdrop-filter: blur(10px);
+}
+
+.top-bar-main .mode-tab,
+.top-bar-main .quick-actions-trigger,
+.top-bar-main .top-bar-actions > button {
+  height: var(--top-bar-control-height);
 }
 
 .top-bar-main {

@@ -58,6 +58,10 @@ public sealed class ProjectDocument
     [BsonIgnoreIfNull]
     public string? ActiveGraphId { get; set; }
 
+    [BsonElement("thumbnailId")]
+    [BsonIgnoreIfNull]
+    public string? ThumbnailId { get; set; }
+
     [BsonElement("store")]
     public BsonDocument Store { get; set; } = new();
 }
@@ -82,8 +86,27 @@ public sealed class GraphDocument
     [BsonElement("sortOrder")]
     public int SortOrder { get; set; }
 
+    [BsonElement("thumbnailId")]
+    [BsonIgnoreIfNull]
+    public string? ThumbnailId { get; set; }
+
     [BsonElement("data")]
     public BsonDocument Data { get; set; } = new();
+}
+
+public sealed class ImageDocument
+{
+    [BsonId]
+    public required string Id { get; init; }
+
+    [BsonElement("data")]
+    public required byte[] Data { get; init; }
+
+    [BsonElement("contentType")]
+    public required string ContentType { get; init; }
+
+    [BsonElement("sha256")]
+    public required string Sha256 { get; init; }
 }
 
 public sealed class SecretSettingDocument

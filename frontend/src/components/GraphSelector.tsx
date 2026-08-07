@@ -6,8 +6,12 @@ import {
   activateGraph,
   renameGraph as apiRenameGraph,
   copyGraph as apiCopyGraph,
-  deleteGraph as apiDeleteGraph
+  deleteGraph as apiDeleteGraph,
+  deleteGraphThumbnail,
+  getGraphThumbnailUrl,
+  putGraphThumbnail
 } from "../api/persistence";
+import EntityThumbnail from "./EntityThumbnail";
 
 type GraphSelectorProps = {
   activeProjectId: string | null;
@@ -207,22 +211,47 @@ export default function GraphSelector({
     setContextMenu({ id, x: e.clientX, y: e.clientY });
   };
 
+  const handleThumbnailUpload = async (id: string, file: File) => {
+    if (!activeProjectId) return;
+    const thumbnailId = await putGraphThumbnail(activeProjectId, id, file);
+    setGraphs((current) => current.map((graph) => graph.id === id ? { ...graph, thumbnailId } : graph));
+  };
+
+  const handleThumbnailDelete = async (id: string) => {
+    if (!activeProjectId) return;
+    await deleteGraphThumbnail(activeProjectId, id);
+    setGraphs((current) => current.map((graph) => graph.id === id ? { ...graph, thumbnailId: null } : graph));
+    setContextMenu(null);
+  };
+
   return (
     <div className="graph-selector" ref={dropdownRef}>
-      <button
+      <div
         className="graph-selector-btn"
         onClick={() => {
-          setIsOpen((o) => !o);
+          setIsOpen((open) => !open);
           setContextMenu(null);
         }}
-        title={activeGraph?.name ?? "Select graph"}
       >
-        <span className="graph-selector-icon">📊</span>
-        <span className="graph-selector-label">
-          {activeGraph?.name ?? "Loading..."}
-        </span>
-        <span className="graph-selector-chevron">{isOpen ? "▲" : "▼"}</span>
-      </button>
+        {activeGraph && activeProjectId && (
+          <EntityThumbnail
+            compact
+            src={getGraphThumbnailUrl(activeProjectId, activeGraph.id, activeGraph.thumbnailId)}
+            label={activeGraph.name}
+            onUpload={(file) => handleThumbnailUpload(activeGraph.id, file)}
+          />
+        )}
+        <button
+          type="button"
+          className="graph-selector-toggle"
+          title={activeGraph?.name ?? "Select graph"}
+        >
+          <span className="graph-selector-label">
+            {activeGraph?.name ?? "Loading..."}
+          </span>
+          <span className="graph-selector-chevron">{isOpen ? "▲" : "▼"}</span>
+        </button>
+      </div>
 
       {isOpen && (
         <div className="graph-dropdown">
@@ -237,6 +266,11 @@ export default function GraphSelector({
                 }}
                 onContextMenu={(e) => handleContextMenu(e, g.id)}
               >
+                <EntityThumbnail
+                  src={activeProjectId ? getGraphThumbnailUrl(activeProjectId, g.id, g.thumbnailId) : null}
+                  label={g.name}
+                  onUpload={(file) => handleThumbnailUpload(g.id, file)}
+                />
                 {editingId === g.id ? (
                   <input
                     ref={inputRef}
@@ -323,6 +357,9 @@ export default function GraphSelector({
             ✏️ Rename
           </button>
           <button onClick={() => void handleCopy(contextMenu.id)}>📋 Duplicate</button>
+          {graphs.find((graph) => graph.id === contextMenu.id)?.thumbnailId && (
+            <button onClick={() => void handleThumbnailDelete(contextMenu.id)}>Remove thumbnail</button>
+          )}
           <button
             className="danger"
             onClick={() => void handleDelete(contextMenu.id)}
