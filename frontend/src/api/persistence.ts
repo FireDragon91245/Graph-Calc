@@ -912,6 +912,35 @@ export async function saveStore(store: StoreData, projectId: string): Promise<vo
   return persistenceMode === "remote" ? apiSaveStore(store, projectId) : localSaveStore(store, projectId);
 }
 
+export async function getProjectSnapshot(projectId: string): Promise<WorkspaceProjectSnapshot> {
+  const [projectsResponse, store, graphsResponse] = await Promise.all([
+    listProjects(),
+    loadStore(projectId),
+    listGraphs(projectId)
+  ]);
+  const project = projectsResponse.projects.find((entry) => entry.id === projectId);
+  if (!project) {
+    throw new Error("The active project could not be found.");
+  }
+
+  const graphs = await Promise.all(
+    graphsResponse.graphs.map(async (graph) => ({
+      name: graph.name,
+      data: await loadGraph(projectId, graph.id)
+    }))
+  );
+
+  return {
+    name: project.name,
+    activeGraphName:
+      graphsResponse.graphs.find((graph) => graph.id === graphsResponse.activeGraphId)?.name
+      ?? graphs[0]?.name
+      ?? null,
+    store,
+    graphs
+  };
+}
+
 export async function getLocalWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
   return normalizeWorkspaceSnapshot(workspaceToSnapshot(readLocalWorkspace()));
 }

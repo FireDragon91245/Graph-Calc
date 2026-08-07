@@ -15,9 +15,38 @@
   stroke: #4a5568;
 }
 
-/* Keep edge flow labels and their tooltips above the node layer. */
+/*
+ * Canvas stacking order:
+ *   0: edge paths and their persistent flow badges
+ *   1: nodes
+ *   2: transient edge tooltips
+ *
+ * The label renderer must not create a stacking context of its own; otherwise
+ * its badge and tooltip cannot sit on opposite sides of the node layer.
+ */
+.react-flow__edges {
+  z-index: 0;
+}
+
 .react-flow__edgelabel-renderer {
-  z-index: 1000;
+  z-index: auto;
+}
+
+.react-flow__nodes {
+  z-index: 1;
+}
+
+.edge-flow-label {
+  z-index: 0;
+}
+
+.edge-flow-badge {
+  position: relative;
+  z-index: 0;
+}
+
+.edge-flow-tooltip {
+  z-index: 2;
 }
 
 /* Fix for default input/output node styles creating white boxes */

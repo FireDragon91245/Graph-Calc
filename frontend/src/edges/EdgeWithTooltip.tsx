@@ -74,16 +74,17 @@ export default function EdgeWithTooltip({
       {isProblem && !hasFlowData && (
         <EdgeLabelRenderer>
           <div
+            className="edge-flow-label"
             style={{
               position: "absolute",
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               fontSize: 11,
               fontWeight: 600,
               pointerEvents: "none",
-              zIndex: 1000,
             }}
           >
             <div
+              className="edge-flow-badge"
               style={{
                 background: "rgba(16, 20, 28, 0.95)",
                 padding: "4px 8px",
@@ -99,49 +100,48 @@ export default function EdgeWithTooltip({
         </EdgeLabelRenderer>
       )}
       {hasFlowData && (
-        <EdgeLabelRenderer>
-          <div
-            style={{
-              position: "absolute",
-              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              fontSize: 11,
-              fontWeight: 600,
-              pointerEvents: "none",
-              zIndex: isHovered ? 1001 : 0,
-            }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-          >
-            {/* Main label */}
+        <>
+          <EdgeLabelRenderer>
             <div
+              className="edge-flow-label"
               style={{
-                background: "rgba(16, 20, 28, 0.95)",
-                padding: "4px 8px",
-                borderRadius: "6px",
-                color: "#10b981",
-                border: "1px solid rgba(16, 185, 129, 0.3)",
-                whiteSpace: "nowrap",
+                position: "absolute",
+                transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+                fontSize: 11,
+                fontWeight: 600,
+                pointerEvents: "none",
               }}
             >
-              {data.totalFlow.toFixed(2)}/s
-            </div>
-
-            {/* Tooltip on hover */}
-            {isHovered && Object.keys(data.flows).length > 0 && (
               <div
+                className="edge-flow-badge"
+                style={{
+                  background: "rgba(16, 20, 28, 0.95)",
+                  padding: "4px 8px",
+                  borderRadius: "6px",
+                  color: "#10b981",
+                  border: "1px solid rgba(16, 185, 129, 0.3)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {data.totalFlow.toFixed(2)}/s
+              </div>
+            </div>
+          </EdgeLabelRenderer>
+
+          {isHovered && Object.keys(data.flows).length > 0 && (
+            <EdgeLabelRenderer>
+              <div
+                className="edge-flow-tooltip"
                 style={{
                   position: "absolute",
-                  top: "100%",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  marginTop: "8px",
+                  transform: `translate(-50%, 20px) translate(${labelX}px,${labelY}px)`,
                   background: "rgba(16, 20, 28, 0.98)",
                   border: "1px solid rgba(255, 255, 255, 0.12)",
                   borderRadius: "8px",
                   padding: "8px 12px",
                   minWidth: "180px",
                   width: "max-content",
-                  zIndex: 1000,
+                  pointerEvents: "none",
                   boxShadow: "0 8px 24px rgba(0, 0, 0, 0.5)",
                 }}
               >
@@ -185,9 +185,9 @@ export default function EdgeWithTooltip({
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-        </EdgeLabelRenderer>
+            </EdgeLabelRenderer>
+          )}
+        </>
       )}
     </>
   );

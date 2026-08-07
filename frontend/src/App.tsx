@@ -20,6 +20,9 @@ import {
     captureRemoteWorkspaceToLocal,
     createEmptyStoreData,
     GraphData,
+    activateGraph,
+    copyGraph,
+    getProjectSnapshot,
     getLocalWorkspaceSnapshot,
     getRemoteWorkspaceSnapshot,
     hasMeaningfulWorkspaceSnapshot,
@@ -60,6 +63,8 @@ import AuthDialog, { AuthDialogMode } from "./components/AuthDialog";
 import WorkspaceMergeDialog from "./components/WorkspaceMergeDialog";
 import { NodeType } from "./components/NodeTypeSelector";
 import EdgeWithTooltip from "./edges/EdgeWithTooltip";
+import { GraphLayoutPreset, layoutGraph } from "./domain/graphLayout";
+import { copyTextToClipboard, toPrettyJson } from "./utils/clipboard";
 
 const nodeTypes = {
     recipe: RecipeNode,
@@ -97,6 +102,33 @@ const getRequiredValue = (value: string | null, message: string): string => {
     return value;
 };
 
+type AppNotice = {
+    id: number;
+    message: string;
+    tone?: "success" | "error";
+    actionLabel?: string;
+    onAction?: () => void;
+};
+
+const NODE_ACTION_TYPES: Record<string, NodeType> = {
+    "node.add.input": "input",
+    "node.add.output": "output",
+    "node.add.requester": "requester",
+    "node.add.recipe": "recipe",
+    "node.add.input-recipe": "inputrecipe",
+    "node.add.recipe-tag": "recipetag",
+    "node.add.input-recipe-tag": "inputrecipetag",
+    "node.add.mixed-output": "mixedoutput"
+};
+
+const LAYOUT_ACTION_PRESETS: Record<string, GraphLayoutPreset> = {
+    "layout.production": "production",
+    "layout.compact": "compact",
+    "layout.cascade": "cascade",
+    "layout.tree": "tree",
+    "layout.hierarchical": "hierarchical"
+};
+
 function AppContent() {
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -110,6 +142,8 @@ function AppContent() {
     const [pendingNodePosition, setPendingNodePosition] = useState<{ x: number; y: number } | null>(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+    const [graphListRevision, setGraphListRevision] = useState(0);
+    const [notice, setNotice] = useState<AppNotice | null>(null);
     const [authUser, setAuthUser] = useState<AuthUser | null>(null);
     const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
     const [authDialogMode, setAuthDialogMode] = useState<AuthDialogMode>("login");
@@ -135,8 +169,18 @@ function AppContent() {
     const reactFlowInstance = useReactFlow();
     const selectionLoadRequestIdRef = useRef(0);
     const saveTimeoutRef = useRef<number | null>(null);
-    const graphSaveInFlightRef = useRef(false);
+    const graphSaveInFlightRef = useRef<Promise<void> | null>(null);
     const pendingGraphSaveRef = useRef<{ graphData: GraphData; projectId: string; graphId: string } | null>(null);
+
+    const showNotice = useCallback((nextNotice: Omit<AppNotice, "id">) => {
+        setNotice({ ...nextNotice, id: Date.now() });
+    }, []);
+
+    useEffect(() => {
+        if (!notice) return;
+        const timer = window.setTimeout(() => setNotice(null), notice.onAction ? 8000 : 3500);
+        return () => window.clearTimeout(timer);
+    }, [notice]);
 
     const buildGraphData = useCallback((): GraphData => ({
         nodes: nodes.map((node) => ({
@@ -155,23 +199,31 @@ function AppContent() {
     }), [nodes, edges]);
 
     const flushGraphSave = useCallback(async () => {
-        if (graphSaveInFlightRef.current || !pendingGraphSaveRef.current) {
+        if (graphSaveInFlightRef.current) {
+            await graphSaveInFlightRef.current;
+        }
+
+        if (!pendingGraphSaveRef.current) {
             return;
         }
 
         const saveJob = pendingGraphSaveRef.current;
         pendingGraphSaveRef.current = null;
-        graphSaveInFlightRef.current = true;
 
-        try {
-            await saveGraph(saveJob.graphData, saveJob.projectId, saveJob.graphId);
-        } catch (error) {
-            console.error("Error auto-saving graph:", error);
-        } finally {
-            graphSaveInFlightRef.current = false;
-            if (pendingGraphSaveRef.current) {
-                void flushGraphSave();
-            }
+        const savePromise = saveGraph(saveJob.graphData, saveJob.projectId, saveJob.graphId)
+            .catch((error) => {
+                console.error("Error auto-saving graph:", error);
+            })
+            .finally(() => {
+                if (graphSaveInFlightRef.current === savePromise) {
+                    graphSaveInFlightRef.current = null;
+                }
+            });
+        graphSaveInFlightRef.current = savePromise;
+        await savePromise;
+
+        if (pendingGraphSaveRef.current) {
+            await flushGraphSave();
         }
     }, []);
 
@@ -206,22 +258,18 @@ function AppContent() {
         prevIsLoadedRef.current = isLoaded;
     }, [isLoaded, reactFlowInstance]);
 
-    // Keyboard shortcut for command palette (Ctrl+I)
+    // Keyboard shortcut for quick actions (Ctrl+I / Cmd+I)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Ctrl+I or Cmd+I on Mac
             if ((e.ctrlKey || e.metaKey) && e.key === "i") {
-                // Only open in edit mode
-                if (appMode === "edit") {
-                    e.preventDefault();
-                    setIsCommandPaletteOpen(true);
-                }
+                e.preventDefault();
+                setIsCommandPaletteOpen((current) => !current);
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [appMode]);
+    }, []);
 
     useEffect(() => {
         let ignore = false;
@@ -954,120 +1002,6 @@ function AppContent() {
         setPendingNodePosition(null);
     }, []);
 
-    // Handle command palette action selection
-    const handleCommandPaletteAction = useCallback(
-        (action: CommandAction) => {
-            const position = reactFlowInstance.screenToFlowPosition({
-                x: window.innerWidth / 2 - 150,
-                y: window.innerHeight / 2 - 100
-            });
-
-            const id = `${action.type}-${Date.now()}`;
-
-            if (action.type === "input" && action.itemId) {
-                setNodes((current) => [
-                    ...current,
-                    {
-                        id,
-                        type: "input",
-                        position,
-                        data: { items: [{ id: "1", itemId: action.itemId, mode: "infinite" }] }
-                    }
-                ]);
-            } else if (action.type === "output" && action.itemId) {
-                setNodes((current) => [
-                    ...current,
-                    {
-                        id,
-                        type: "output",
-                        position,
-                        data: { items: [{ id: "1", itemId: action.itemId }] }
-                    }
-                ]);
-            } else if (action.type === "requester" && action.itemId) {
-                setNodes((current) => [
-                    ...current,
-                    {
-                        id,
-                        type: "requester",
-                        position,
-                        data: { requests: [{ id: "req1", itemId: action.itemId, targetPerSecond: 1.0 }] }
-                    }
-                ]);
-            } else if (action.type === "recipe" && action.recipeId) {
-                const recipe = recipes.find((r) => r.id === action.recipeId);
-                if (!recipe) return;
-
-                const inputs = recipe.inputs.map((input: any) => {
-                    const name =
-                        input.refType === "item"
-                            ? items.find((item) => item.id === input.refId)?.name ?? input.refId
-                            : tags.find((tag) => tag.id === input.refId)?.name ?? input.refId;
-
-                    return {
-                        id: input.id,
-                        name,
-                        refId: input.refId,
-                        refType: input.refType,
-                        amountPerCycle: input.amount
-                    };
-                });
-
-                const outputs = recipe.outputs.map((output: any) => ({
-                    id: output.id,
-                    itemId: output.itemId,
-                    name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
-                    amountPerCycle: output.amount,
-                    probability: output.probability
-                }));
-
-                setNodes((current) => [
-                    ...current,
-                    {
-                        id,
-                        type: "recipe",
-                        position,
-                        data: {
-                            recipeId: recipe.id,
-                            title: recipe.name,
-                            timeSeconds: recipe.timeSeconds,
-                            inputs,
-                            outputs
-                        }
-                    }
-                ]);
-            } else if (action.type === "inputrecipe" && action.recipeId) {
-                const recipe = recipes.find((r) => r.id === action.recipeId);
-                if (!recipe) return;
-
-                const outputs = recipe.outputs.map((output: any) => ({
-                    id: output.id,
-                    itemId: output.itemId,
-                    name: items.find((item) => item.id === output.itemId)?.name ?? output.itemId,
-                    amountPerCycle: output.amount,
-                    probability: output.probability
-                }));
-
-                setNodes((current) => [
-                    ...current,
-                    {
-                        id,
-                        type: "inputrecipe",
-                        position,
-                        data: {
-                            recipeId: recipe.id,
-                            title: recipe.name,
-                            timeSeconds: recipe.timeSeconds,
-                            outputs,
-                            multiplier: 1
-                        }
-                    }
-                ]);
-            }
-        },
-        [reactFlowInstance, setNodes, recipes, items, tags]
-    );
-
     const handleCreateInputNode = useCallback(
         (itemId: string) => {
             const item = items.find((entry) => entry.id === itemId);
@@ -1220,6 +1154,145 @@ function AppContent() {
         }
     }, [activeGraphId, activeProjectId, authUser, buildGraphData, categories, items, recipeTags, recipes, setNodes, setEdges, tags]);
 
+    const getCanvasCenterPosition = useCallback(() => {
+        const bounds = document.querySelector<HTMLElement>(".react-flow")?.getBoundingClientRect();
+        return reactFlowInstance.screenToFlowPosition({
+            x: bounds ? bounds.left + bounds.width / 2 : window.innerWidth / 2,
+            y: bounds ? bounds.top + bounds.height / 2 : window.innerHeight / 2
+        });
+    }, [reactFlowInstance]);
+
+    const handleQuickAddNode = useCallback((nodeType: NodeType) => {
+        const position = getCanvasCenterPosition();
+        if (nodeType === "mixedoutput") {
+            setNodes((current) => [
+                ...current,
+                {
+                    id: `${nodeType}-${Date.now()}`,
+                    type: nodeType,
+                    position,
+                    data: {}
+                }
+            ]);
+            showNotice({ message: "Mixed Output node added.", tone: "success" });
+            return;
+        }
+
+        setPendingNodeType(nodeType);
+        setPendingNodePosition(position);
+    }, [getCanvasCenterPosition, setNodes, showNotice]);
+
+    const handleApplyLayout = useCallback(async (preset: GraphLayoutPreset) => {
+        if (nodes.length < 2) {
+            throw new Error("Add at least two nodes before rearranging the graph.");
+        }
+
+        const previousPositions = new Map(nodes.map((node) => [node.id, node.position]));
+        const layoutedNodes = await layoutGraph(nodes, edges, preset);
+        setNodes(layoutedNodes);
+        window.requestAnimationFrame(() => {
+            reactFlowInstance.fitView({ padding: 0.15, duration: 300 });
+        });
+
+        showNotice({
+            message: "Node layout applied.",
+            tone: "success",
+            actionLabel: "Undo",
+            onAction: () => {
+                setNodes((current) => current.map((node) => ({
+                    ...node,
+                    position: previousPositions.get(node.id) ?? node.position
+                })));
+                window.requestAnimationFrame(() => {
+                    reactFlowInstance.fitView({ padding: 0.15, duration: 250 });
+                });
+                setNotice(null);
+            }
+        });
+    }, [edges, nodes, reactFlowInstance, setNodes, showNotice]);
+
+    const handleDuplicateGraph = useCallback(async () => {
+        const projectId = getRequiredValue(activeProjectId, "No active project selected");
+        const graphId = getRequiredValue(activeGraphId, "No active graph selected");
+        await flushPendingGraphSave();
+
+        const response = await listGraphs(projectId);
+        const sourceGraph = response.graphs.find((graph) => graph.id === graphId);
+        if (!sourceGraph) throw new Error("The active graph could not be found.");
+
+        const usedNames = new Set(response.graphs.map((graph) => graph.name.toLowerCase()));
+        const baseName = `${sourceGraph.name} (copy)`;
+        let copyName = baseName;
+        let copyIndex = 2;
+        while (usedNames.has(copyName.toLowerCase())) {
+            copyName = `${sourceGraph.name} (copy ${copyIndex})`;
+            copyIndex += 1;
+        }
+
+        const copiedGraph = await copyGraph(projectId, graphId, copyName);
+        await activateGraph(projectId, copiedGraph.id);
+        setGraphListRevision((current) => current + 1);
+        await handleGraphChange(copiedGraph.id);
+        showNotice({ message: `Duplicated as “${copyName}”.`, tone: "success" });
+    }, [activeGraphId, activeProjectId, flushPendingGraphSave, handleGraphChange, showNotice]);
+
+    const handleCopyGraphJson = useCallback(async () => {
+        if (!activeGraphId) throw new Error("No active graph selected.");
+        await copyTextToClipboard(toPrettyJson(buildGraphData()));
+        showNotice({ message: "Graph JSON copied.", tone: "success" });
+    }, [activeGraphId, buildGraphData, showNotice]);
+
+    const handleCopyProjectJson = useCallback(async () => {
+        const projectId = getRequiredValue(activeProjectId, "No active project selected");
+        await Promise.all([flushPendingGraphSave(), flushPendingStoreSave()]);
+        const project = await getProjectSnapshot(projectId);
+        await copyTextToClipboard(toPrettyJson({ schemaVersion: 1, project }));
+        showNotice({ message: "Project JSON copied.", tone: "success" });
+    }, [activeProjectId, flushPendingGraphSave, showNotice]);
+
+    const handleCopySolveResultJson = useCallback(async () => {
+        if (!solveResult) throw new Error("Run Solve successfully before copying its result.");
+        await copyTextToClipboard(toPrettyJson(solveResult));
+        showNotice({ message: "Solve result JSON copied.", tone: "success" });
+    }, [showNotice, solveResult]);
+
+    const handleQuickAction = useCallback(async (action: CommandAction) => {
+        const nodeType = NODE_ACTION_TYPES[action.id];
+        if (nodeType) {
+            handleQuickAddNode(nodeType);
+            return;
+        }
+
+        const layoutPreset = LAYOUT_ACTION_PRESETS[action.id];
+        if (layoutPreset) {
+            await handleApplyLayout(layoutPreset);
+            return;
+        }
+
+        switch (action.id) {
+            case "graph.duplicate":
+                await handleDuplicateGraph();
+                return;
+            case "graph.solve":
+                await handleSolve();
+                return;
+            case "graph.fit-view":
+                reactFlowInstance.fitView({ padding: 0.15, duration: 300 });
+                return;
+            case "clipboard.graph":
+                await handleCopyGraphJson();
+                return;
+            case "clipboard.project":
+                await handleCopyProjectJson();
+                return;
+            case "clipboard.solve-result":
+                await handleCopySolveResultJson();
+                return;
+            default:
+                throw new Error("Unknown quick action.");
+        }
+    }, [handleApplyLayout, handleCopyGraphJson, handleCopyProjectJson, handleCopySolveResultJson, handleDuplicateGraph, handleQuickAddNode, handleSolve, reactFlowInstance]);
+
     const handleLogin = useCallback(async (username: string, password: string) => {
         await authenticateUser(username, password);
         await flushPendingGraphSave();
@@ -1320,6 +1393,212 @@ function AppContent() {
 
     const isAuthenticated = Boolean(authUser);
     const workspaceSelectorKey = authUser ? `remote:${authUser.id}` : "local";
+    const hasActiveGraph = Boolean(activeProjectId && activeGraphId);
+    const quickActions = useMemo<CommandAction[]>(() => {
+        const actions: CommandAction[] = [];
+
+        if (appMode === "edit") {
+            actions.push(
+                {
+                    id: "node.add.input",
+                    label: "Add Input Node",
+                    description: "Choose an item after selecting this action.",
+                    group: "Add nodes",
+                    icon: "📥",
+                    keywords: ["source", "item"],
+                    disabled: !hasActiveGraph,
+                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                },
+                {
+                    id: "node.add.output",
+                    label: "Add Output Node",
+                    description: "Choose an output item after selecting this action.",
+                    group: "Add nodes",
+                    icon: "📤",
+                    keywords: ["target", "item"],
+                    disabled: !hasActiveGraph,
+                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                },
+                {
+                    id: "node.add.requester",
+                    label: "Add Requester Node",
+                    description: "Choose the requested item after selecting this action.",
+                    group: "Add nodes",
+                    icon: "🎯",
+                    keywords: ["demand", "target"],
+                    disabled: !hasActiveGraph,
+                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                },
+                {
+                    id: "node.add.recipe",
+                    label: "Add Recipe Node",
+                    description: "Choose a configured recipe after selecting this action.",
+                    group: "Add nodes",
+                    icon: "⚙️",
+                    keywords: ["production", "machine"],
+                    disabled: !hasActiveGraph,
+                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                },
+                {
+                    id: "node.add.input-recipe",
+                    label: "Add Input Recipe Node",
+                    description: "Choose a recipe to use as an input source.",
+                    group: "Add nodes",
+                    icon: "⚡",
+                    keywords: ["source", "recipe"],
+                    disabled: !hasActiveGraph,
+                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                },
+                {
+                    id: "node.add.recipe-tag",
+                    label: "Add Recipe Tag Node",
+                    description: "Choose a configured recipe tag.",
+                    group: "Add nodes",
+                    icon: "🏷️",
+                    keywords: ["group", "pattern"],
+                    disabled: !hasActiveGraph,
+                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                },
+                {
+                    id: "node.add.input-recipe-tag",
+                    label: "Add Input Recipe Tag Node",
+                    description: "Choose a recipe tag to use as an input source.",
+                    group: "Add nodes",
+                    icon: "🔖",
+                    keywords: ["source", "group", "pattern"],
+                    disabled: !hasActiveGraph,
+                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                },
+                {
+                    id: "node.add.mixed-output",
+                    label: "Add Mixed Output Node",
+                    description: "Create an output node for mixed incoming items.",
+                    group: "Add nodes",
+                    icon: "🎲",
+                    keywords: ["output", "mixed"],
+                    disabled: !hasActiveGraph,
+                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                },
+                {
+                    id: "graph.rearrange",
+                    label: "Rearrange Nodes",
+                    description: "Choose an automatic graph layout.",
+                    group: "Graph",
+                    icon: "✨",
+                    keywords: ["layout", "organize", "arrange"],
+                    disabled: nodes.length < 2,
+                    disabledReason: nodes.length < 2 ? "Add at least two nodes first." : undefined,
+                    children: [
+                        {
+                            id: "layout.production",
+                            label: "Production Flow",
+                            description: "Readable left-to-right layered production flow.",
+                            group: "Layout",
+                            icon: "→",
+                            keywords: ["layered", "horizontal", "default"]
+                        },
+                        {
+                            id: "layout.compact",
+                            label: "Compact Flow",
+                            description: "Tighter left-to-right layout for large graphs.",
+                            group: "Layout",
+                            icon: "⇥",
+                            keywords: ["layered", "dense", "tight"]
+                        },
+                        {
+                            id: "layout.cascade",
+                            label: "Cascade Flow",
+                            description: "Stagger branches while preserving left-to-right item flow.",
+                            group: "Layout",
+                            icon: "⇘",
+                            keywords: ["cascade", "staggered", "branches", "flow"]
+                        },
+                        {
+                            id: "layout.tree",
+                            label: "Tree Flow",
+                            description: "Emphasize parent-child recipe branches from left to right.",
+                            group: "Layout",
+                            icon: "⑂",
+                            keywords: ["tree", "branch", "parent", "hierarchy"]
+                        },
+                        {
+                            id: "layout.hierarchical",
+                            label: "Hierarchical Flow",
+                            description: "Strict Sugiyama layers with uniformly rightward edges.",
+                            group: "Layout",
+                            icon: "≡→",
+                            keywords: ["layered", "sugiyama", "hierarchy", "flow"]
+                        }
+                    ]
+                },
+                {
+                    id: "graph.solve",
+                    label: "Solve Graph",
+                    description: isSolving ? "A solve is already running." : "Run the production solver.",
+                    group: "Graph",
+                    icon: "▶",
+                    keywords: ["calculate", "result"],
+                    disabled: !hasActiveGraph || isSolving,
+                    disabledReason: !hasActiveGraph ? "Select a graph first." : isSolving ? "Solve in progress." : undefined
+                },
+                {
+                    id: "graph.fit-view",
+                    label: "Fit Graph to View",
+                    description: "Center all nodes in the canvas.",
+                    group: "Graph",
+                    icon: "⊡",
+                    keywords: ["center", "zoom"],
+                    disabled: nodes.length === 0,
+                    disabledReason: nodes.length === 0 ? "The graph is empty." : undefined
+                }
+            );
+        }
+
+        actions.push(
+            {
+                id: "graph.duplicate",
+                label: "Duplicate Graph",
+                description: "Create and open a copy containing the latest edits.",
+                group: "Graph",
+                icon: "▣",
+                keywords: ["copy", "clone"],
+                disabled: !hasActiveGraph,
+                disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+            },
+            {
+                id: "clipboard.graph",
+                label: "Copy Graph JSON",
+                description: "Copy the current graph without temporary solve decorations.",
+                group: "Clipboard",
+                icon: "{}",
+                keywords: ["export", "nodes", "edges"],
+                disabled: !hasActiveGraph,
+                disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+            },
+            {
+                id: "clipboard.project",
+                label: "Copy Project JSON",
+                description: "Copy project configuration and every graph.",
+                group: "Clipboard",
+                icon: "📦",
+                keywords: ["export", "store", "workspace"],
+                disabled: !activeProjectId,
+                disabledReason: !activeProjectId ? "Select a project first." : undefined
+            },
+            {
+                id: "clipboard.solve-result",
+                label: "Copy Solve Result JSON",
+                description: "Copy the latest complete solver response.",
+                group: "Clipboard",
+                icon: "✓",
+                keywords: ["export", "flows", "result"],
+                disabled: !solveResult,
+                disabledReason: !solveResult ? "Run Solve successfully first." : undefined
+            }
+        );
+
+        return actions;
+    }, [activeProjectId, appMode, hasActiveGraph, isSolving, nodes.length, solveResult]);
 
     return (
         <div className="app-root">
@@ -1339,6 +1618,7 @@ function AppContent() {
                                     activeProjectId={activeProjectId}
                                     activeGraphId={activeGraphId}
                                     onGraphChange={handleGraphChange}
+                                    refreshToken={graphListRevision}
                                 />
                                 <ModeSelector
                                     currentMode={appMode}
@@ -1347,17 +1627,15 @@ function AppContent() {
                             </>
                         )}
                     </div>
-                    {appMode === "edit" ? (
-                        <input
-                            className="search"
-                            placeholder="Quick Actions (Ctrl+I)"
-                            readOnly
-                            onClick={() => setIsCommandPaletteOpen(true)}
-                            style={{ cursor: "pointer" }}
-                        />
-                    ) : (
-                        <div className="top-bar-spacer" />
-                    )}
+                    <button
+                        type="button"
+                        className="quick-actions-trigger"
+                        onClick={() => setIsCommandPaletteOpen(true)}
+                    >
+                        <span className="quick-actions-trigger-icon" aria-hidden="true">⌕</span>
+                        <span className="quick-actions-trigger-label">Quick Actions</span>
+                        <kbd>{navigator.platform.includes("Mac") ? "⌘I" : "Ctrl+I"}</kbd>
+                    </button>
                     <div className="top-bar-actions">
                         {appMode === "edit" && (
                             <button className="primary" onClick={handleSolve} disabled={isSolving}>
@@ -1402,6 +1680,12 @@ function AppContent() {
                 error={mergeDialogError}
                 onCancel={handleMergeCancel}
                 onConfirm={handleMergeConfirm}
+            />
+            <CommandPalette
+                isOpen={isCommandPaletteOpen}
+                actions={quickActions}
+                onClose={() => setIsCommandPaletteOpen(false)}
+                onActionSelected={handleQuickAction}
             />
 
             {appMode === "edit" ? (
@@ -1489,11 +1773,6 @@ function AppContent() {
                             onCancel={handleNodeConfigCancel}
                         />
                     )}
-                    <CommandPalette
-                        isOpen={isCommandPaletteOpen}
-                        onClose={() => setIsCommandPaletteOpen(false)}
-                        onActionSelected={handleCommandPaletteAction}
-                    />
                 </div>
             ) : (
                 <div className="config-container">
@@ -1503,6 +1782,22 @@ function AppContent() {
                     {configSubMode === "recipeTags" && <RecipeTagMode />}
                     {configSubMode === "recipeGenerator" && <RecipeGenerator />}
                     {configSubMode === "itemGenerator" && <ItemGenerator />}
+                </div>
+            )}
+            {notice && (
+                <div className={`app-notice ${notice.tone ?? "success"}`} role="status" aria-live="polite">
+                    <span>{notice.message}</span>
+                    {notice.actionLabel && notice.onAction && (
+                        <button type="button" onClick={notice.onAction}>{notice.actionLabel}</button>
+                    )}
+                    <button
+                        type="button"
+                        className="app-notice-close"
+                        onClick={() => setNotice(null)}
+                        aria-label="Dismiss notification"
+                    >
+                        ×
+                    </button>
                 </div>
             )}
         </div>

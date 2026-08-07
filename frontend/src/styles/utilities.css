@@ -17,3 +17,63 @@
   text-align: center;
   padding: 8px;
 }
+/* App-level action feedback */
+.app-notice {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 10020;
+  max-width: min(420px, calc(100vw - 40px));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(16, 20, 28, 0.97);
+  border: 1px solid rgba(34, 197, 94, 0.38);
+  border-radius: 12px;
+  color: var(--text);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+  font-size: 0.84rem;
+  animation: appNoticeIn 0.18s ease-out;
+}
+
+.app-notice.error {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.app-notice > span {
+  flex: 1;
+}
+
+.app-notice button {
+  padding: 5px 9px;
+  background: rgba(110, 168, 254, 0.12);
+  border: 1px solid rgba(110, 168, 254, 0.28);
+  border-radius: 7px;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.app-notice button:hover {
+  background: rgba(110, 168, 254, 0.2);
+}
+
+.app-notice .app-notice-close {
+  padding: 2px 5px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1.15rem;
+}
+
+@keyframes appNoticeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-notice { animation: none; }
+}

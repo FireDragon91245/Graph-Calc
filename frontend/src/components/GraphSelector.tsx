@@ -13,12 +13,14 @@ type GraphSelectorProps = {
   activeProjectId: string | null;
   activeGraphId: string | null;
   onGraphChange: (graphId: string) => void;
+  refreshToken?: number;
 };
 
 export default function GraphSelector({
   activeProjectId,
   activeGraphId,
-  onGraphChange
+  onGraphChange,
+  refreshToken = 0
 }: GraphSelectorProps) {
   const [graphs, setGraphs] = useState<GraphInfo[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -50,7 +52,7 @@ export default function GraphSelector({
 
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+  }, [refresh, refreshToken]);
 
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
