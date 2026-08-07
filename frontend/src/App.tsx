@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, DragEvent, useEffect, useRef } from "react";
+import { useCallback, useMemo, useState, DragEvent, MouseEvent as ReactMouseEvent, useEffect, useRef } from "react";
 import ReactFlow, {
     Background,
     Controls,
@@ -12,7 +12,8 @@ import ReactFlow, {
     Panel,
     NodeMouseHandler,
     ReactFlowProvider,
-    useReactFlow
+    useReactFlow,
+    XYPosition
 } from "reactflow";
 import { solveGraph, SolveResponse, solveGuestGraph } from "./api/solve";
 import {
@@ -64,7 +65,20 @@ import WorkspaceMergeDialog from "./components/WorkspaceMergeDialog";
 import { NodeType } from "./components/NodeTypeSelector";
 import EdgeWithTooltip from "./edges/EdgeWithTooltip";
 import { GraphLayoutPreset, layoutGraph } from "./domain/graphLayout";
-import { copyTextToClipboard, toPrettyJson } from "./utils/clipboard";
+import {
+    assertGraphClipboardProject,
+    createGraphClipboardPayload,
+    materializeGraphClipboardPayload,
+    parseGraphClipboardPayload,
+    serializeGraphClipboardPayload,
+    type MaterializedGraphSelection
+} from "./domain/graphClipboard";
+import {
+    copyTextToClipboard,
+    readTextFromClipboard,
+    rememberClipboardText,
+    toPrettyJson
+} from "./utils/clipboard";
 
 const nodeTypes = {
     recipe: RecipeNode,
@@ -110,6 +124,19 @@ type AppNotice = {
     onAction?: () => void;
 };
 
+type CanvasContextMenu = {
+    kind: "node" | "pane";
+    id?: string;
+    top: number;
+    left: number;
+    position: XYPosition;
+};
+
+const isEditableTarget = (target: EventTarget | null): boolean => {
+    if (!(target instanceof HTMLElement)) return false;
+    return target.isContentEditable || Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
+};
+
 const NODE_ACTION_TYPES: Record<string, NodeType> = {
     "node.add.input": "input",
     "node.add.output": "output",
@@ -135,7 +162,7 @@ function AppContent() {
     const [solveResult, setSolveResult] = useState<SolveResponse | null>(null);
     const [solveError, setSolveError] = useState<string | null>(null);
     const [isSolving, setIsSolving] = useState(false);
-    const [menu, setMenu] = useState<{ id: string; top: number; left: number } | null>(null);
+    const [menu, setMenu] = useState<CanvasContextMenu | null>(null);
     const [appMode, setAppMode] = useState<AppMode>("edit");
     const [configSubMode, setConfigSubMode] = useState<ConfigSubMode>("items");
     const [pendingNodeType, setPendingNodeType] = useState<NodeType | null>(null);
@@ -171,6 +198,9 @@ function AppContent() {
     const saveTimeoutRef = useRef<number | null>(null);
     const graphSaveInFlightRef = useRef<Promise<void> | null>(null);
     const pendingGraphSaveRef = useRef<{ graphData: GraphData; projectId: string; graphId: string } | null>(null);
+    const canvasPointerPositionRef = useRef<XYPosition | null>(null);
+    const lastPastedPayloadRef = useRef<string | null>(null);
+    const repeatedPasteCountRef = useRef(0);
 
     const showNotice = useCallback((nextNotice: Omit<AppNotice, "id">) => {
         setNotice({ ...nextNotice, id: Date.now() });
@@ -257,19 +287,6 @@ function AppContent() {
         }
         prevIsLoadedRef.current = isLoaded;
     }, [isLoaded, reactFlowInstance]);
-
-    // Keyboard shortcut for quick actions (Ctrl+I / Cmd+I)
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === "i") {
-                e.preventDefault();
-                setIsCommandPaletteOpen((current) => !current);
-            }
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, []);
 
     useEffect(() => {
         let ignore = false;
@@ -427,6 +444,11 @@ function AppContent() {
     const handleProjectChange = useCallback(async (newProjectId: string) => {
         const requestId = ++selectionLoadRequestIdRef.current;
 
+        await Promise.all([flushPendingGraphSave(), flushPendingStoreSave()]);
+        if (selectionLoadRequestIdRef.current !== requestId) {
+            return;
+        }
+
         setIsLoaded(false);
         setSolveResult(null);
         setSolveError(null);
@@ -474,11 +496,16 @@ function AppContent() {
                 setIsLoaded(true);
             }
         }
-    }, [setActiveProjectId, setActiveGraphId, loadStoreData, setNodes, setEdges]);
+    }, [flushPendingGraphSave, setActiveProjectId, setActiveGraphId, loadStoreData, setNodes, setEdges]);
 
     // Handle graph change (reload only graph data, store is shared)
     const handleGraphChange = useCallback(async (newGraphId: string) => {
         const requestId = ++selectionLoadRequestIdRef.current;
+
+        await flushPendingGraphSave();
+        if (selectionLoadRequestIdRef.current !== requestId) {
+            return;
+        }
 
         setIsLoaded(false);
         setSolveResult(null);
@@ -509,7 +536,7 @@ function AppContent() {
                 setIsLoaded(true);
             }
         }
-    }, [activeProjectId, setActiveGraphId, setNodes, setEdges]);
+    }, [activeProjectId, flushPendingGraphSave, setActiveGraphId, setNodes, setEdges]);
 
     // Inject solve results into node and edge data
     useEffect(() => {
@@ -568,49 +595,34 @@ function AppContent() {
 
             if (reactFlowBounds) {
                 setMenu({
+                    kind: "node",
                     id: node.id,
                     top: event.clientY - reactFlowBounds.top,
                     left: event.clientX - reactFlowBounds.left,
+                    position: reactFlowInstance.screenToFlowPosition({ x: event.clientX, y: event.clientY })
                 });
             } else {
                 // Fallback if we can't find the container
                 setMenu({
+                    kind: "node",
                     id: node.id,
                     top: event.clientY,
                     left: event.clientX,
+                    position: reactFlowInstance.screenToFlowPosition({ x: event.clientX, y: event.clientY })
                 });
             }
         },
-        [setMenu]
+        [reactFlowInstance, setMenu]
     );
 
     const onPaneClick = useCallback(() => setMenu(null), [setMenu]);
 
     const handleDeleteNode = useCallback(() => {
-        if (!menu) return;
+        if (!menu || menu.kind !== "node" || !menu.id) return;
         setNodes((nds) => nds.filter((n) => n.id !== menu.id));
         setEdges((eds) => eds.filter((e) => e.source !== menu.id && e.target !== menu.id));
         setMenu(null);
     }, [menu, setNodes, setEdges]);
-
-    const handleDuplicateNode = useCallback(() => {
-        if (!menu) return;
-        const node = nodes.find((n) => n.id === menu.id);
-        if (!node) return;
-
-        setNodes((nds) => {
-            const deselected = nds.map((n) => ({ ...n, selected: false }));
-            const newNode: Node = {
-                ...node,
-                id: `${node.type}-${Date.now()}`,
-                position: { x: node.position.x + 50, y: node.position.y + 50 },
-                selected: true,
-                data: JSON.parse(JSON.stringify(node.data)),
-            };
-            return [...deselected, newNode];
-        });
-        setMenu(null);
-    }, [menu, nodes, setNodes]);
 
     const createPosition = () => ({
         x: 120 + nodes.length * 40,
@@ -1154,6 +1166,11 @@ function AppContent() {
         }
     }, [activeGraphId, activeProjectId, authUser, buildGraphData, categories, items, recipeTags, recipes, setNodes, setEdges, tags]);
 
+    const selectedNodeCount = useMemo(
+        () => nodes.filter((node) => node.selected).length,
+        [nodes]
+    );
+
     const getCanvasCenterPosition = useCallback(() => {
         const bounds = document.querySelector<HTMLElement>(".react-flow")?.getBoundingClientRect();
         return reactFlowInstance.screenToFlowPosition({
@@ -1161,6 +1178,253 @@ function AppContent() {
             y: bounds ? bounds.top + bounds.height / 2 : window.innerHeight / 2
         });
     }, [reactFlowInstance]);
+
+    const insertGraphSelection = useCallback((selection: MaterializedGraphSelection) => {
+        setSolveResult(null);
+        setSolveError(null);
+        setNodes((current) => [
+            ...current.map((node) => ({
+                ...node,
+                selected: false,
+                data: stripSolveData(node.data)
+            })),
+            ...selection.nodes
+        ]);
+        setEdges((current) => [
+            ...current.map((edge) => ({
+                ...edge,
+                selected: false,
+                data: undefined,
+                label: undefined
+            })),
+            ...selection.edges
+        ]);
+    }, [setEdges, setNodes]);
+
+    const handleCopyNodes = useCallback(async (
+        nodeIds?: Iterable<string>,
+        options?: { silent?: boolean }
+    ) => {
+        const projectId = getRequiredValue(activeProjectId, "No active project selected");
+        const graphId = getRequiredValue(activeGraphId, "No active graph selected");
+        const payload = createGraphClipboardPayload({
+            projectId,
+            graphId,
+            nodes: reactFlowInstance.getNodes(),
+            edges: reactFlowInstance.getEdges(),
+            nodeIds
+        });
+        const serialized = serializeGraphClipboardPayload(payload);
+        rememberClipboardText(serialized);
+        lastPastedPayloadRef.current = null;
+        repeatedPasteCountRef.current = 0;
+
+        let systemClipboardAvailable = true;
+        try {
+            await copyTextToClipboard(serialized);
+        } catch (error) {
+            systemClipboardAvailable = false;
+            console.warn("System clipboard write failed; using the in-app clipboard.", error);
+        }
+
+        if (!options?.silent) {
+            const nodeLabel = payload.nodes.length === 1 ? "node" : "nodes";
+            showNotice({
+                message: systemClipboardAvailable
+                    ? `Copied ${payload.nodes.length} ${nodeLabel}.`
+                    : `Copied ${payload.nodes.length} ${nodeLabel} for this session.`,
+                tone: "success"
+            });
+        }
+    }, [activeGraphId, activeProjectId, reactFlowInstance, showNotice]);
+
+    const handleCutNodes = useCallback(async (nodeIds?: Iterable<string>) => {
+        const currentNodes = reactFlowInstance.getNodes();
+        const ids = new Set(nodeIds ?? currentNodes.filter((node) => node.selected).map((node) => node.id));
+        if (ids.size === 0) {
+            throw new Error("Select at least one node to cut.");
+        }
+
+        await handleCopyNodes(ids, { silent: true });
+        setSolveResult(null);
+        setSolveError(null);
+        setNodes((current) => current.filter((node) => !ids.has(node.id)));
+        setEdges((current) => current.filter((edge) => !ids.has(edge.source) && !ids.has(edge.target)));
+        setMenu(null);
+
+        showNotice({
+            message: `Cut ${ids.size} ${ids.size === 1 ? "node" : "nodes"}.`,
+            tone: "success"
+        });
+    }, [handleCopyNodes, reactFlowInstance, setEdges, setNodes, showNotice]);
+
+    const handleDuplicateSelectedNodes = useCallback((nodeIds?: Iterable<string>) => {
+        const projectId = getRequiredValue(activeProjectId, "No active project selected");
+        const graphId = getRequiredValue(activeGraphId, "No active graph selected");
+        const currentNodes = reactFlowInstance.getNodes();
+        const currentEdges = reactFlowInstance.getEdges();
+        const payload = createGraphClipboardPayload({
+            projectId,
+            graphId,
+            nodes: currentNodes,
+            edges: currentEdges,
+            nodeIds
+        });
+        const duplicated = materializeGraphClipboardPayload(payload, {
+            anchor: {
+                x: (payload.bounds.minX + payload.bounds.maxX) / 2,
+                y: (payload.bounds.minY + payload.bounds.maxY) / 2
+            },
+            existingNodeIds: currentNodes.map((node) => node.id),
+            existingEdgeIds: currentEdges.map((edge) => edge.id),
+            offset: 50
+        });
+
+        insertGraphSelection(duplicated);
+        setMenu(null);
+        showNotice({
+            message: `Duplicated ${duplicated.nodes.length} ${duplicated.nodes.length === 1 ? "node" : "nodes"}.`,
+            tone: "success"
+        });
+    }, [activeGraphId, activeProjectId, insertGraphSelection, reactFlowInstance, showNotice]);
+
+    const handlePasteNodes = useCallback(async (position?: XYPosition) => {
+        const projectId = getRequiredValue(activeProjectId, "No active project selected");
+        getRequiredValue(activeGraphId, "No active graph selected");
+        const clipboard = await readTextFromClipboard();
+        if (!clipboard.text) {
+            throw new Error("The clipboard is empty.");
+        }
+
+        const payload = parseGraphClipboardPayload(clipboard.text);
+        if (!payload) {
+            throw new Error("The clipboard does not contain a GraphCalc node selection.");
+        }
+        assertGraphClipboardProject(payload, projectId);
+
+        const payloadKey = `${payload.sourceProjectId}:${payload.sourceGraphId}:${payload.copiedAt}`;
+        if (lastPastedPayloadRef.current === payloadKey) {
+            repeatedPasteCountRef.current += 1;
+        } else {
+            lastPastedPayloadRef.current = payloadKey;
+            repeatedPasteCountRef.current = 0;
+        }
+
+        const currentNodes = reactFlowInstance.getNodes();
+        const currentEdges = reactFlowInstance.getEdges();
+        const pasted = materializeGraphClipboardPayload(payload, {
+            anchor: position ?? canvasPointerPositionRef.current ?? getCanvasCenterPosition(),
+            existingNodeIds: currentNodes.map((node) => node.id),
+            existingEdgeIds: currentEdges.map((edge) => edge.id),
+            offset: repeatedPasteCountRef.current * 24
+        });
+
+        insertGraphSelection(pasted);
+        setMenu(null);
+
+        const nodeLabel = pasted.nodes.length === 1 ? "node" : "nodes";
+        const edgeLabel = pasted.edges.length === 1 ? "connection" : "connections";
+        showNotice({
+            message: `Pasted ${pasted.nodes.length} ${nodeLabel} and ${pasted.edges.length} ${edgeLabel}.`,
+            tone: "success"
+        });
+    }, [activeGraphId, activeProjectId, getCanvasCenterPosition, insertGraphSelection, reactFlowInstance, showNotice]);
+
+    const getMenuNodeIds = useCallback((): string[] => {
+        if (!menu || menu.kind !== "node" || !menu.id) return [];
+        const clickedNode = nodes.find((node) => node.id === menu.id);
+        if (!clickedNode) return [];
+        return clickedNode.selected
+            ? nodes.filter((node) => node.selected).map((node) => node.id)
+            : [clickedNode.id];
+    }, [menu, nodes]);
+
+    const handleCopyFromMenu = useCallback(async () => {
+        if (!menu || menu.kind !== "node" || !menu.id) return;
+        await handleCopyNodes(getMenuNodeIds());
+        setMenu(null);
+    }, [getMenuNodeIds, handleCopyNodes, menu]);
+
+    const handleCutFromMenu = useCallback(async () => {
+        await handleCutNodes(getMenuNodeIds());
+    }, [getMenuNodeIds, handleCutNodes]);
+
+    const handleDuplicateFromMenu = useCallback(() => {
+        handleDuplicateSelectedNodes(getMenuNodeIds());
+    }, [getMenuNodeIds, handleDuplicateSelectedNodes]);
+
+    const handlePasteFromMenu = useCallback(async () => {
+        if (!menu) return;
+        await handlePasteNodes(menu.position);
+    }, [handlePasteNodes, menu]);
+
+    const onPaneContextMenu = useCallback((event: ReactMouseEvent) => {
+        event.preventDefault();
+        const reactFlowBounds = (event.target as HTMLElement).closest(".react-flow")?.getBoundingClientRect();
+        setMenu({
+            kind: "pane",
+            top: reactFlowBounds ? event.clientY - reactFlowBounds.top : event.clientY,
+            left: reactFlowBounds ? event.clientX - reactFlowBounds.left : event.clientX,
+            position: reactFlowInstance.screenToFlowPosition({ x: event.clientX, y: event.clientY })
+        });
+    }, [reactFlowInstance]);
+
+    const onPaneMouseMove = useCallback((event: ReactMouseEvent) => {
+        canvasPointerPositionRef.current = reactFlowInstance.screenToFlowPosition({
+            x: event.clientX,
+            y: event.clientY
+        });
+    }, [reactFlowInstance]);
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (!(event.ctrlKey || event.metaKey) || event.altKey || event.repeat) return;
+            const key = event.key.toLowerCase();
+
+            if (key === "i") {
+                event.preventDefault();
+                setIsCommandPaletteOpen((current) => !current);
+                return;
+            }
+
+            if (isEditableTarget(event.target) || appMode !== "edit" || !activeProjectId || !activeGraphId) {
+                return;
+            }
+
+            if (key === "c" && selectedNodeCount > 0) {
+                event.preventDefault();
+                void handleCopyNodes().catch((error) => showNotice({
+                    message: error instanceof Error ? error.message : "The selection could not be copied.",
+                    tone: "error"
+                }));
+            } else if (key === "x" && selectedNodeCount > 0) {
+                event.preventDefault();
+                void handleCutNodes().catch((error) => showNotice({
+                    message: error instanceof Error ? error.message : "The selection could not be cut.",
+                    tone: "error"
+                }));
+            } else if (key === "d" && selectedNodeCount > 0) {
+                event.preventDefault();
+                try {
+                    handleDuplicateSelectedNodes();
+                } catch (error) {
+                    showNotice({
+                        message: error instanceof Error ? error.message : "The selection could not be duplicated.",
+                        tone: "error"
+                    });
+                }
+            } else if (key === "v") {
+                event.preventDefault();
+                void handlePasteNodes().catch((error) => showNotice({
+                    message: error instanceof Error ? error.message : "The selection could not be pasted.",
+                    tone: "error"
+                }));
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [activeGraphId, activeProjectId, appMode, handleCopyNodes, handleCutNodes, handleDuplicateSelectedNodes, handlePasteNodes, selectedNodeCount, showNotice]);
 
     const handleQuickAddNode = useCallback((nodeType: NodeType) => {
         const position = getCanvasCenterPosition();
@@ -1270,6 +1534,18 @@ function AppContent() {
         }
 
         switch (action.id) {
+            case "clipboard.nodes.copy":
+                await handleCopyNodes();
+                return;
+            case "clipboard.nodes.cut":
+                await handleCutNodes();
+                return;
+            case "clipboard.nodes.paste":
+                await handlePasteNodes();
+                return;
+            case "clipboard.nodes.duplicate":
+                handleDuplicateSelectedNodes();
+                return;
             case "graph.duplicate":
                 await handleDuplicateGraph();
                 return;
@@ -1291,7 +1567,7 @@ function AppContent() {
             default:
                 throw new Error("Unknown quick action.");
         }
-    }, [handleApplyLayout, handleCopyGraphJson, handleCopyProjectJson, handleCopySolveResultJson, handleDuplicateGraph, handleQuickAddNode, handleSolve, reactFlowInstance]);
+    }, [handleApplyLayout, handleCopyGraphJson, handleCopyNodes, handleCopyProjectJson, handleCopySolveResultJson, handleCutNodes, handleDuplicateGraph, handleDuplicateSelectedNodes, handlePasteNodes, handleQuickAddNode, handleSolve, reactFlowInstance]);
 
     const handleLogin = useCallback(async (username: string, password: string) => {
         await authenticateUser(username, password);
@@ -1566,6 +1842,54 @@ function AppContent() {
                 disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
             },
             {
+                id: "clipboard.nodes.copy",
+                label: "Copy Selected Nodes",
+                description: "Copy selected nodes and the connections between them (Ctrl/Cmd+C).",
+                group: "Clipboard",
+                icon: "⧉",
+                keywords: ["copy", "selection", "nodes", "ctrl c", "command c"],
+                disabled: appMode !== "edit" || selectedNodeCount === 0,
+                disabledReason: appMode !== "edit"
+                    ? "Open a graph in edit mode first."
+                    : selectedNodeCount === 0 ? "Select one or more nodes first." : undefined
+            },
+            {
+                id: "clipboard.nodes.paste",
+                label: "Paste Nodes",
+                description: "Paste copied nodes into this graph (Ctrl/Cmd+V).",
+                group: "Clipboard",
+                icon: "▣",
+                keywords: ["paste", "selection", "nodes", "ctrl v", "command v"],
+                disabled: appMode !== "edit" || !hasActiveGraph,
+                disabledReason: appMode !== "edit"
+                    ? "Open a graph in edit mode first."
+                    : !hasActiveGraph ? "Select a graph first." : undefined
+            },
+            {
+                id: "clipboard.nodes.cut",
+                label: "Cut Selected Nodes",
+                description: "Copy and remove selected nodes (Ctrl/Cmd+X).",
+                group: "Clipboard",
+                icon: "✂",
+                keywords: ["cut", "selection", "nodes", "ctrl x", "command x"],
+                disabled: appMode !== "edit" || selectedNodeCount === 0,
+                disabledReason: appMode !== "edit"
+                    ? "Open a graph in edit mode first."
+                    : selectedNodeCount === 0 ? "Select one or more nodes first." : undefined
+            },
+            {
+                id: "clipboard.nodes.duplicate",
+                label: "Duplicate Selected Nodes",
+                description: "Duplicate selected nodes and their internal connections (Ctrl/Cmd+D).",
+                group: "Clipboard",
+                icon: "⧉",
+                keywords: ["duplicate", "clone", "selection", "nodes", "ctrl d", "command d"],
+                disabled: appMode !== "edit" || selectedNodeCount === 0,
+                disabledReason: appMode !== "edit"
+                    ? "Open a graph in edit mode first."
+                    : selectedNodeCount === 0 ? "Select one or more nodes first." : undefined
+            },
+            {
                 id: "clipboard.graph",
                 label: "Copy Graph JSON",
                 description: "Copy the current graph without temporary solve decorations.",
@@ -1598,7 +1922,7 @@ function AppContent() {
         );
 
         return actions;
-    }, [activeProjectId, appMode, hasActiveGraph, isSolving, nodes.length, solveResult]);
+    }, [activeProjectId, appMode, hasActiveGraph, isSolving, nodes.length, selectedNodeCount, solveResult]);
 
     return (
         <div className="app-root">
@@ -1699,13 +2023,15 @@ function AppContent() {
                         onConnect={onConnect}
                         onNodeContextMenu={onNodeContextMenu}
                         onPaneClick={onPaneClick}
+                        onPaneContextMenu={onPaneContextMenu}
+                        onPaneMouseMove={onPaneMouseMove}
                         onDrop={handleDrop}
                         onDragOver={handleDragOver}
                         selectionOnDrag
                         panOnDrag={[1, 2]}
                         selectionMode={undefined}
                         zoomOnScroll
-                        multiSelectionKeyCode="Control"
+                        multiSelectionKeyCode={["Control", "Meta"]}
                         deleteKeyCode={["Backspace", "Delete"]}
                         elementsSelectable
                         nodesDraggable
@@ -1761,8 +2087,44 @@ function AppContent() {
                                 top={menu.top}
                                 left={menu.left}
                                 onClose={() => setMenu(null)}
-                                onDuplicate={handleDuplicateNode}
-                                onDelete={handleDeleteNode}
+                                copyLabel={menu.kind === "node" && menu.id && nodes.find((node) => node.id === menu.id)?.selected && selectedNodeCount > 1
+                                    ? `Copy ${selectedNodeCount} Selected Nodes`
+                                    : "Copy Node"}
+                                onCopy={menu.kind === "node" ? () => {
+                                    void handleCopyFromMenu().catch((error) => showNotice({
+                                        message: error instanceof Error ? error.message : "The selection could not be copied.",
+                                        tone: "error"
+                                    }));
+                                } : undefined}
+                                cutLabel={menu.kind === "node" && menu.id && nodes.find((node) => node.id === menu.id)?.selected && selectedNodeCount > 1
+                                    ? `Cut ${selectedNodeCount} Selected Nodes`
+                                    : "Cut Node"}
+                                onCut={menu.kind === "node" ? () => {
+                                    void handleCutFromMenu().catch((error) => showNotice({
+                                        message: error instanceof Error ? error.message : "The selection could not be cut.",
+                                        tone: "error"
+                                    }));
+                                } : undefined}
+                                onPaste={() => {
+                                    void handlePasteFromMenu().catch((error) => showNotice({
+                                        message: error instanceof Error ? error.message : "The selection could not be pasted.",
+                                        tone: "error"
+                                    }));
+                                }}
+                                duplicateLabel={menu.kind === "node" && menu.id && nodes.find((node) => node.id === menu.id)?.selected && selectedNodeCount > 1
+                                    ? `Duplicate ${selectedNodeCount} Selected Nodes`
+                                    : "Duplicate Node"}
+                                onDuplicate={menu.kind === "node" ? () => {
+                                    try {
+                                        handleDuplicateFromMenu();
+                                    } catch (error) {
+                                        showNotice({
+                                            message: error instanceof Error ? error.message : "The selection could not be duplicated.",
+                                            tone: "error"
+                                        });
+                                    }
+                                } : undefined}
+                                onDelete={menu.kind === "node" ? handleDeleteNode : undefined}
                             />
                         )}
                     </ReactFlow>
