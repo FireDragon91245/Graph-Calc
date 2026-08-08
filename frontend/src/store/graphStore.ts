@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { saveStore, StoreData } from "../api/persistence";
 import type { RecipeBlueprint } from "../domain/recipeBlueprint";
+import i18n from "../i18n";
 
 type Category = {
   id: string;
@@ -223,7 +224,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
         (i) => i.name === item.name && i.id !== itemId
       );
       if (existingByName) {
-        alert(`Item "${item.name}" already exists!`);
+        alert(i18n.t("ui.validation.itemExists", { name: item.name }));
         return state;
       }
       
@@ -275,7 +276,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
         (i) => i.name === newName && i.id !== itemId
       );
       if (existingByName) {
-        alert(`Item "${newName}" already exists!`);
+        alert(i18n.t("ui.validation.itemExists", { name: newName }));
         return state;
       }
       
@@ -342,7 +343,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
         (t) => t.name === formattedName && t.id !== tagId
       );
       if (existingByName) {
-        alert(`Tag "${formattedName}" already exists!`);
+        alert(i18n.t("ui.validation.tagExists", { name: formattedName }));
         return state;
       }
       
@@ -402,7 +403,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
         (rt) => rt.name === formattedName && rt.id !== recipeTagId
       );
       if (existingByName) {
-        alert(`Recipe Tag "${formattedName}" already exists!`);
+        alert(i18n.t("ui.validation.recipeTagExists", { name: formattedName }));
         return state;
       }
       
@@ -504,7 +505,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
         (r) => r.name === newName && r.id !== recipeId
       );
       if (existingByName) {
-        alert(`Recipe "${newName}" already exists!`);
+        alert(i18n.t("ui.validation.recipeExists", { name: newName }));
         return state;
       }
       

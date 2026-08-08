@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 import type { GraphData, StoreData, WorkspaceGraphSnapshot, WorkspaceProjectSnapshot, WorkspaceSnapshot } from "../api/persistence";
 
 type ProjectPresenceStatus = "same" | "only-local" | "only-account" | "different";
@@ -67,7 +69,7 @@ const compareProjects = (localSnapshot: WorkspaceSnapshot, remoteSnapshot: Works
   return names.map((name) => {
     const localProject = localProjectsByName.get(name) ?? null;
     const remoteProject = remoteProjectsByName.get(name) ?? null;
-    const displayName = localProject?.name ?? remoteProject?.name ?? "Unnamed Project";
+    const displayName = localProject?.name ?? remoteProject?.name ?? i18n.t("ui.merge.unnamedProject");
 
     if (!localProject) {
       return {
@@ -99,7 +101,7 @@ const compareProjects = (localSnapshot: WorkspaceSnapshot, remoteSnapshot: Works
     const graphs = graphNames.map((graphName) => {
       const localGraph = localGraphsByName.get(graphName) ?? null;
       const remoteGraph = remoteGraphsByName.get(graphName) ?? null;
-      const displayGraphName = localGraph?.name ?? remoteGraph?.name ?? "Unnamed Graph";
+      const displayGraphName = localGraph?.name ?? remoteGraph?.name ?? i18n.t("ui.merge.unnamedGraph");
 
       if (!localGraph) {
         return {
@@ -145,8 +147,8 @@ const compareProjects = (localSnapshot: WorkspaceSnapshot, remoteSnapshot: Works
   });
 };
 
-function uniqueName(baseName: string, usedNames: Set<string>, suffix = "copy"): string {
-  const trimmed = baseName.trim() || "Unnamed";
+function uniqueName(baseName: string, usedNames: Set<string>, suffix = i18n.t("ui.merge.copy")): string {
+  const trimmed = baseName.trim() || i18n.t("ui.merge.unnamed");
   const direct = trimmed.toLowerCase();
   if (!usedNames.has(direct)) {
     usedNames.add(direct);
@@ -219,7 +221,7 @@ function buildMergedSnapshot(
         mergedProjects.push({ ...clone(comparison.remoteProject), name: accountProjectName });
       }
       if (comparison.localProject) {
-        const localProjectName = uniqueName(comparison.localProject.name, usedProjectNames, "local copy");
+        const localProjectName = uniqueName(comparison.localProject.name, usedProjectNames, i18n.t("ui.merge.localCopy"));
         mergedProjects.push({ ...clone(comparison.localProject), name: localProjectName });
       }
       continue;
@@ -263,13 +265,13 @@ function buildMergedSnapshot(
         mergedGraphs.push({ ...clone(graphComparison.remoteGraph), name: graphName });
       }
       if ((graphChoice === "local" || graphChoice === "copy-to-new") && graphComparison.localGraph) {
-        const suffix = graphChoice === "copy-to-new" ? "local copy" : "copy";
+        const suffix = graphChoice === "copy-to-new" ? i18n.t("ui.merge.localCopy") : i18n.t("ui.merge.copy");
         const graphName = uniqueName(graphComparison.localGraph.name, usedGraphNames, suffix);
         mergedGraphs.push({ ...clone(graphComparison.localGraph), name: graphName });
       }
     }
 
-    const firstFallbackGraph = mergedGraphs[0] ?? clone(remoteProject.graphs[0] ?? localProject.graphs[0] ?? { name: "Main Graph", data: { nodes: [], edges: [] }, thumbnail: null });
+    const firstFallbackGraph = mergedGraphs[0] ?? clone(remoteProject.graphs[0] ?? localProject.graphs[0] ?? { name: i18n.t("ui.merge.mainGraph"), data: { nodes: [], edges: [] }, thumbnail: null });
     if (mergedGraphs.length === 0) {
       mergedGraphs.push(firstFallbackGraph);
     }
@@ -298,11 +300,11 @@ function buildMergedSnapshot(
   };
 }
 
-const statusLabel: Record<ProjectPresenceStatus | GraphPresenceStatus, string> = {
-  same: "Same",
-  "only-local": "Only local",
-  "only-account": "Only account",
-  different: "Different"
+const statusLabelKey: Record<ProjectPresenceStatus | GraphPresenceStatus, string> = {
+  same: "ui.merge.status.same",
+  "only-local": "ui.merge.status.onlyLocal",
+  "only-account": "ui.merge.status.onlyAccount",
+  different: "ui.merge.status.different"
 };
 
 export default function WorkspaceMergeDialog({
@@ -314,6 +316,7 @@ export default function WorkspaceMergeDialog({
   onCancel,
   onConfirm
 }: WorkspaceMergeDialogProps) {
+  const { t } = useTranslation();
   const comparisons = useMemo(() => {
     if (!localSnapshot || !remoteSnapshot) {
       return [];
@@ -391,7 +394,7 @@ export default function WorkspaceMergeDialog({
 
   const handleConfirm = async () => {
     if (mergedSnapshot.projects.length === 0) {
-      setValidationError("The merge must keep at least one project.");
+      setValidationError(t("ui.merge.keepOne"));
       return;
     }
 
@@ -401,27 +404,27 @@ export default function WorkspaceMergeDialog({
 
   return (
     <div className="auth-dialog-backdrop" onClick={(event) => event.target === event.currentTarget && !isSubmitting && onCancel()}>
-      <div className="workspace-merge-dialog" role="dialog" aria-modal="true" aria-label="Workspace merge dialog">
+      <div className="workspace-merge-dialog" role="dialog" aria-modal="true" aria-label={t("ui.merge.aria")}>
         <div className="auth-dialog-header">
           <div>
-            <h2 className="auth-dialog-title">Resolve Workspace Differences</h2>
+            <h2 className="auth-dialog-title">{t("ui.merge.title")}</h2>
             <p className="auth-dialog-subtitle">
-              Local guest data and account data do not match. Review the merge plan before switching into the account workspace.
+              {t("ui.merge.subtitle")}
             </p>
           </div>
-          <button className="auth-close" type="button" onClick={onCancel} disabled={isSubmitting} aria-label="Close merge dialog">
+          <button className="auth-close" type="button" onClick={onCancel} disabled={isSubmitting} aria-label={t("ui.merge.close")}>
             ×
           </button>
         </div>
 
         <div className="workspace-merge-legend">
-          <span className="workspace-merge-chip same">Same</span>
-          <span className="workspace-merge-chip warning">Only on one side</span>
-          <span className="workspace-merge-chip conflict">Different</span>
+          <span className="workspace-merge-chip same">{t("ui.merge.status.same")}</span>
+          <span className="workspace-merge-chip warning">{t("ui.merge.status.oneSide")}</span>
+          <span className="workspace-merge-chip conflict">{t("ui.merge.status.different")}</span>
         </div>
 
         <p className="auth-helper workspace-merge-helper">
-          Conservative defaults are selected: account wins on conflicts, local-only entries are discarded, and account-only entries are kept unless you change them.
+          {t("ui.merge.defaults")}
         </p>
 
         <div className="workspace-merge-list">
@@ -429,16 +432,16 @@ export default function WorkspaceMergeDialog({
             <div key={comparison.key} className={`workspace-merge-project workspace-merge-${comparison.status}`}>
               <div className="workspace-merge-row workspace-merge-project-row">
                 <div>
-                  <div className="workspace-merge-title">Project: {comparison.name}</div>
+                  <div className="workspace-merge-title">{t("ui.merge.project.title", { name: comparison.name })}</div>
                   <div className="workspace-merge-meta">
-                    {comparison.status === "only-local" && "Exists only in the local guest workspace."}
-                    {comparison.status === "only-account" && "Exists only in the account workspace."}
-                    {comparison.status === "same" && "Project data matches on both sides."}
-                    {comparison.status === "different" && "Project contents differ between guest and account."}
+                    {comparison.status === "only-local" && t("ui.merge.project.onlyLocal")}
+                    {comparison.status === "only-account" && t("ui.merge.project.onlyAccount")}
+                    {comparison.status === "same" && t("ui.merge.project.same")}
+                    {comparison.status === "different" && t("ui.merge.project.different")}
                   </div>
                 </div>
                 <span className={`workspace-merge-chip ${comparison.status === "same" ? "same" : comparison.status === "different" ? "conflict" : "warning"}`}>
-                  {statusLabel[comparison.status]}
+                  {t(statusLabelKey[comparison.status])}
                 </span>
               </div>
 
@@ -449,14 +452,14 @@ export default function WorkspaceMergeDialog({
                     className={projectSideChoices[comparison.key] === "merge" ? "primary" : "auth-secondary"}
                     onClick={() => setProjectSideChoices((current) => ({ ...current, [comparison.key]: "merge" }))}
                   >
-                    Merge
+                    {t("ui.merge.actions.merge")}
                   </button>
                   <button
                     type="button"
                     className={projectSideChoices[comparison.key] === "discard" ? "primary" : "auth-secondary"}
                     onClick={() => setProjectSideChoices((current) => ({ ...current, [comparison.key]: "discard" }))}
                   >
-                    Discard
+                    {t("ui.merge.actions.discard")}
                   </button>
                 </div>
               )}
@@ -468,28 +471,28 @@ export default function WorkspaceMergeDialog({
                     className={projectConflictChoices[comparison.key] === "custom" ? "primary" : "auth-secondary"}
                     onClick={() => setProjectConflictChoices((current) => ({ ...current, [comparison.key]: "custom" }))}
                   >
-                    Custom Merge
+                    {t("ui.merge.actions.custom")}
                   </button>
                   <button
                     type="button"
                     className={projectConflictChoices[comparison.key] === "account" ? "primary" : "auth-secondary"}
                     onClick={() => setProjectConflictChoices((current) => ({ ...current, [comparison.key]: "account" }))}
                   >
-                    Account
+                    {t("ui.merge.actions.account")}
                   </button>
                   <button
                     type="button"
                     className={projectConflictChoices[comparison.key] === "local" ? "primary" : "auth-secondary"}
                     onClick={() => setProjectConflictChoices((current) => ({ ...current, [comparison.key]: "local" }))}
                   >
-                    Local
+                    {t("ui.merge.actions.local")}
                   </button>
                   <button
                     type="button"
                     className={projectConflictChoices[comparison.key] === "copy-to-new" ? "primary" : "auth-secondary"}
                     onClick={() => setProjectConflictChoices((current) => ({ ...current, [comparison.key]: "copy-to-new" }))}
                   >
-                    Copy To New
+                    {t("ui.merge.actions.copyNew")}
                   </button>
                 </div>
               )}
@@ -499,8 +502,8 @@ export default function WorkspaceMergeDialog({
                   {comparison.storeDifferent && (
                     <div className="workspace-merge-row workspace-merge-row-conflict">
                       <div>
-                        <div className="workspace-merge-title">Project Data</div>
-                        <div className="workspace-merge-meta">Items, recipes, tags, and other project store data differ.</div>
+                        <div className="workspace-merge-title">{t("ui.merge.project.data")}</div>
+                        <div className="workspace-merge-meta">{t("ui.merge.project.dataDifferent")}</div>
                       </div>
                       <div className="workspace-merge-actions">
                         <button
@@ -508,14 +511,14 @@ export default function WorkspaceMergeDialog({
                           className={projectStoreChoices[comparison.key] === "account" ? "primary" : "auth-secondary"}
                           onClick={() => setProjectStoreChoices((current) => ({ ...current, [comparison.key]: "account" }))}
                         >
-                          Account
+                          {t("ui.merge.actions.account")}
                         </button>
                         <button
                           type="button"
                           className={projectStoreChoices[comparison.key] === "local" ? "primary" : "auth-secondary"}
                           onClick={() => setProjectStoreChoices((current) => ({ ...current, [comparison.key]: "local" }))}
                         >
-                          Local
+                          {t("ui.merge.actions.local")}
                         </button>
                       </div>
                     </div>
@@ -524,17 +527,17 @@ export default function WorkspaceMergeDialog({
                   {comparison.graphs.map((graph) => (
                     <div key={graph.key} className={`workspace-merge-row ${graph.status === "same" ? "workspace-merge-row-same" : graph.status === "different" ? "workspace-merge-row-conflict" : "workspace-merge-row-warning"}`}>
                       <div>
-                        <div className="workspace-merge-title">Graph: {graph.name}</div>
+                        <div className="workspace-merge-title">{t("ui.merge.graph.title", { name: graph.name })}</div>
                         <div className="workspace-merge-meta">
-                          {graph.status === "same" && "Graph data matches on both sides."}
-                          {graph.status === "only-local" && "Graph exists only in the local guest workspace."}
-                          {graph.status === "only-account" && "Graph exists only in the account workspace."}
-                          {graph.status === "different" && "Graph contents differ between guest and account."}
+                          {graph.status === "same" && t("ui.merge.graph.same")}
+                          {graph.status === "only-local" && t("ui.merge.graph.onlyLocal")}
+                          {graph.status === "only-account" && t("ui.merge.graph.onlyAccount")}
+                          {graph.status === "different" && t("ui.merge.graph.different")}
                         </div>
                       </div>
                       <div className="workspace-merge-row-actions">
                         <span className={`workspace-merge-chip ${graph.status === "same" ? "same" : graph.status === "different" ? "conflict" : "warning"}`}>
-                          {statusLabel[graph.status]}
+                          {t(statusLabelKey[graph.status])}
                         </span>
                         {graph.status === "only-local" || graph.status === "only-account" ? (
                           <div className="workspace-merge-actions">
@@ -543,14 +546,14 @@ export default function WorkspaceMergeDialog({
                               className={graphSideChoices[graph.key] === "merge" ? "primary" : "auth-secondary"}
                               onClick={() => setGraphSideChoices((current) => ({ ...current, [graph.key]: "merge" }))}
                             >
-                              Merge
+                              {t("ui.merge.actions.merge")}
                             </button>
                             <button
                               type="button"
                               className={graphSideChoices[graph.key] === "discard" ? "primary" : "auth-secondary"}
                               onClick={() => setGraphSideChoices((current) => ({ ...current, [graph.key]: "discard" }))}
                             >
-                              Discard
+                              {t("ui.merge.actions.discard")}
                             </button>
                           </div>
                         ) : graph.status === "different" ? (
@@ -560,21 +563,21 @@ export default function WorkspaceMergeDialog({
                               className={graphConflictChoices[graph.key] === "account" ? "primary" : "auth-secondary"}
                               onClick={() => setGraphConflictChoices((current) => ({ ...current, [graph.key]: "account" }))}
                             >
-                              Account
+                              {t("ui.merge.actions.account")}
                             </button>
                             <button
                               type="button"
                               className={graphConflictChoices[graph.key] === "local" ? "primary" : "auth-secondary"}
                               onClick={() => setGraphConflictChoices((current) => ({ ...current, [graph.key]: "local" }))}
                             >
-                              Local
+                              {t("ui.merge.actions.local")}
                             </button>
                             <button
                               type="button"
                               className={graphConflictChoices[graph.key] === "copy-to-new" ? "primary" : "auth-secondary"}
                               onClick={() => setGraphConflictChoices((current) => ({ ...current, [graph.key]: "copy-to-new" }))}
                             >
-                              Copy To New
+                              {t("ui.merge.actions.copyNew")}
                             </button>
                           </div>
                         ) : null}
@@ -592,10 +595,10 @@ export default function WorkspaceMergeDialog({
 
         <div className="auth-actions">
           <button className="auth-secondary" type="button" onClick={onCancel} disabled={isSubmitting}>
-            Cancel Login
+            {t("ui.merge.actions.cancel")}
           </button>
           <button className="primary" type="button" onClick={handleConfirm} disabled={isSubmitting}>
-            {isSubmitting ? "Applying Merge..." : "Continue Login"}
+            {isSubmitting ? t("ui.merge.actions.apply") : t("ui.merge.actions.continue")}
           </button>
         </div>
       </div>

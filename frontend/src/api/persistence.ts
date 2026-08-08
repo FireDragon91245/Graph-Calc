@@ -1,4 +1,5 @@
 import { apiFetch, getErrorMessage } from "./client";
+import i18n from "../i18n";
 import type { RecipeBlueprint } from "../domain/recipeBlueprint";
 
 export interface GraphData {
@@ -150,8 +151,10 @@ type LocalWorkspaceRecord = {
 const LOCAL_WORKSPACE_STORAGE_KEY = "graphcalc.local-workspace.v1";
 const LOCAL_IMAGES_STORAGE_KEY = "graphcalc.local-images.v1";
 const LOCAL_WORKSPACE_VERSION = 1;
-const DEFAULT_LOCAL_PROJECT_NAME = "Guest Project";
-const DEFAULT_LOCAL_GRAPH_NAME = "Main Graph";
+const getDefaultLocalProjectName = () => i18n.t("ui.defaults.guestProject");
+const getDefaultLocalGraphName = () => i18n.t("ui.defaults.mainGraph");
+const isDefaultLocalProjectName = (name: string) => ["en", "de"].some((language) => name === i18n.getFixedT(language)("ui.defaults.guestProject"));
+const isDefaultLocalGraphName = (name: string) => ["en", "de"].some((language) => name === i18n.getFixedT(language)("ui.defaults.mainGraph"));
 
 let persistenceMode: PersistenceMode = "local";
 let localWorkspaceFallback: LocalWorkspaceRecord | null = null;
@@ -181,7 +184,7 @@ function createLocalId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function createDefaultLocalGraph(name = DEFAULT_LOCAL_GRAPH_NAME): LocalGraphRecord {
+function createDefaultLocalGraph(name = getDefaultLocalGraphName()): LocalGraphRecord {
   return {
     id: createLocalId("graph"),
     name,
@@ -190,7 +193,7 @@ function createDefaultLocalGraph(name = DEFAULT_LOCAL_GRAPH_NAME): LocalGraphRec
   };
 }
 
-function createDefaultLocalProject(name = DEFAULT_LOCAL_PROJECT_NAME): LocalProjectRecord {
+function createDefaultLocalProject(name = getDefaultLocalProjectName()): LocalProjectRecord {
   const graph = createDefaultLocalGraph();
   return {
     id: createLocalId("project"),
@@ -239,7 +242,7 @@ function normalizeLocalGraph(value: unknown): LocalGraphRecord | null {
   const candidate = value as Partial<LocalGraphRecord>;
   return {
     id: typeof candidate.id === "string" && candidate.id ? candidate.id : createLocalId("graph"),
-    name: typeof candidate.name === "string" && candidate.name.trim() ? candidate.name : DEFAULT_LOCAL_GRAPH_NAME,
+    name: typeof candidate.name === "string" && candidate.name.trim() ? candidate.name : getDefaultLocalGraphName(),
     data: normalizeGraphData(candidate.data),
     thumbnailId: typeof candidate.thumbnailId === "string" && candidate.thumbnailId ? candidate.thumbnailId : null
   };
@@ -261,7 +264,7 @@ function normalizeLocalProject(value: unknown): LocalProjectRecord | null {
 
   return {
     id: typeof candidate.id === "string" && candidate.id ? candidate.id : createLocalId("project"),
-    name: typeof candidate.name === "string" && candidate.name.trim() ? candidate.name : DEFAULT_LOCAL_PROJECT_NAME,
+    name: typeof candidate.name === "string" && candidate.name.trim() ? candidate.name : getDefaultLocalProjectName(),
     activeGraphId,
     store: normalizeStoreData(candidate.store),
     graphs: ensuredGraphs,
@@ -335,7 +338,7 @@ function updateLocalWorkspace<T>(mutator: (workspace: LocalWorkspaceRecord) => T
 function getLocalProjectOrThrow(workspace: LocalWorkspaceRecord, projectId: string): LocalProjectRecord {
   const project = workspace.projects.find((entry) => entry.id === projectId);
   if (!project) {
-    throw new Error("Project not found");
+    throw new Error(i18n.t("persistenceErrors.projectNotFound"));
   }
 
   return project;
@@ -344,7 +347,7 @@ function getLocalProjectOrThrow(workspace: LocalWorkspaceRecord, projectId: stri
 function getLocalGraphOrThrow(project: LocalProjectRecord, graphId: string): LocalGraphRecord {
   const graph = project.graphs.find((entry) => entry.id === graphId);
   if (!graph) {
-    throw new Error("Graph not found");
+    throw new Error(i18n.t("persistenceErrors.graphNotFound"));
   }
 
   return graph;
@@ -437,7 +440,7 @@ function snapshotToWorkspace(snapshot: WorkspaceSnapshot): LocalWorkspaceRecord 
     return image.id;
   };
   const projects = snapshot.projects.map((project) => {
-    const graphs = (project.graphs.length > 0 ? project.graphs : [{ name: DEFAULT_LOCAL_GRAPH_NAME, data: createEmptyGraphData(), thumbnail: null }])
+    const graphs = (project.graphs.length > 0 ? project.graphs : [{ name: getDefaultLocalGraphName(), data: createEmptyGraphData(), thumbnail: null }])
       .map((graph) => ({
         id: createLocalId("graph"),
         name: graph.name,
@@ -475,7 +478,7 @@ function hasMeaningfulLocalWorkspace(workspace: LocalWorkspaceRecord): boolean {
     return false;
   }
 
-  if (project.name !== DEFAULT_LOCAL_PROJECT_NAME) {
+  if (!isDefaultLocalProjectName(project.name)) {
     return true;
   }
 
@@ -488,7 +491,7 @@ function hasMeaningfulLocalWorkspace(workspace: LocalWorkspaceRecord): boolean {
     return false;
   }
 
-  return graph.name !== DEFAULT_LOCAL_GRAPH_NAME
+  return !isDefaultLocalGraphName(graph.name)
     || !isStoreDataEmpty(project.store)
     || !isGraphDataEmpty(graph.data)
     || Boolean(project.thumbnailId)
@@ -564,7 +567,7 @@ function ensureUniqueName(baseName: string, usedNames: Set<string>, fallbackName
 async function apiListProjects(): Promise<ProjectsResponse> {
   const response = await apiFetch("/projects");
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to list projects"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.listProjects")));
   }
   return response.json();
 }
@@ -575,7 +578,7 @@ async function apiCreateProject(name: string): Promise<Project> {
     body: JSON.stringify({ name })
   });
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to create project"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.createProject")));
   }
   return response.json();
 }
@@ -585,7 +588,7 @@ async function apiActivateProject(projectId: string): Promise<void> {
     method: "PUT"
   });
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to activate project"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.activateProject")));
   }
 }
 
@@ -595,7 +598,7 @@ async function apiRenameProject(projectId: string, name: string): Promise<void> 
     body: JSON.stringify({ name })
   });
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to rename project"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.renameProject")));
   }
 }
 
@@ -605,7 +608,7 @@ async function apiCopyProject(projectId: string, name: string): Promise<Project>
     body: JSON.stringify({ name })
   });
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to copy project"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.copyProject")));
   }
   return response.json();
 }
@@ -615,7 +618,7 @@ async function apiDeleteProject(projectId: string): Promise<void> {
     method: "DELETE"
   });
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to delete project"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.deleteProject")));
   }
 }
 
@@ -624,7 +627,7 @@ async function apiDeleteProject(projectId: string): Promise<void> {
 async function apiListGraphs(projectId: string): Promise<GraphsResponse> {
   const response = await apiFetch(`/projects/${projectId}/graphs`);
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to list graphs"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.listGraphs")));
   }
   return response.json();
 }
@@ -635,7 +638,7 @@ async function apiCreateGraph(projectId: string, name: string): Promise<GraphInf
     body: JSON.stringify({ name })
   });
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to create graph"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.createGraph")));
   }
   return response.json();
 }
@@ -645,7 +648,7 @@ async function apiActivateGraph(projectId: string, graphId: string): Promise<voi
     method: "PUT"
   });
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to activate graph"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.activateGraph")));
   }
 }
 
@@ -655,7 +658,7 @@ async function apiRenameGraph(projectId: string, graphId: string, name: string):
     body: JSON.stringify({ name })
   });
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to rename graph"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.renameGraph")));
   }
 }
 
@@ -665,7 +668,7 @@ async function apiCopyGraph(projectId: string, graphId: string, name: string): P
     body: JSON.stringify({ name })
   });
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to copy graph"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.copyGraph")));
   }
   return response.json();
 }
@@ -675,7 +678,7 @@ async function apiDeleteGraph(projectId: string, graphId: string): Promise<void>
     method: "DELETE"
   });
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to delete graph"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.deleteGraph")));
   }
 }
 
@@ -684,7 +687,7 @@ async function apiDeleteGraph(projectId: string, graphId: string): Promise<void>
 async function apiLoadGraph(projectId: string, graphId: string): Promise<GraphData> {
   const response = await apiFetch(`/projects/${encodeURIComponent(projectId)}/graphs/${encodeURIComponent(graphId)}/load`);
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to load graph"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.loadGraph")));
   }
   return response.json();
 }
@@ -695,14 +698,14 @@ async function apiSaveGraph(graph: GraphData, projectId: string, graphId: string
     body: JSON.stringify(graph)
   });
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to save graph"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.saveGraph")));
   }
 }
 
 async function apiLoadStore(projectId: string): Promise<StoreData> {
   const response = await apiFetch(`/projects/${encodeURIComponent(projectId)}/store/load`);
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to load store"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.loadStore")));
   }
   return response.json();
 }
@@ -713,7 +716,7 @@ async function apiSaveStore(store: StoreData, projectId: string): Promise<void> 
     body: JSON.stringify(store)
   });
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "Failed to save store"));
+    throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.saveStore")));
   }
 }
 
@@ -729,7 +732,7 @@ async function localListProjects(): Promise<ProjectsResponse> {
 
 async function localCreateProject(name: string): Promise<Project> {
   return updateLocalWorkspace((workspace) => {
-    const project = createDefaultLocalProject(name.trim() || DEFAULT_LOCAL_PROJECT_NAME);
+    const project = createDefaultLocalProject(name.trim() || getDefaultLocalProjectName());
     workspace.projects.push(project);
     return toProjectSummary(project);
   });
@@ -763,7 +766,7 @@ async function localDeleteProject(projectId: string): Promise<void> {
   updateLocalWorkspace((workspace) => {
     const index = workspace.projects.findIndex((project) => project.id === projectId);
     if (index < 0) {
-      throw new Error("Project not found");
+      throw new Error(i18n.t("persistenceErrors.projectNotFound"));
     }
 
     const [removed] = workspace.projects.splice(index, 1);
@@ -800,7 +803,7 @@ async function localCreateGraph(projectId: string, name: string): Promise<GraphI
     const project = getLocalProjectOrThrow(workspace, projectId);
     const graph: LocalGraphRecord = {
       id: createLocalId("graph"),
-      name: name.trim() || DEFAULT_LOCAL_GRAPH_NAME,
+      name: name.trim() || getDefaultLocalGraphName(),
       data: createEmptyGraphData(),
       thumbnailId: null
     };
@@ -849,7 +852,7 @@ async function localDeleteGraph(projectId: string, graphId: string): Promise<voi
     const project = getLocalProjectOrThrow(workspace, projectId);
     const index = project.graphs.findIndex((graph) => graph.id === graphId);
     if (index < 0) {
-      throw new Error("Graph not found");
+      throw new Error(i18n.t("persistenceErrors.graphNotFound"));
     }
 
     const [removed] = project.graphs.splice(index, 1);
@@ -1069,14 +1072,14 @@ async function apiPutThumbnail(path: string, file: File): Promise<string> {
   const form = new FormData();
   form.append("image", file);
   const response = await apiFetch(path, { method: "PUT", body: form });
-  if (!response.ok) throw new Error(await getErrorMessage(response, "Failed to save thumbnail"));
+  if (!response.ok) throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.saveThumbnail")));
   const result = await response.json() as { thumbnailId: string };
   return result.thumbnailId;
 }
 
 async function apiDeleteThumbnail(path: string): Promise<void> {
   const response = await apiFetch(path, { method: "DELETE" });
-  if (!response.ok) throw new Error(await getErrorMessage(response, "Failed to remove thumbnail"));
+  if (!response.ok) throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.removeThumbnail")));
 }
 
 async function fetchRemoteThumbnail(path: string, thumbnailId: string | null): Promise<WorkspaceThumbnailSnapshot | null> {
@@ -1087,7 +1090,7 @@ async function fetchRemoteThumbnail(path: string, thumbnailId: string | null): P
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Failed to read thumbnail data."));
+    reader.onerror = () => reject(new Error(i18n.t("persistenceErrors.readThumbnail")));
     reader.readAsDataURL(blob);
   });
   const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
@@ -1142,20 +1145,20 @@ function deleteUnreferencedLocalImage(imageId: string | null): void {
 }
 
 async function validateThumbnailFile(file: File): Promise<{ contentType: string; sha256: string; dataUrl: string }> {
-  if (file.size === 0) throw new Error("Choose an image file.");
-  if (file.size > 5 * 1024 * 1024) throw new Error("Image files must not exceed 5 MB.");
-  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) throw new Error("Only PNG, JPEG, and WebP images are supported.");
+  if (file.size === 0) throw new Error(i18n.t("persistenceErrors.chooseImage"));
+  if (file.size > 5 * 1024 * 1024) throw new Error(i18n.t("persistenceErrors.imageSize"));
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) throw new Error(i18n.t("persistenceErrors.imageType"));
 
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
   } catch {
-    throw new Error("The selected file is not a valid image.");
+    throw new Error(i18n.t("persistenceErrors.invalidImage"));
   }
   const { width, height } = bitmap;
   bitmap.close();
   if (width < 16 || height < 16 || width > 1024 || height > 1024) {
-    throw new Error("Image dimensions must be between 16x16 and 1024x1024 pixels.");
+    throw new Error(i18n.t("persistenceErrors.dimensions"));
   }
 
   const bytes = await file.arrayBuffer();
@@ -1164,7 +1167,7 @@ async function validateThumbnailFile(file: File): Promise<{ contentType: string;
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Failed to read the selected image."));
+    reader.onerror = () => reject(new Error(i18n.t("persistenceErrors.readImage")));
     reader.readAsDataURL(file);
   });
   return { contentType: file.type, sha256, dataUrl };
@@ -1172,7 +1175,7 @@ async function validateThumbnailFile(file: File): Promise<{ contentType: string;
 
 function dataUrlToFile(thumbnail: WorkspaceThumbnailSnapshot): File {
   const [header, encoded] = thumbnail.dataUrl.split(",", 2);
-  if (!header || encoded === undefined) throw new Error("Invalid thumbnail data.");
+  if (!header || encoded === undefined) throw new Error(i18n.t("persistenceErrors.invalidThumbnail"));
   const binary = atob(encoded);
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
@@ -1187,7 +1190,7 @@ export async function getProjectSnapshot(projectId: string): Promise<WorkspacePr
   ]);
   const project = projectsResponse.projects.find((entry) => entry.id === projectId);
   if (!project) {
-    throw new Error("The active project could not be found.");
+    throw new Error(i18n.t("persistenceErrors.activeProjectMissing"));
   }
 
   const graphs = await Promise.all(
@@ -1249,7 +1252,7 @@ export async function getRemoteWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
 async function importSnapshotToRemote(snapshot: WorkspaceSnapshot): Promise<void> {
   const projectNameCounts = new Map<string, number>();
   const ensureUniqueProjectName = (name: string): string => {
-    const normalized = name.trim() || DEFAULT_LOCAL_PROJECT_NAME;
+    const normalized = name.trim() || getDefaultLocalProjectName();
     const currentCount = projectNameCounts.get(normalized.toLowerCase()) ?? 0;
     projectNameCounts.set(normalized.toLowerCase(), currentCount + 1);
     return currentCount === 0 ? normalized : `${normalized} (${currentCount + 1})`;
@@ -1268,13 +1271,13 @@ async function importSnapshotToRemote(snapshot: WorkspaceSnapshot): Promise<void
     const remoteGraphs = await apiListGraphs(remoteProject.id);
     const graphNameCounts = new Map<string, number>();
     const ensureUniqueGraphName = (name: string): string => {
-      const normalized = name.trim() || DEFAULT_LOCAL_GRAPH_NAME;
+      const normalized = name.trim() || getDefaultLocalGraphName();
       const currentCount = graphNameCounts.get(normalized.toLowerCase()) ?? 0;
       graphNameCounts.set(normalized.toLowerCase(), currentCount + 1);
       return currentCount === 0 ? normalized : `${normalized} (${currentCount + 1})`;
     };
     const remoteGraphIdsByName = new Map<string, string>();
-    const sourceGraphs = project.graphs.length > 0 ? project.graphs : [{ name: DEFAULT_LOCAL_GRAPH_NAME, data: createEmptyGraphData(), thumbnail: null }];
+    const sourceGraphs = project.graphs.length > 0 ? project.graphs : [{ name: getDefaultLocalGraphName(), data: createEmptyGraphData(), thumbnail: null }];
     const firstSourceGraph = sourceGraphs[0];
     const defaultRemoteGraphId = remoteGraphs.activeGraphId ?? remoteGraphs.graphs[0]?.id ?? null;
 
@@ -1339,7 +1342,7 @@ export async function syncLocalWorkspaceToRemote(): Promise<void> {
     activeProjectName: localSnapshot.activeProjectName,
     projects: localSnapshot.projects.map((project) => ({
       ...project,
-      name: ensureUniqueName(project.name, new Set<string>(), DEFAULT_LOCAL_PROJECT_NAME)
+      name: ensureUniqueName(project.name, new Set<string>(), getDefaultLocalProjectName())
     }))
   });
 }

@@ -33,7 +33,7 @@ public sealed class ProjectsController : ControllerBase
     public async Task<ActionResult<EntitySummaryResponse>> CreateProject([FromBody] NamedEntityRequest request, CancellationToken cancellationToken)
     {
         var user = ApiRequestContext.GetAuthenticatedUser(User);
-        return Ok(await _store.CreateProjectAsync(user.Id, ApiRequestContext.NormalizeName(request.Name, "Project name is required"), cancellationToken));
+        return Ok(await _store.CreateProjectAsync(user.Id, ApiRequestContext.NormalizeName(request.Name, "backend.errors.projectNameRequired"), cancellationToken));
     }
 
     [HttpPut("{projectId}/activate")]
@@ -42,7 +42,7 @@ public sealed class ProjectsController : ControllerBase
         var user = ApiRequestContext.GetAuthenticatedUser(User);
         if (!await _store.SetActiveProjectAsync(user.Id, projectId, cancellationToken))
         {
-            throw new ApiException(StatusCodes.Status404NotFound, "Project not found");
+            throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.projectNotFound");
         }
 
         return Ok(new StatusResponse { Status = "ok" });
@@ -52,9 +52,9 @@ public sealed class ProjectsController : ControllerBase
     public async Task<ActionResult<StatusResponse>> RenameProject(string projectId, [FromBody] NamedEntityRequest request, CancellationToken cancellationToken)
     {
         var user = ApiRequestContext.GetAuthenticatedUser(User);
-        if (!await _store.RenameProjectAsync(user.Id, projectId, ApiRequestContext.NormalizeName(request.Name, "Project name is required"), cancellationToken))
+        if (!await _store.RenameProjectAsync(user.Id, projectId, ApiRequestContext.NormalizeName(request.Name, "backend.errors.projectNameRequired"), cancellationToken))
         {
-            throw new ApiException(StatusCodes.Status404NotFound, "Project not found");
+            throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.projectNotFound");
         }
 
         return Ok(new StatusResponse { Status = "ok" });
@@ -64,7 +64,7 @@ public sealed class ProjectsController : ControllerBase
     public async Task<ActionResult<EntitySummaryResponse>> CopyProject(string projectId, [FromBody] NamedEntityRequest request, CancellationToken cancellationToken)
     {
         var user = ApiRequestContext.GetAuthenticatedUser(User);
-        return Ok(await _store.CopyProjectAsync(user.Id, projectId, ApiRequestContext.NormalizeName(request.Name, "Project name is required"), cancellationToken));
+        return Ok(await _store.CopyProjectAsync(user.Id, projectId, ApiRequestContext.NormalizeName(request.Name, "backend.errors.projectNameRequired"), cancellationToken));
     }
 
     [HttpDelete("{projectId}/delete")]
@@ -73,7 +73,7 @@ public sealed class ProjectsController : ControllerBase
         var user = ApiRequestContext.GetAuthenticatedUser(User);
         if (!await _store.DeleteProjectAsync(user.Id, projectId, cancellationToken))
         {
-            throw new ApiException(StatusCodes.Status404NotFound, "Project not found");
+            throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.projectNotFound");
         }
 
         return Ok(new StatusResponse { Status = "ok" });
@@ -84,7 +84,7 @@ public sealed class ProjectsController : ControllerBase
     {
         var user = ApiRequestContext.GetAuthenticatedUser(User);
         var image = await _store.GetProjectThumbnailAsync(user.Id, projectId, cancellationToken)
-            ?? throw new ApiException(StatusCodes.Status404NotFound, "Thumbnail not found");
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.thumbnailNotFound");
         SetThumbnailResponseHeaders(image.Sha256);
         return File(image.Data, image.ContentType);
     }
@@ -105,7 +105,7 @@ public sealed class ProjectsController : ControllerBase
         var user = ApiRequestContext.GetAuthenticatedUser(User);
         if (!await _store.DeleteProjectThumbnailAsync(user.Id, projectId, cancellationToken))
         {
-            throw new ApiException(StatusCodes.Status404NotFound, "Project not found");
+            throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.projectNotFound");
         }
         return NoContent();
     }
@@ -123,7 +123,7 @@ public sealed class ProjectsController : ControllerBase
     {
         var user = ApiRequestContext.GetAuthenticatedUser(User);
         await _store.RequireProjectAccessAsync(user.Id, projectId, cancellationToken);
-        return Ok(await _store.CreateGraphAsync(user.Id, projectId, ApiRequestContext.NormalizeName(request.Name, "Graph name is required"), cancellationToken));
+        return Ok(await _store.CreateGraphAsync(user.Id, projectId, ApiRequestContext.NormalizeName(request.Name, "backend.errors.graphNameRequired"), cancellationToken));
     }
 
     [HttpPut("{projectId}/graphs/{graphId}/activate")]
@@ -133,7 +133,7 @@ public sealed class ProjectsController : ControllerBase
         await _store.RequireProjectAccessAsync(user.Id, projectId, cancellationToken);
         if (!await _store.SetActiveGraphAsync(user.Id, projectId, graphId, cancellationToken))
         {
-            throw new ApiException(StatusCodes.Status404NotFound, "Graph not found");
+            throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.graphNotFound");
         }
 
         return Ok(new StatusResponse { Status = "ok" });
@@ -144,9 +144,9 @@ public sealed class ProjectsController : ControllerBase
     {
         var user = ApiRequestContext.GetAuthenticatedUser(User);
         await _store.RequireProjectAccessAsync(user.Id, projectId, cancellationToken);
-        if (!await _store.RenameGraphAsync(user.Id, projectId, graphId, ApiRequestContext.NormalizeName(request.Name, "Graph name is required"), cancellationToken))
+        if (!await _store.RenameGraphAsync(user.Id, projectId, graphId, ApiRequestContext.NormalizeName(request.Name, "backend.errors.graphNameRequired"), cancellationToken))
         {
-            throw new ApiException(StatusCodes.Status404NotFound, "Graph not found");
+            throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.graphNotFound");
         }
 
         return Ok(new StatusResponse { Status = "ok" });
@@ -157,7 +157,7 @@ public sealed class ProjectsController : ControllerBase
     {
         var user = ApiRequestContext.GetAuthenticatedUser(User);
         await _store.RequireProjectAccessAsync(user.Id, projectId, cancellationToken);
-        return Ok(await _store.CopyGraphAsync(user.Id, projectId, graphId, ApiRequestContext.NormalizeName(request.Name, "Graph name is required"), cancellationToken));
+        return Ok(await _store.CopyGraphAsync(user.Id, projectId, graphId, ApiRequestContext.NormalizeName(request.Name, "backend.errors.graphNameRequired"), cancellationToken));
     }
 
     [HttpDelete("{projectId}/graphs/{graphId}/delete")]
@@ -167,7 +167,7 @@ public sealed class ProjectsController : ControllerBase
         await _store.RequireProjectAccessAsync(user.Id, projectId, cancellationToken);
         if (!await _store.DeleteGraphAsync(user.Id, projectId, graphId, cancellationToken))
         {
-            throw new ApiException(StatusCodes.Status404NotFound, "Graph not found");
+            throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.graphNotFound");
         }
 
         return Ok(new StatusResponse { Status = "ok" });
@@ -178,7 +178,7 @@ public sealed class ProjectsController : ControllerBase
     {
         var user = ApiRequestContext.GetAuthenticatedUser(User);
         var image = await _store.GetGraphThumbnailAsync(user.Id, projectId, graphId, cancellationToken)
-            ?? throw new ApiException(StatusCodes.Status404NotFound, "Thumbnail not found");
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.thumbnailNotFound");
         SetThumbnailResponseHeaders(image.Sha256);
         return File(image.Data, image.ContentType);
     }
@@ -199,7 +199,7 @@ public sealed class ProjectsController : ControllerBase
         var user = ApiRequestContext.GetAuthenticatedUser(User);
         if (!await _store.DeleteGraphThumbnailAsync(user.Id, projectId, graphId, cancellationToken))
         {
-            throw new ApiException(StatusCodes.Status404NotFound, "Graph not found");
+            throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.graphNotFound");
         }
         return NoContent();
     }

@@ -1,70 +1,71 @@
 import { DragEvent } from "react";
+import { useTranslation } from "react-i18next";
 
 export type NodeType = "recipe" | "recipetag" | "input" | "inputrecipe" | "inputrecipetag" | "output" | "requester" | "mixedoutput";
 
 type NodeTypeInfo = {
   type: NodeType;
-  label: string;
+  labelKey: string;
   icon: string;
-  description: string;
+  descriptionKey: string;
   color: string;
 };
 
 const nodeTypes: NodeTypeInfo[] = [
   {
     type: "input",
-    label: "Input Node",
+    labelKey: "ui.nodeTypes.input.label",
     icon: "📥",
-    description: "Source of items/fluids",
+    descriptionKey: "ui.nodeTypes.input.description",
     color: "#10b981"
   },
   {
     type: "inputrecipe",
-    label: "Input Recipe",
+    labelKey: "ui.nodeTypes.inputRecipe.label",
     icon: "⚡",
-    description: "Recipe as input source",
+    descriptionKey: "ui.nodeTypes.inputRecipe.description",
     color: "#059669"
   },
   {
     type: "inputrecipetag",
-    label: "Input Recipe Tag",
+    labelKey: "ui.nodeTypes.inputRecipeTag.label",
     icon: "🔖",
-    description: "Recipe tag as input source",
+    descriptionKey: "ui.nodeTypes.inputRecipeTag.description",
     color: "#047857"
   },
   {
     type: "output",
-    label: "Output Node",
+    labelKey: "ui.nodeTypes.output.label",
     icon: "📤",
-    description: "Target for production",
+    descriptionKey: "ui.nodeTypes.output.description",
     color: "#3b82f6"
   },
   {
     type: "recipe",
-    label: "Recipe Node",
+    labelKey: "ui.nodeTypes.recipe.label",
     icon: "⚙️",
-    description: "Processing recipe",
+    descriptionKey: "ui.nodeTypes.recipe.description",
     color: "#8b5cf6"
   },
   {
     type: "recipetag",
-    label: "Recipe Tag Node",
+    labelKey: "ui.nodeTypes.recipeTag.label",
     icon: "🏷️",
-    description: "Pattern-based recipe group",
+    descriptionKey: "ui.nodeTypes.recipeTag.description",
     color: "#ec4899"
   },
   {
     type: "requester",
-    label: "Requester Node",
+    labelKey: "ui.nodeTypes.requester.label",
     icon: "🎯",
-    description: "Defines production targets",
+    descriptionKey: "ui.nodeTypes.requester.description",
     color: "#f59e0b"
   },
   {
     type: "mixedoutput",
-    label: "Mixed Output",
+    labelKey: "ui.nodeTypes.mixedOutput.label",
     icon: "🎲",
-    description: "Output with mixed input",
+    descriptionKey: "ui.nodeTypes.mixedOutput.description",
     color: "#06b6d4"
   }
 ];
@@ -74,6 +75,7 @@ type NodeTypeSelectorProps = {
 };
 
 export default function NodeTypeSelector({ onNodeTypeSelected }: NodeTypeSelectorProps) {
+  const { t } = useTranslation();
   const handleDragStart = (e: DragEvent, nodeType: NodeType) => {
     e.dataTransfer.setData("application/reactflow", nodeType);
     e.dataTransfer.effectAllowed = "move";
@@ -81,7 +83,7 @@ export default function NodeTypeSelector({ onNodeTypeSelected }: NodeTypeSelecto
 
   return (
     <div className="node-type-selector">
-      <h3 className="selector-header">Node Types</h3>
+      <h3 className="selector-header">{t("ui.nodeTypes.title")}</h3>
       <div className="node-types-list">
         {nodeTypes.map((nt) => (
           <div
@@ -94,14 +96,14 @@ export default function NodeTypeSelector({ onNodeTypeSelected }: NodeTypeSelecto
           >
             <div className="node-type-icon">{nt.icon}</div>
             <div className="node-type-info">
-              <div className="node-type-label">{nt.label}</div>
-              <div className="node-type-desc">{nt.description}</div>
+              <div className="node-type-label">{t(nt.labelKey)}</div>
+              <div className="node-type-desc">{t(nt.descriptionKey)}</div>
             </div>
           </div>
         ))}
       </div>
       <div className="selector-hint">
-        💡 Drag & drop or click to add nodes
+        💡 {t("ui.nodeTypes.hint")}
       </div>
     </div>
   );

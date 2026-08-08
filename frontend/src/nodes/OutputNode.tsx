@@ -2,6 +2,7 @@ import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
 import { useGraphStore } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
 import type { NodeFlowData } from "../api/solve";
+import { useTranslation } from "react-i18next";
 
 type OutputItem = {
   id: string;
@@ -14,6 +15,7 @@ type OutputNodeData = {
 };
 
 export default function OutputNode({ id, data }: NodeProps<OutputNodeData>) {
+  const { t } = useTranslation();
   const { setNodes, getEdges, setEdges } = useReactFlow();
   const items = useGraphStore((state) => state.items);
 
@@ -84,9 +86,9 @@ export default function OutputNode({ id, data }: NodeProps<OutputNodeData>) {
   return (
     <div className="node io output">
       <div className="node-header">
-        <span className="node-title">Output</span>
+        <span className="node-title">{t("ui.nodes.output")}</span>
         {data.solveData && data.solveData.totalInput > 0 && (
-          <span className="node-badge" title="Total input rate">
+          <span className="node-badge" title={t("ui.nodes.totalInput")}>
             ↓ {data.solveData.totalInput.toFixed(2)}/s
           </span>
         )}
@@ -109,10 +111,10 @@ export default function OutputNode({ id, data }: NodeProps<OutputNodeData>) {
                     value={item.itemId}
                     options={items.map((i) => ({ value: i.id, label: i.name }))}
                     onChange={(value) => updateItem(item.id, { itemId: value })}
-                    placeholder="Select item"
+                    placeholder={t("ui.nodes.selectItem")}
                   />
                   {data.solveData && (
-                    <span className="port-rate" title="Output rate">
+                    <span className="port-rate" title={t("ui.nodes.actualOutput")}>
                       {flowRate.toFixed(2)}/s
                     </span>
                   )}

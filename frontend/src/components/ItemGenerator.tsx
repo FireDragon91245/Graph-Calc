@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useGraphStore, Item } from "../store/graphStore";
+import { useTranslation } from "react-i18next";
 
 interface ItemSuggestion {
   id: string;
@@ -32,6 +33,7 @@ interface TransformStep {
 }
 
 export default function ItemGenerator() {
+  const { t } = useTranslation();
   const items = useGraphStore((state) => state.items);
   const tags = useGraphStore((state) => state.tags);
   const categories = useGraphStore((state) => state.categories);
@@ -193,7 +195,7 @@ export default function ItemGenerator() {
   };
 
   const validateSteps = (): string | null => {
-    if (steps.length === 0) return "Add at least one transformation step.";
+    if (steps.length === 0) return t("ui.itemGenerator.validation.oneStep");
 
     for (const step of steps) {
       switch (step.type) {
@@ -201,10 +203,10 @@ export default function ItemGenerator() {
         case "addSuffix":
         case "removePrefix":
         case "removeSuffix":
-          if (!step.value?.trim()) return "Each add/remove step needs a value.";
+          if (!step.value?.trim()) return t("ui.itemGenerator.validation.value");
           break;
         case "replace":
-          if (!step.replaceFrom?.trim()) return "Find & replace needs a search term.";
+          if (!step.replaceFrom?.trim()) return t("ui.itemGenerator.validation.search");
           break;
         default:
           break;
@@ -217,7 +219,7 @@ export default function ItemGenerator() {
     const sourceItems = getSourceItems();
     
     if (sourceItems.length === 0) {
-      alert("Please select items or a tag first!");
+      alert(t("ui.generator.item.selectFirst"));
       return;
     }
 
@@ -252,7 +254,7 @@ export default function ItemGenerator() {
     });
 
     if (newSuggestions.length === 0) {
-      alert("No new items to generate! All transformed items already exist or transformation had no effect.");
+      alert(t("ui.generator.item.noNew"));
       return;
     }
 
@@ -277,11 +279,11 @@ export default function ItemGenerator() {
     const approved = suggestions.filter((s) => s.approved);
     
     if (approved.length === 0) {
-      alert("No items approved!");
+      alert(t("ui.generator.item.noApproved"));
       return;
     }
 
-    if (!confirm(`Create ${approved.length} items?`)) {
+    if (!confirm(t("ui.generator.item.confirmCreate", { count: approved.length }))) {
       return;
     }
 
@@ -305,7 +307,7 @@ export default function ItemGenerator() {
       });
     });
 
-    alert(`✅ Created ${approved.length} items!`);
+    alert(`✅ ${t("ui.generator.item.created", { count: approved.length })}`);
     setSuggestions([]);
   };
 
@@ -324,17 +326,17 @@ export default function ItemGenerator() {
     <div className="config-mode-content">
       <div className="config-sidebar">
         <div className="config-section">
-          <h3>Item Generator</h3>
+          <h3>{t("ui.generator.item.title")}</h3>
           <p className="help-text">
-            Generate new items by transforming existing ones with naming patterns
+            {t("ui.itemGenerator.intro")}
           </p>
         </div>
 
         <div className="config-section">
-          <h3>Select Source Items</h3>
+          <h3>{t("ui.generator.item.selectSources")}</h3>
           
           <div className="form-row">
-            <label>Source Tag</label>
+            <label>{t("ui.generator.item.sourceTag")}</label>
             <select
               value={selectedTagId}
               onChange={(e) => {
@@ -344,7 +346,7 @@ export default function ItemGenerator() {
               }}
               className="config-input"
             >
-              <option value="">-- Not using a tag --</option>
+              <option value="">— {t("ui.generator.item.noTag")} —</option>
               {tags.map((tag) => (
                 <option key={tag.id} value={tag.id}>
                   {tag.name} ({tag.memberItemIds.length} items)
@@ -354,7 +356,7 @@ export default function ItemGenerator() {
           </div>
 
           <div className="form-row">
-            <label>Source Category</label>
+            <label>{t("ui.generator.item.sourceCategory")}</label>
             <select
               value={selectedCategoryId}
               onChange={(e) => {
@@ -364,8 +366,8 @@ export default function ItemGenerator() {
               }}
               className="config-input"
             >
-              <option value="">-- Or select items manually --</option>
-              <option value={NO_CATEGORY_VALUE}>-- None --</option>
+              <option value="">— {t("ui.generator.item.manual")} —</option>
+              <option value={NO_CATEGORY_VALUE}>— {t("ui.generator.item.none")} —</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name} ({items.filter((item) => item.categoryId === category.id).length} items)
@@ -378,7 +380,7 @@ export default function ItemGenerator() {
             <>
               <input
                 type="text"
-                placeholder="Search items..."
+                placeholder={t("ui.generator.item.search")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="config-input"
@@ -412,30 +414,25 @@ export default function ItemGenerator() {
 
           {selectedTagId && (
             <div className="selected-tag-info">
-              ✓ Using tag: <strong>{tags.find(t => t.id === selectedTagId)?.name}</strong>
+              ✓ {t("ui.generator.item.usingTag", { name: tags.find(tag => tag.id === selectedTagId)?.name ?? "" })}
               <div className="help-text" style={{ marginTop: "0.25rem" }}>
-                {tags.find(t => t.id === selectedTagId)?.memberItemIds.length} items selected
+                {t("ui.itemGenerator.itemsSelected", { count: tags.find(tag => tag.id === selectedTagId)?.memberItemIds.length ?? 0 })}
               </div>
             </div>
           )}
 
           {selectedCategoryId && (
             <div className="selected-tag-info">
-              ✓ Using category:{" "}
-              <strong>
-                {selectedCategoryId === NO_CATEGORY_VALUE
-                  ? "-- None --"
-                  : categories.find((category) => category.id === selectedCategoryId)?.name}
-              </strong>
+              ✓ {t("ui.itemGenerator.usingCategory", { name: selectedCategoryId === NO_CATEGORY_VALUE ? t("ui.generator.item.none") : categories.find((category) => category.id === selectedCategoryId)?.name })}
               <div className="help-text" style={{ marginTop: "0.25rem" }}>
-                {getSourceItems().length} items selected
+                {t("ui.itemGenerator.itemsSelected", { count: getSourceItems().length })}
               </div>
             </div>
           )}
 
           {!selectedTagId && !selectedCategoryId && selectedItemIds.length > 0 && (
             <div className="selected-items-count">
-              ✓ {selectedItemIds.length} items selected
+              ✓ {t("ui.itemGenerator.itemsSelected", { count: selectedItemIds.length })}
             </div>
           )}
         </div>
@@ -443,21 +440,21 @@ export default function ItemGenerator() {
 
       <div className="config-main">
         <div className="generator-panel">
-          <h3>Transformation Settings</h3>
+          <h3>{t("ui.generator.item.settings")}</h3>
           
           <div className="form-row" style={{ alignItems: "flex-start" }}>
             <div>
-              <label>Steps (run top to bottom)</label>
-              <p className="help-text">Chain multiple actions like remove prefix → add prefix → replace text.</p>
+              <label>{t("ui.generator.item.steps")}</label>
+              <p className="help-text">{t("ui.generator.item.stepsHelp")}</p>
             </div>
             <button onClick={() => addStep()} className="btn-secondary" style={{ marginLeft: "auto" }}>
-              + Add Step
+              + {t("ui.itemGenerator.addStep")}
             </button>
           </div>
 
           {steps.length === 0 && (
             <div className="help-text" style={{ marginBottom: "1rem" }}>
-              No steps yet. Add one to start building a transformation pipeline.
+              {t("ui.itemGenerator.noSteps")}
             </div>
           )}
 
@@ -466,45 +463,42 @@ export default function ItemGenerator() {
               <div key={step.id} className="suggestion-card" style={{ marginBottom: "0.75rem" }}>
                 <div className="suggestion-header">
                   <div className="suggestion-title">
-                    <h4>Step {index + 1}</h4>
+                    <h4>{t("ui.itemGenerator.step", { number: index + 1 })}</h4>
                     <div className="suggestion-badges">
                       <span className="category-badge-mini">{step.type}</span>
                     </div>
                   </div>
                   <button onClick={() => removeStep(step.id)} className="btn-secondary">
-                    Remove
+                    {t("ui.itemGenerator.remove")}
                   </button>
                 </div>
 
                 <div className="form-row">
-                  <label>Type</label>
+                  <label>{t("ui.generator.item.type")}</label>
                   <select
                     value={step.type}
                     onChange={(e) => updateStep(step.id, { type: e.target.value as TransformType })}
                     className="config-input"
                   >
-                    <option value="addPrefix">Add Prefix</option>
-                    <option value="addSuffix">Add Suffix</option>
-                    <option value="replace">Find & Replace</option>
-                    <option value="removePrefix">Remove Prefix</option>
-                    <option value="removeSuffix">Remove Suffix</option>
-                    <option value="uppercase">Uppercase (name only)</option>
-                    <option value="lowercase">Lowercase (name only)</option>
-                    <option value="titlecase">Title Case (name only)</option>
+                    <option value="addPrefix">{t("ui.generator.item.addPrefix")}</option>
+                    <option value="addSuffix">{t("ui.generator.item.addSuffix")}</option>
+                    <option value="replace">{t("ui.generator.item.findReplace")}</option>
+                    <option value="removePrefix">{t("ui.generator.item.removePrefix")}</option>
+                    <option value="removeSuffix">{t("ui.generator.item.removeSuffix")}</option>
+                    <option value="uppercase">{t("ui.generator.item.uppercase")}</option>
+                    <option value="lowercase">{t("ui.generator.item.lowercase")}</option>
+                    <option value="titlecase">{t("ui.generator.item.titlecase")}</option>
                   </select>
                 </div>
 
                 {(step.type === "addPrefix" || step.type === "addSuffix" || step.type === "removePrefix" || step.type === "removeSuffix") && (
                   <div className="form-row">
                     <label>
-                      {step.type === "addPrefix" && "Value"}
-                      {step.type === "addSuffix" && "Value"}
-                      {step.type === "removePrefix" && "Value"}
-                      {step.type === "removeSuffix" && "Value"}
+                      {t("ui.itemGenerator.value")}
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g., Raw"
+                      placeholder={t("ui.itemGenerator.rawExample")}
                       value={step.value ?? ""}
                       onChange={(e) => updateStep(step.id, { value: e.target.value })}
                       className="config-input"
@@ -515,20 +509,20 @@ export default function ItemGenerator() {
                 {step.type === "replace" && (
                   <>
                     <div className="form-row">
-                      <label>Find Text</label>
+                      <label>{t("ui.generator.item.find")}</label>
                       <input
                         type="text"
-                        placeholder="e.g., Raw"
+                        placeholder={t("ui.itemGenerator.rawExample")}
                         value={step.replaceFrom ?? ""}
                         onChange={(e) => updateStep(step.id, { replaceFrom: e.target.value })}
                         className="config-input"
                       />
                     </div>
                     <div className="form-row">
-                      <label>Replace With</label>
+                      <label>{t("ui.generator.item.replaceWith")}</label>
                       <input
                         type="text"
-                        placeholder="e.g., Crushed"
+                        placeholder={t("ui.itemGenerator.crushedExample")}
                         value={step.replaceTo ?? ""}
                         onChange={(e) => updateStep(step.id, { replaceTo: e.target.value })}
                         className="config-input"
@@ -539,7 +533,7 @@ export default function ItemGenerator() {
 
                 {(step.type === "uppercase" || step.type === "lowercase" || step.type === "titlecase") && (
                   <div className="help-text" style={{ marginTop: "0.5rem" }}>
-                    This step only changes the display name; IDs stay slugged from other steps.
+                    {t("ui.itemGenerator.caseHelp")}
                   </div>
                 )}
               </div>
@@ -547,14 +541,14 @@ export default function ItemGenerator() {
           </div>
 
           <div className="form-row">
-            <label>Target Category (Optional)</label>
+            <label>{t("ui.generator.item.targetCategory")}</label>
             <select
               value={targetCategoryId}
               onChange={(e) => setTargetCategoryId(e.target.value)}
               className="config-input"
             >
-              <option value="">-- Keep source category --</option>
-              <option value={NO_CATEGORY_VALUE}>-- None --</option>
+              <option value="">— {t("ui.generator.item.keepCategory")} —</option>
+              <option value={NO_CATEGORY_VALUE}>— {t("ui.generator.item.none")} —</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
@@ -565,8 +559,8 @@ export default function ItemGenerator() {
 
           <div className="form-row item-generator-target-tags">
             <div className="item-generator-setting-heading">
-              <label>Target Tags (Optional)</label>
-              <span className="help-text">Generated items will be added to every selected tag.</span>
+              <label>{t("ui.generator.item.targetTags")}</label>
+              <span className="help-text">{t("ui.generator.item.targetTagsHelp")}</span>
             </div>
             {tags.length > 0 ? (
               <div className="item-generator-tag-grid">
@@ -582,17 +576,17 @@ export default function ItemGenerator() {
                 ))}
               </div>
             ) : (
-              <span className="help-text">Create an item tag first to assign generated items.</span>
+              <span className="help-text">{t("ui.generator.item.createTagFirst")}</span>
             )}
           </div>
 
           <div className="form-row">
             <div className="form-actions">
               <button onClick={generateSuggestions} className="btn-primary btn-large">
-                Generate Preview
+                {t("ui.itemGenerator.preview")}
               </button>
               <button onClick={clearForm} className="btn-secondary btn-large">
-                Clear
+                {t("ui.itemGenerator.clear")}
               </button>
             </div>
           </div>
@@ -600,20 +594,20 @@ export default function ItemGenerator() {
           {suggestions.length > 0 && (
             <div className="suggestions-section">
               <div className="suggestions-header">
-                <h3>{suggestions.length} Item Suggestions</h3>
+                <h3>{t("ui.itemGenerator.suggestions", { count: suggestions.length })}</h3>
                 <div className="bulk-actions">
                   <button onClick={approveAll} className="btn-secondary">
-                    ✓ Approve All
+                    ✓ {t("ui.itemGenerator.approveAll")}
                   </button>
                   <button onClick={rejectAll} className="btn-secondary">
-                    ✗ Reject All
+                    ✗ {t("ui.itemGenerator.rejectAll")}
                   </button>
                   <button
                     onClick={createApprovedItems}
                     className="btn-primary"
                     disabled={!suggestions.some((s) => s.approved)}
                   >
-                    Create {suggestions.filter((s) => s.approved).length} Approved
+                    {t("ui.itemGenerator.createApproved", { count: suggestions.filter((s) => s.approved).length })}
                   </button>
                 </div>
               </div>
@@ -644,7 +638,7 @@ export default function ItemGenerator() {
                         onClick={() => toggleApproval(suggestion.id)}
                         className={`btn-toggle ${suggestion.approved ? "approved" : "rejected"}`}
                       >
-                        {suggestion.approved ? "✓ Approved" : "✗ Rejected"}
+                        {suggestion.approved ? `✓ ${t("ui.itemGenerator.approved")}` : `✗ ${t("ui.itemGenerator.rejected")}`}
                       </button>
                     </div>
 

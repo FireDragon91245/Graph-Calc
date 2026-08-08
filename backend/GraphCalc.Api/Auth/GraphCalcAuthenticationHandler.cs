@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using GraphCalc.Api.Configuration;
 using GraphCalc.Api.Services;
+using GraphCalc.Api.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 
@@ -67,8 +68,10 @@ public sealed class GraphCalcAuthenticationHandler : AuthenticationHandler<Authe
 
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)
     {
+        const string code = "backend.errors.authenticationRequired";
+        var translations = Context.RequestServices.GetRequiredService<JsonTranslationService>();
         Response.StatusCode = StatusCodes.Status401Unauthorized;
         Response.ContentType = "application/json";
-        return Response.WriteAsJsonAsync(new { detail = "Authentication required" }, Context.RequestAborted);
+        return Response.WriteAsJsonAsync(new { code, args = new { }, detail = translations.Translate(code) }, Context.RequestAborted);
     }
 }

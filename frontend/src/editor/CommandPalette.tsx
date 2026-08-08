@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export type CommandAction = {
   id: string;
@@ -28,6 +29,7 @@ export default function CommandPalette({
   onClose,
   onActionSelected
 }: CommandPaletteProps) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [path, setPath] = useState<CommandAction[]>([]);
@@ -98,7 +100,7 @@ export default function CommandPalette({
       await onActionSelected(action);
       onClose();
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : "The action could not be completed.");
+      setError(actionError instanceof Error ? actionError.message : t("ui.palette.failed"));
       setBusyActionId(null);
     }
   };
@@ -141,11 +143,11 @@ export default function CommandPalette({
         className="command-palette"
         role="dialog"
         aria-modal="true"
-        aria-label={currentParent?.label ?? "Quick actions"}
+        aria-label={currentParent?.label ?? t("ui.palette.title")}
       >
         <div className="command-palette-header">
           {path.length > 0 && !search ? (
-            <button className="command-palette-back" onClick={goBack} aria-label="Back to all actions">
+            <button className="command-palette-back" onClick={goBack} aria-label={t("ui.palette.back")}>
               ←
             </button>
           ) : (
@@ -156,9 +158,9 @@ export default function CommandPalette({
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={currentParent?.label ?? "Search quick actions..."}
+            placeholder={currentParent?.label ?? t("ui.palette.search")}
             className="command-palette-input"
-            aria-label="Search quick actions"
+            aria-label={t("ui.palette.searchLabel")}
             disabled={Boolean(busyActionId)}
           />
           <kbd className="command-palette-shortcut">Esc</kbd>
@@ -166,13 +168,13 @@ export default function CommandPalette({
 
         {path.length > 0 && !search && (
           <div className="command-palette-breadcrumb">
-            Quick Actions <span>›</span> {path.map((entry) => entry.label).join(" › ")}
+            {t("ui.palette.title")} <span>›</span> {path.map((entry) => entry.label).join(" › ")}
           </div>
         )}
 
         <div className="command-palette-results" ref={listRef} role="listbox">
           {filteredActions.length === 0 ? (
-            <div className="command-palette-empty">No matching actions</div>
+            <div className="command-palette-empty">{t("ui.palette.empty")}</div>
           ) : (
             filteredActions.map((action, index) => {
               const showGroup = action.group !== previousGroup;
@@ -199,7 +201,7 @@ export default function CommandPalette({
                       </span>
                     </span>
                     {busyActionId === action.id ? (
-                      <span className="command-palette-spinner" aria-label="Working" />
+                      <span className="command-palette-spinner" aria-label={t("ui.palette.working")} />
                     ) : action.children?.length ? (
                       <span className="command-palette-chevron" aria-hidden="true">›</span>
                     ) : null}
@@ -213,9 +215,9 @@ export default function CommandPalette({
         {error && <div className="command-palette-error" role="alert">{error}</div>}
 
         <footer className="command-palette-footer">
-          <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
-          <span><kbd>Enter</kbd> Select</span>
-          {path.length > 0 && <span><kbd>Backspace</kbd> Back</span>}
+          <span><kbd>↑</kbd><kbd>↓</kbd> {t("ui.palette.navigate")}</span>
+          <span><kbd>Enter</kbd> {t("ui.palette.select")}</span>
+          {path.length > 0 && <span><kbd>Backspace</kbd> {t("ui.palette.backAction")}</span>}
         </footer>
       </section>
     </div>

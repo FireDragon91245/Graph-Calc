@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useGraphStore } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
 import type { NodeFlowData } from "../api/solve";
+import { useTranslation } from "react-i18next";
 
 type Port = {
   id: string;
@@ -25,6 +26,7 @@ type RecipeNodeData = {
 };
 
 export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
+  const { t } = useTranslation();
   const { setNodes, getEdges, setEdges } = useReactFlow();
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
@@ -115,21 +117,21 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
           value={data.recipeId}
           options={recipes.map((r) => ({ value: r.id, label: r.name }))}
           onChange={handleRecipeChange}
-          placeholder="Select recipe"
+          placeholder={t("ui.nodes.selectRecipe")}
         />
         <span className="node-sub">{data.timeSeconds}s</span>
         {hasSolveData ? (
-          <span className="node-badge" title="Total input flow">
+          <span className="node-badge" title={t("ui.nodes.totalInput")}>
             ↓ {(data.solveData?.totalInput ?? 0).toFixed(2)}/s
           </span>
         ) : null}
         {data.solveData?.machineCount !== undefined ? (
-          <span className="node-badge" title="Machine Count">
+          <span className="node-badge" title={t("ui.nodes.machineCount")}>
             🏭 {(data.solveData.machineCount ?? 0).toFixed(2)}
           </span>
         ) : null}
         {hasSolveData ? (
-          <span className="node-badge" title="Total output flow">
+          <span className="node-badge" title={t("ui.nodes.totalOutput")}>
             ↑ {(data.solveData?.totalOutput ?? 0).toFixed(2)}/s
           </span>
         ) : null}
@@ -137,7 +139,7 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
           className="node-detail-btn"
           onClick={() => hasSolveData && setShowDetails((prev) => !prev)}
           disabled={!hasSolveData}
-          title={hasSolveData ? "Show details" : "Run solver first"}
+          title={hasSolveData ? t("ui.nodes.showDetails") : t("ui.nodes.runSolver")}
         >
           ...
         </button>
@@ -160,7 +162,7 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
                   <span className="port-name">{getInputLabel(input)}</span>
                   <span className="port-amount">{input.amountPerCycle}</span>
                   {hasSolveData && (
-                    <span className="port-rate" title="Actual flow rate">
+                    <span className="port-rate" title={t("ui.nodes.actualFlow")}>
                       {flowRate.toFixed(2)}/s
                     </span>
                   )}
@@ -175,7 +177,7 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
               return (
                 <div key={output.id} className="port-row right">
                   {hasSolveData && (
-                    <span className="port-rate" title="Actual flow rate">
+                    <span className="port-rate" title={t("ui.nodes.actualFlow")}>
                       {flowRate.toFixed(2)}/s
                     </span>
                   )}
@@ -197,13 +199,13 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeData>) {
         </div>
         {showDetails && data.solveData ? (
           <div className="node-detail-panel">
-            <div className="node-detail-title">Recipe Details</div>
+            <div className="node-detail-title">{t("ui.nodes.recipeDetails")}</div>
             <div className="node-detail-row">
               <span>{recipeTitle}</span>
               <span>{data.timeSeconds}s</span>
             </div>
             <div className="node-detail-row">
-              <span>Machines</span>
+              <span>{t("ui.nodes.machines")}</span>
               <span>{(data.solveData.machineCount ?? 0).toFixed(2)}</span>
             </div>
             {data.inputs.map((input) => {

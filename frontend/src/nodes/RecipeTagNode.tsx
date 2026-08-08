@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import { useGraphStore } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
 import type { NodeFlowData } from "../api/solve";
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 
 type PortPattern = {
   id: string;
@@ -36,8 +38,8 @@ function analyzeRecipePattern(
 ): { inputs: PortPattern[]; outputs: PortPattern[] } {
   if (recipeIds.length === 0) {
     return {
-      inputs: [{ id: "i1", name: "Mixed Input", amountPerCycle: 1, isMixed: true }],
-      outputs: [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }]
+      inputs: [{ id: "i1", name: i18n.t("ui.nodes.mixedInput"), amountPerCycle: 1, isMixed: true }],
+      outputs: [{ id: "o1", name: i18n.t("ui.nodes.mixedOutput"), amountPerCycle: 1, isMixed: true }]
     };
   }
 
@@ -45,8 +47,8 @@ function analyzeRecipePattern(
   
   if (recipeData.length === 0) {
     return {
-      inputs: [{ id: "i1", name: "Mixed Input", amountPerCycle: 1, isMixed: true }],
-      outputs: [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }]
+      inputs: [{ id: "i1", name: i18n.t("ui.nodes.mixedInput"), amountPerCycle: 1, isMixed: true }],
+      outputs: [{ id: "o1", name: i18n.t("ui.nodes.mixedOutput"), amountPerCycle: 1, isMixed: true }]
     };
   }
 
@@ -59,8 +61,8 @@ function analyzeRecipePattern(
   // If structure doesn't match, fallback to 1 mixed in, 1 mixed out
   if (!sameInputCount || !sameOutputCount) {
     return {
-      inputs: [{ id: "i1", name: "Mixed Input", amountPerCycle: 1, isMixed: true }],
-      outputs: [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }]
+      inputs: [{ id: "i1", name: i18n.t("ui.nodes.mixedInput"), amountPerCycle: 1, isMixed: true }],
+      outputs: [{ id: "o1", name: i18n.t("ui.nodes.mixedOutput"), amountPerCycle: 1, isMixed: true }]
     };
   }
 
@@ -84,7 +86,7 @@ function analyzeRecipePattern(
     let name: string;
 
     if (isMixed) {
-      name = `Mixed Input ${i + 1}`;
+      name = `${i18n.t("ui.nodes.mixedInput")} ${i + 1}`;
     } else {
       // Fixed input - get the name
       const refType = refTypes[0];
@@ -123,7 +125,7 @@ function analyzeRecipePattern(
     let name: string;
 
     if (isMixed) {
-      name = `Mixed Output ${i + 1}`;
+      name = `${i18n.t("ui.nodes.mixedOutput")} ${i + 1}`;
     } else {
       // Fixed output - get the name
       name = items.find((item) => item.id === itemIds[0])?.name ?? itemIds[0];
@@ -144,6 +146,7 @@ function analyzeRecipePattern(
 }
 
 export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>) {
+  const { t } = useTranslation();
   const { setNodes, getEdges, setEdges } = useReactFlow();
   const recipeTags = useGraphStore((state) => state.recipeTags);
   const recipes = useGraphStore((state) => state.recipes);
@@ -210,20 +213,20 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
           value={data.recipeTagId}
           options={recipeTags.map((rt) => ({ value: rt.id, label: rt.name }))}
           onChange={handleRecipeTagChange}
-          placeholder="Select recipe tag"
+          placeholder={t("ui.nodes.selectRecipeTag")}
         />
         {hasSolveData ? (
-          <span className="node-badge" title="Total input flow">
+          <span className="node-badge" title={t("ui.nodes.totalInput")}>
             ↓ {(data.solveData?.totalInput ?? 0).toFixed(2)}/s
           </span>
         ) : null}
         {data.solveData?.machineCount !== undefined ? (
-          <span className="node-badge" title="Total machines (all recipes)">
+          <span className="node-badge" title={t("ui.nodes.totalMachines")}>
             🏭 {(data.solveData.machineCount ?? 0).toFixed(2)}
           </span>
         ) : null}
         {hasSolveData ? (
-          <span className="node-badge" title="Total output flow">
+          <span className="node-badge" title={t("ui.nodes.totalOutput")}>
             ↑ {(data.solveData?.totalOutput ?? 0).toFixed(2)}/s
           </span>
         ) : null}
@@ -231,7 +234,7 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
           className="node-detail-btn"
           onClick={() => hasSolveData && setShowDetails((prev) => !prev)}
           disabled={!hasSolveData}
-          title={hasSolveData ? "Show details" : "Run solver first"}
+          title={hasSolveData ? t("ui.nodes.showDetails") : t("ui.nodes.runSolver")}
         >
           ...
         </button>
@@ -253,7 +256,7 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
                 </span>
                 <span className="port-amount">{input.amountPerCycle}</span>
                 {hasSolveData && !input.isMixed ? (
-                  <span className="port-rate" title="Actual input flow">
+                  <span className="port-rate" title={t("ui.nodes.actualInput")}>
                     {(data.solveData?.inputFlows[resolveInputId(input)] ?? 0).toFixed(2)}/s
                   </span>
                 ) : null}
@@ -264,7 +267,7 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
             {data.outputs.map((output) => (
               <div key={output.id} className="port-row right">
                 {hasSolveData && !output.isMixed ? (
-                  <span className="port-rate" title="Actual output flow">
+                  <span className="port-rate" title={t("ui.nodes.actualOutput")}>
                     {(data.solveData?.outputFlows[resolveOutputId(output)] ?? 0).toFixed(2)}/s
                   </span>
                 ) : null}
@@ -287,7 +290,7 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
         </div>
         {showDetails && data.solveData ? (
           <div className="node-detail-panel">
-            <div className="node-detail-title">Recipe Tag Details</div>
+            <div className="node-detail-title">{t("ui.nodes.recipeTagDetails")}</div>
             <div className="node-detail-row">
               <span>{recipeTagTitle}</span>
               <span>{(data.solveData.machineCount ?? 0).toFixed(2)} machines</span>

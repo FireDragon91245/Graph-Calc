@@ -8,6 +8,8 @@ using GraphCalc.Api.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Localization;
+using System.Globalization;
 
 public class Program
 {
@@ -61,6 +63,14 @@ public class Program
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+        builder.Services.Configure<RequestLocalizationOptions>(options =>
+        {
+            var cultures = new[] { new CultureInfo("en"), new CultureInfo("de") };
+            options.DefaultRequestCulture = new RequestCulture("en");
+            options.SupportedCultures = cultures;
+            options.SupportedUICultures = cultures;
+        });
+        builder.Services.AddSingleton<JsonTranslationService>();
 
         builder.Services.AddSingleton<BackendStore>();
         builder.Services.AddSingleton<PasswordService>();
@@ -76,8 +86,10 @@ public class Program
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             options.OnRejected = async (context, cancellationToken) =>
             {
+                var translations = context.HttpContext.RequestServices.GetRequiredService<JsonTranslationService>();
+                const string code = "backend.errors.rateLimited";
                 context.HttpContext.Response.ContentType = "application/json";
-                await context.HttpContext.Response.WriteAsJsonAsync(new { detail = "Too many requests" }, cancellationToken);
+                await context.HttpContext.Response.WriteAsJsonAsync(new { code, args = new { }, detail = translations.Translate(code) }, cancellationToken);
             };
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
             {
@@ -128,12 +140,12 @@ public class Program
                 var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Errors");
                 var error = feature?.Error;
 
-                var (statusCode, detail) = error switch
+                var (statusCode, code, args) = error switch
                 {
-                    ApiException apiException => (apiException.StatusCode, apiException.Detail),
-                    OperationCanceledException when context.RequestAborted.IsCancellationRequested => (499, "Request cancelled"),
-                    BadHttpRequestException badRequestException => (StatusCodes.Status400BadRequest, badRequestException.Message),
-                    _ => (StatusCodes.Status500InternalServerError, "Internal server error")
+                    ApiException apiException => (apiException.StatusCode, apiException.Code, apiException.Args),
+                    OperationCanceledException when context.RequestAborted.IsCancellationRequested => (499, "backend.errors.requestCancelled", (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>()),
+                    BadHttpRequestException => (StatusCodes.Status400BadRequest, "backend.errors.invalidRequest", (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>()),
+                    _ => (StatusCodes.Status500InternalServerError, "backend.errors.internal", (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>())
                 };
 
                 if (error is not null && statusCode >= 500)
@@ -143,7 +155,8 @@ public class Program
 
                 context.Response.StatusCode = statusCode;
                 context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(new { detail }, context.RequestAborted);
+                var translations = context.RequestServices.GetRequiredService<JsonTranslationService>();
+                await context.Response.WriteAsJsonAsync(new { code, args, detail = translations.Translate(code, args) }, context.RequestAborted);
             });
         });
 
@@ -170,6 +183,7 @@ public class Program
 
         app.UseSwagger();
         app.UseSwaggerUI();
+        app.UseRequestLocalization();
         app.UseCors("frontend");
         app.UseRateLimiter();
         app.UseAuthentication();

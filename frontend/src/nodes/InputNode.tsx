@@ -2,6 +2,7 @@ import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
 import { useGraphStore } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
 import type { NodeFlowData } from "../api/solve";
+import { useTranslation } from "react-i18next";
 
 type InputItem = {
   id: string;
@@ -16,6 +17,7 @@ type InputNodeData = {
 };
 
 export default function InputNode({ id, data }: NodeProps<InputNodeData>) {
+  const { t } = useTranslation();
   const { setNodes, getEdges, setEdges } = useReactFlow();
   const items = useGraphStore((state) => state.items);
 
@@ -88,9 +90,9 @@ export default function InputNode({ id, data }: NodeProps<InputNodeData>) {
   return (
     <div className="node io input">
       <div className="node-header">
-        <span className="node-title">Input</span>
+        <span className="node-title">{t("ui.nodes.input")}</span>
         {data.solveData && data.solveData.totalOutput > 0 && (
-          <span className="node-badge" title="Total output rate">
+          <span className="node-badge" title={t("ui.nodes.totalOutputRate")}>
             ↑ {data.solveData.totalOutput.toFixed(2)}/s
           </span>
         )}
@@ -103,10 +105,10 @@ export default function InputNode({ id, data }: NodeProps<InputNodeData>) {
                 value={item.itemId}
                 options={items.map((i) => ({ value: i.id, label: i.name }))}
                 onChange={(value) => updateItem(item.id, { itemId: value })}
-                placeholder="Select item"
+                placeholder={t("ui.nodes.selectItem")}
               />
               {data.solveData && (
-                <span className="port-rate" title="Utilized rate from this input row">
+                <span className="port-rate" title={t("ui.nodes.utilizedRate")}>
                   {(data.solveData.outputFlows[item.itemId] ?? 0).toFixed(2)}/s
                 </span>
               )}
@@ -114,7 +116,7 @@ export default function InputNode({ id, data }: NodeProps<InputNodeData>) {
                 <button
                    className={`mode-btn ${item.mode === "infinite" ? "active" : ""}`}
                    onClick={() => updateItem(item.id, { mode: item.mode === "infinite" ? "limit" : "infinite" })}
-                   title={item.mode === "infinite" ? "Infinite" : "Limited"}
+                   title={item.mode === "infinite" ? t("ui.nodes.infinite") : t("ui.nodes.limited")}
                 >
                   {item.mode === "infinite" ? "∞" : "↧"}
                 </button>
@@ -124,7 +126,7 @@ export default function InputNode({ id, data }: NodeProps<InputNodeData>) {
                     className="nodrag limit-input"
                     value={item.limit || 0}
                     onChange={(e) => updateItem(item.id, { limit: parseFloat(e.target.value) })}
-                    placeholder="Limit"
+                    placeholder={t("ui.nodes.limit")}
                   />
                 )}
                 <button className="icon-btn danger" onClick={() => removeItem(item.id)}>

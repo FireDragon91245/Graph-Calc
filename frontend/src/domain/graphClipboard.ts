@@ -1,4 +1,5 @@
 import type { Edge, Node, XYPosition } from "reactflow";
+import i18n from "../i18n";
 
 export const GRAPH_CLIPBOARD_KIND = "graphcalc/node-selection";
 export const GRAPH_CLIPBOARD_SCHEMA_VERSION = 1;
@@ -129,7 +130,7 @@ export function createGraphClipboardPayload({
   const requestedIds = nodeIds ? new Set(nodeIds) : null;
   const selectedNodes = nodes.filter((node) => requestedIds ? requestedIds.has(node.id) : node.selected);
   if (selectedNodes.length === 0) {
-    throw new Error("Select at least one node to copy.");
+    throw new Error(i18n.t("persistenceErrors.copySelection"));
   }
 
   const clipboardNodes: ClipboardNode[] = selectedNodes.map((node) => ({
@@ -169,7 +170,7 @@ export function assertGraphClipboardProject(
   targetProjectId: string
 ): void {
   if (payload.sourceProjectId !== targetProjectId) {
-    throw new Error("Nodes can only be pasted into another graph in the same project.");
+    throw new Error(i18n.t("persistenceErrors.sameProject"));
   }
 }
 

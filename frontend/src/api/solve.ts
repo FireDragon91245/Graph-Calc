@@ -32,10 +32,15 @@ export type SolveResponse = {
   machineCounts: Record<string, number>;
   flowsPerSecond: Record<string, number>;
   bottlenecks: string[];
-  warnings: string[];
+  warnings: LocalizedMessage[];
   nodeFlows: Record<string, NodeFlowData>;  // node_id -> flow data
   edgeFlows: Record<string, EdgeFlowData>;  // edge_id -> flow data
   problemEdgeIds: string[];  // edge IDs with mismatches or zero flow
+};
+
+export type LocalizedMessage = {
+  code: string;
+  args?: Record<string, string | number | boolean | null>;
 };
 
 export async function solveGraph(projectId: string, graphId: string, payload: SolveRequest = {}): Promise<SolveResponse> {
@@ -45,7 +50,7 @@ export async function solveGraph(projectId: string, graphId: string, payload: So
   });
 
   if (!res.ok) {
-    throw new Error(await getErrorMessage(res, `Solve failed: ${res.status}`));
+    throw new Error(await getErrorMessage(res, "apiErrors.solve"));
   }
 
   return res.json() as Promise<SolveResponse>;
@@ -58,7 +63,7 @@ export async function solveGuestGraph(payload: SolveRequest): Promise<SolveRespo
   });
 
   if (!res.ok) {
-    throw new Error(await getErrorMessage(res, `Solve failed: ${res.status}`));
+    throw new Error(await getErrorMessage(res, "apiErrors.solve"));
   }
 
   return res.json() as Promise<SolveResponse>;

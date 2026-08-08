@@ -30,7 +30,7 @@ public sealed class SolverQueueService
         if (queued > _options.Solver.QueueLimit)
         {
             Interlocked.Decrement(ref _queuedCount);
-            throw new ApiException(StatusCodes.Status429TooManyRequests, "Solver queue is full");
+            throw new ApiException(StatusCodes.Status429TooManyRequests, "backend.errors.solverQueueFull");
         }
 
         using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(_options.Solver.RequestTimeoutSeconds));
@@ -57,7 +57,7 @@ public sealed class SolverQueueService
                 QueuedCount,
                 ActiveCount,
                 stopwatch.ElapsedMilliseconds);
-            throw new ApiException(StatusCodes.Status408RequestTimeout, "Solver timed out");
+            throw new ApiException(StatusCodes.Status408RequestTimeout, "backend.errors.solverTimedOut");
         }
         finally
         {

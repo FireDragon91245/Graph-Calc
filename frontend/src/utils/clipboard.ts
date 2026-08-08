@@ -1,3 +1,5 @@
+import i18n from "../i18n";
+
 export async function copyTextToClipboard(value: string): Promise<void> {
   rememberedClipboardText = value;
 
@@ -21,7 +23,7 @@ export async function copyTextToClipboard(value: string): Promise<void> {
 
   try {
     if (!document.execCommand("copy")) {
-      throw new Error("The browser denied clipboard access.");
+      throw new Error(i18n.t("persistenceErrors.clipboardDenied"));
     }
   } finally {
     document.body.removeChild(textarea);

@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 
 type ContextMenuProps = {
   top: number;
@@ -17,9 +18,9 @@ type ContextMenuProps = {
 const ContextMenu = memo(({
   top,
   left,
-  copyLabel = "Copy Node",
-  cutLabel = "Cut Node",
-  duplicateLabel = "Duplicate Node",
+  copyLabel,
+  cutLabel,
+  duplicateLabel,
   onCopy,
   onCut,
   onPaste,
@@ -27,6 +28,7 @@ const ContextMenu = memo(({
   onDuplicate,
   onClose
 }: ContextMenuProps) => {
+  const { t } = useTranslation();
   return (
     <div
       style={{
@@ -38,11 +40,11 @@ const ContextMenu = memo(({
       className="context-menu"
       onClick={onClose}
     >
-      {onCopy && <button type="button" onClick={onCopy}>{copyLabel}</button>}
-      {onCut && <button type="button" onClick={onCut}>{cutLabel}</button>}
-      {onPaste && <button type="button" onClick={onPaste}>Paste Here</button>}
-      {onDuplicate && <button type="button" onClick={onDuplicate}>{duplicateLabel}</button>}
-      {onDelete && <button type="button" onClick={onDelete}>Delete</button>}
+      {onCopy && <button type="button" onClick={onCopy}>{copyLabel ?? t("ui.context.copyNode")}</button>}
+      {onCut && <button type="button" onClick={onCut}>{cutLabel ?? t("ui.context.cutNode")}</button>}
+      {onPaste && <button type="button" onClick={onPaste}>{t("ui.context.paste")}</button>}
+      {onDuplicate && <button type="button" onClick={onDuplicate}>{duplicateLabel ?? t("ui.context.duplicateNode")}</button>}
+      {onDelete && <button type="button" onClick={onDelete}>{t("ui.context.delete")}</button>}
     </div>
   );
 });

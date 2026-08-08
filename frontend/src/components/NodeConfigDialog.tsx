@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useGraphStore, Recipe, Item } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
+import { useTranslation } from "react-i18next";
 
 export type NodeType = "recipe" | "recipetag" | "input" | "inputrecipe" | "inputrecipetag" | "output" | "requester";
 
@@ -15,6 +16,7 @@ export default function NodeConfigDialog({
   onConfirm,
   onCancel
 }: NodeConfigDialogProps) {
+  const { t } = useTranslation();
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
   const categories = useGraphStore((state) => state.categories);
@@ -132,21 +134,21 @@ export default function NodeConfigDialog({
   const getTitle = () => {
     switch (nodeType) {
       case "recipe":
-        return "Select Recipe";
+        return t("ui.nodes.selectRecipe");
       case "recipetag":
-        return "Select Recipe Tag";
+        return t("ui.nodes.selectRecipeTag");
       case "inputrecipe":
-        return "Select Input Recipe";
+        return `${t("common.actions.select")} ${t("ui.nodeTypes.inputRecipe.label")}`;
       case "inputrecipetag":
-        return "Select Input Recipe Tag";
+        return `${t("common.actions.select")} ${t("ui.nodeTypes.inputRecipeTag.label")}`;
       case "input":
-        return "Select Input Item";
+        return `${t("common.actions.select")} ${t("ui.nodes.input")}`;
       case "output":
-        return "Select Output Item";
+        return `${t("common.actions.select")} ${t("ui.nodes.output")}`;
       case "requester":
-        return "Select Item to Request";
+        return `${t("common.actions.select")} ${t("ui.nodes.requester")}`;
       default:
-        return "Select";
+        return t("common.actions.select");
     }
   };
 
@@ -178,7 +180,7 @@ export default function NodeConfigDialog({
             ref={searchInputRef}
             type="text"
             className="dialog-search"
-            placeholder="Type to search..."
+            placeholder={t("ui.dialog.search")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -214,7 +216,7 @@ export default function NodeConfigDialog({
                   );
                 })
               ) : (
-                <div className="dialog-empty">No recipes found</div>
+                <div className="dialog-empty">{t("ui.dialog.noRecipes")}</div>
               )
             ) : (nodeType === "recipetag" || nodeType === "inputrecipetag") ? (
               filteredRecipeTags.length > 0 ? (
@@ -237,7 +239,7 @@ export default function NodeConfigDialog({
                   );
                 })
               ) : (
-                <div className="dialog-empty">No recipe tags found</div>
+                <div className="dialog-empty">{t("ui.dialog.noRecipeTags")}</div>
               )
             ) : (
               filteredItems.length > 0 ? (
@@ -271,7 +273,7 @@ export default function NodeConfigDialog({
                   );
                 })
               ) : (
-                <div className="dialog-empty">No items found</div>
+                <div className="dialog-empty">{t("ui.dialog.noItems")}</div>
               )
             )}
           </div>
@@ -291,9 +293,9 @@ export default function NodeConfigDialog({
         </div>
         
         <div className="dialog-hints">
-          <span>↑↓ Navigate</span>
-          <span>Enter Confirm</span>
-          <span>Esc Cancel</span>
+          <span>↑↓ {t("ui.dialog.navigate")}</span>
+          <span>Enter {t("ui.dialog.confirm")}</span>
+          <span>Esc {t("ui.dialog.cancel")}</span>
         </div>
       </div>
     </div>

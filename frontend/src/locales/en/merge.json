@@ -1,0 +1,8 @@
+{
+  "title": "Resolve workspace differences", "aria": "Workspace merge dialog", "close": "Close merge dialog", "subtitle": "Local guest data and account data do not match. Review the merge plan before switching to the account workspace.", "defaults": "Conservative defaults are selected: account data wins conflicts, local-only entries are discarded, and account-only entries are kept unless you change them.",
+  "status": { "same": "Same", "onlyLocal": "Only local", "onlyAccount": "Only account", "oneSide": "Only on one side", "different": "Different" },
+  "project": { "title": "Project: {{name}}", "onlyLocal": "Exists only in the local guest workspace.", "onlyAccount": "Exists only in the account workspace.", "same": "Project data matches on both sides.", "different": "Project contents differ between guest and account.", "data": "Project data", "dataDifferent": "Items, recipes, tags, and other project data differ." },
+  "graph": { "title": "Graph: {{name}}", "onlyLocal": "Graph exists only in the local guest workspace.", "onlyAccount": "Graph exists only in the account workspace.", "same": "Graph data matches on both sides.", "different": "Graph contents differ between guest and account." },
+  "actions": { "merge": "Merge", "discard": "Discard", "custom": "Custom merge", "account": "Account", "local": "Local", "copyNew": "Copy to new", "cancel": "Cancel login", "apply": "Applying merge…", "continue": "Continue login" },
+  "keepOne": "The merge must keep at least one project.", "unnamedProject": "Unnamed project", "unnamedGraph": "Unnamed graph", "unnamed": "Unnamed", "mainGraph": "Main graph", "copy": "copy", "localCopy": "local copy"
+}

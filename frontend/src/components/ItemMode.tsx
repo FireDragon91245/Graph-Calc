@@ -1,7 +1,9 @@
 import { useState, DragEvent } from "react";
 import { useGraphStore, Category, Item } from "../store/graphStore";
+import { useTranslation } from "react-i18next";
 
 export default function ItemMode() {
+  const { t } = useTranslation();
   const categories = useGraphStore((state) => state.categories);
   const items = useGraphStore((state) => state.items);
   const addCategory = useGraphStore((state) => state.addCategory);
@@ -35,7 +37,7 @@ export default function ItemMode() {
   };
 
   const handleDeleteCategory = (categoryId: string) => {
-    if (confirm("Delete this category? All items will move to Uncategorized.")) {
+    if (confirm(t("ui.config.item.deleteCategory"))) {
       deleteCategory(categoryId);
     }
   };
@@ -60,7 +62,7 @@ export default function ItemMode() {
 
   const handleDeleteItem = (itemId: string) => {
     const item = items.find((i) => i.id === itemId);
-    if (confirm(`Delete "${item?.name}"? This will remove it from all tags and recipes.`)) {
+    if (confirm(t("ui.config.item.deleteItem", { name: item?.name ?? "" }))) {
       deleteItem(itemId);
     }
   };
@@ -124,10 +126,10 @@ export default function ItemMode() {
     <div className="config-mode-content">
       <div className="config-sidebar">
         <div className="config-section">
-          <h3>Quick Add Item</h3>
+          <h3>{t("ui.config.item.quickAdd")}</h3>
           <input
             type="text"
-            placeholder="Item name..."
+            placeholder={t("ui.config.item.name")}
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddItem()}
@@ -142,10 +144,10 @@ export default function ItemMode() {
         </div>
 
         <div className="config-section">
-          <h3>Add Category</h3>
+          <h3>{t("ui.config.item.addCategory")}</h3>
           <input
             type="text"
-            placeholder="Category name..."
+            placeholder={t("ui.config.item.categoryName")}
             value={newCategoryName}
             onChange={(e) => setNewCategoryName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
@@ -157,15 +159,15 @@ export default function ItemMode() {
         </div>
 
         <div className="config-section">
-          <h3>Statistics</h3>
+          <h3>{t("ui.config.statistics")}</h3>
           <div className="stats-grid">
             <div className="stat-item">
               <div className="stat-value">{items.length}</div>
-              <div className="stat-label">Total Items</div>
+              <div className="stat-label">{t("ui.config.totalItems")}</div>
             </div>
             <div className="stat-item">
               <div className="stat-value">{categories.length}</div>
-              <div className="stat-label">Categories</div>
+              <div className="stat-label">{t("ui.config.categories")}</div>
             </div>
           </div>
         </div>
@@ -180,7 +182,7 @@ export default function ItemMode() {
             onDrop={handleDropOnUncategorized}
           >
             <div className="category-header">
-              <h4>Uncategorized</h4>
+              <h4>{t("ui.config.uncategorized")}</h4>
               <span className="item-count">{getUncategorizedItems().length}</span>
             </div>
             <div className="items-list">
@@ -213,14 +215,14 @@ export default function ItemMode() {
                         <button
                           className="btn-icon-sm"
                           onClick={() => handleStartRenameItem(item)}
-                          title="Rename item"
+                          title={t("ui.config.item.rename")}
                         >
                           ✏️
                         </button>
                         <button
                           className="btn-icon-sm btn-icon-danger"
                           onClick={() => handleDeleteItem(item.id)}
-                          title="Delete item"
+                          title={t("ui.config.item.delete")}
                         >
                           🗑️
                         </button>
@@ -264,14 +266,14 @@ export default function ItemMode() {
                       <button
                         className="btn-icon"
                         onClick={() => handleStartRename(category)}
-                        title="Rename category"
+                        title={t("ui.config.item.renameCategory")}
                       >
                         ✏️
                       </button>
                       <button
                         className="btn-icon btn-icon-danger"
                         onClick={() => handleDeleteCategory(category.id)}
-                        title="Delete category"
+                        title={t("ui.config.item.deleteCategoryAction")}
                       >
                         🗑️
                       </button>

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, DragEvent, MouseEvent as ReactMouseEvent, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import ReactFlow, {
     Background,
     Controls,
@@ -37,7 +38,8 @@ import {
     syncLocalWorkspaceToRemote,
     WorkspaceSnapshot
 } from "./api/persistence";
-import { authenticateUser, AuthUser, changePassword, deleteAccount, getMe, logoutUser, registerUser } from "./api/auth";
+import { authenticateUser, AuthUser, changePassword, deleteAccount, getMe, getProfileImage, logoutUser, registerUser, removeProfileImage, updateAccountSettings, uploadProfileImage } from "./api/auth";
+import { getCurrentLanguage, setCurrentLanguage, supportedLanguages, type SupportedLanguage } from "./i18n";
 import ContextMenu from "./editor/ContextMenu";
 import CommandPalette, { CommandAction } from "./editor/CommandPalette";
 import { flushPendingStoreSave, useGraphStore } from "./store/graphStore";
@@ -61,6 +63,7 @@ import ItemGenerator from "./components/ItemGenerator";
 import ProjectSelector from "./components/ProjectSelector";
 import GraphSelector from "./components/GraphSelector";
 import AuthDialog, { AuthDialogMode } from "./components/AuthDialog";
+import SettingsPage from "./components/SettingsPage";
 import WorkspaceMergeDialog from "./components/WorkspaceMergeDialog";
 import { NodeType } from "./components/NodeTypeSelector";
 import EdgeWithTooltip from "./edges/EdgeWithTooltip";
@@ -157,6 +160,7 @@ const LAYOUT_ACTION_PRESETS: Record<string, GraphLayoutPreset> = {
 };
 
 function AppContent() {
+    const { t } = useTranslation();
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
     const [solveResult, setSolveResult] = useState<SolveResponse | null>(null);
@@ -172,6 +176,8 @@ function AppContent() {
     const [graphListRevision, setGraphListRevision] = useState(0);
     const [notice, setNotice] = useState<AppNotice | null>(null);
     const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+    const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+    const [appView, setAppView] = useState<"workspace" | "settings">("workspace");
     const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
     const [authDialogMode, setAuthDialogMode] = useState<AuthDialogMode>("login");
     const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -206,11 +212,54 @@ function AppContent() {
         setNotice({ ...nextNotice, id: Date.now() });
     }, []);
 
+    const applyAccountLanguage = useCallback(async (profile: AuthUser): Promise<AuthUser> => {
+        const storedLanguage = profile.settings?.language;
+        if (storedLanguage && supportedLanguages.includes(storedLanguage as SupportedLanguage)) {
+            await setCurrentLanguage(storedLanguage as SupportedLanguage);
+            return profile;
+        }
+
+        const language = getCurrentLanguage();
+        try {
+            const settings = await updateAccountSettings({ language });
+            return { ...profile, settings };
+        } catch (error) {
+            console.error("Failed to initialize account settings:", error);
+            return profile;
+        }
+    }, []);
+
     useEffect(() => {
         if (!notice) return;
         const timer = window.setTimeout(() => setNotice(null), notice.onAction ? 8000 : 3500);
         return () => window.clearTimeout(timer);
     }, [notice]);
+
+    useEffect(() => {
+        let cancelled = false;
+        let objectUrl: string | null = null;
+        setProfileImageUrl(null);
+
+        if (!authUser?.profileImageId) {
+            return () => { cancelled = true; };
+        }
+
+        void getProfileImage()
+            .then((blob) => {
+                if (!blob || cancelled) return;
+                objectUrl = URL.createObjectURL(blob);
+                setProfileImageUrl(objectUrl);
+            })
+            .catch((error) => {
+                console.error("Failed to load profile image:", error);
+                if (!cancelled) showNotice({ message: error instanceof Error ? error.message : t("settings.account.image.loadFailed"), tone: "error" });
+            });
+
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    }, [authUser?.id, authUser?.profileImageId, showNotice, t]);
 
     const buildGraphData = useCallback((): GraphData => ({
         nodes: nodes.map((node) => ({
@@ -294,14 +343,14 @@ function AppContent() {
         const loadSession = async () => {
             try {
                 if (!ignore) {
-                    const profile = await getMe();
+                    const profile = await applyAccountLanguage(await getMe());
                     if (!ignore) {
                         setPersistenceMode("remote");
                         setAuthUser(profile);
                     }
                 }
             } catch (error) {
-                if (error instanceof Error && error.message === "Unauthorized") {
+                if (error instanceof Error && error.message === "errors.unauthorized") {
                     if (!ignore) {
                         setPersistenceMode("local");
                         setAuthUser(null);
@@ -326,7 +375,7 @@ function AppContent() {
         return () => {
             ignore = true;
         };
-    }, []);
+    }, [applyAccountLanguage]);
 
     // Load data on mount
     useEffect(() => {
@@ -382,7 +431,7 @@ function AppContent() {
                 }
 
                 // Load graph data (nodes and edges)
-                const graphData = await loadGraph(pid, getRequiredValue(gid ?? null, "No active graph selected"));
+                const graphData = await loadGraph(pid, getRequiredValue(gid ?? null, t("ui.quickActions.errors.noGraph")));
                 if (ignore) {
                     return;
                 }
@@ -513,7 +562,7 @@ function AppContent() {
         setActiveGraphId(newGraphId);
 
         try {
-            const projectId = getRequiredValue(activeProjectId, "No active project selected");
+            const projectId = getRequiredValue(activeProjectId, t("ui.quickActions.errors.noProject"));
             const graphData = await loadGraph(projectId, newGraphId);
             if (selectionLoadRequestIdRef.current !== requestId) {
                 return;
@@ -783,8 +832,8 @@ function AppContent() {
                 const analyzeRecipePattern = (recipeIds: string[]) => {
                     if (recipeIds.length === 0) {
                         return {
-                            inputs: [{ id: "i1", name: "Mixed Input", amountPerCycle: 1, isMixed: true }],
-                            outputs: [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }]
+                            inputs: [{ id: "i1", name: t("ui.nodes.mixedInput"), amountPerCycle: 1, isMixed: true }],
+                            outputs: [{ id: "o1", name: t("ui.nodes.mixedOutput"), amountPerCycle: 1, isMixed: true }]
                         };
                     }
 
@@ -794,8 +843,8 @@ function AppContent() {
 
                     if (recipeData.length === 0) {
                         return {
-                            inputs: [{ id: "i1", name: "Mixed Input", amountPerCycle: 1, isMixed: true }],
-                            outputs: [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }]
+                            inputs: [{ id: "i1", name: t("ui.nodes.mixedInput"), amountPerCycle: 1, isMixed: true }],
+                            outputs: [{ id: "o1", name: t("ui.nodes.mixedOutput"), amountPerCycle: 1, isMixed: true }]
                         };
                     }
 
@@ -806,8 +855,8 @@ function AppContent() {
 
                     if (!sameInputCount || !sameOutputCount) {
                         return {
-                            inputs: [{ id: "i1", name: "Mixed Input", amountPerCycle: 1, isMixed: true }],
-                            outputs: [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }]
+                            inputs: [{ id: "i1", name: t("ui.nodes.mixedInput"), amountPerCycle: 1, isMixed: true }],
+                            outputs: [{ id: "o1", name: t("ui.nodes.mixedOutput"), amountPerCycle: 1, isMixed: true }]
                         };
                     }
 
@@ -828,7 +877,7 @@ function AppContent() {
                         let name: string;
 
                         if (isMixed) {
-                            name = `Mixed Input ${i + 1}`;
+                            name = `${t("ui.nodes.mixedInput")} ${i + 1}`;
                         } else {
                             const refType = refTypes[0];
                             const refId = refIds[0];
@@ -865,7 +914,7 @@ function AppContent() {
                         let name: string;
 
                         if (isMixed) {
-                            name = `Mixed Output ${i + 1}`;
+                            name = `${t("ui.nodes.mixedOutput")} ${i + 1}`;
                         } else {
                             name = items.find((item) => item.id === itemIds[0])?.name ?? itemIds[0];
                         }
@@ -931,7 +980,7 @@ function AppContent() {
                 // Analyze output pattern from recipes in this tag
                 const analyzeRecipeOutputPattern = (recipeIds: string[]) => {
                     if (recipeIds.length === 0) {
-                        return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }];
+                        return [{ id: "o1", name: t("ui.nodes.mixedOutput"), amountPerCycle: 1, isMixed: true }];
                     }
 
                     const recipeData = recipeIds
@@ -939,14 +988,14 @@ function AppContent() {
                         .filter((r): r is NonNullable<typeof r> => r !== undefined);
 
                     if (recipeData.length === 0) {
-                        return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }];
+                        return [{ id: "o1", name: t("ui.nodes.mixedOutput"), amountPerCycle: 1, isMixed: true }];
                     }
 
                     const outputCounts = recipeData.map((r) => r.outputs.length);
                     const sameOutputCount = outputCounts.every((c) => c === outputCounts[0]);
 
                     if (!sameOutputCount) {
-                        return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1, isMixed: true }];
+                        return [{ id: "o1", name: t("ui.nodes.mixedOutput"), amountPerCycle: 1, isMixed: true }];
                     }
 
                     const numOutputs = outputCounts[0];
@@ -966,7 +1015,7 @@ function AppContent() {
                         let name: string;
 
                         if (isMixed) {
-                            name = `Mixed Output ${i + 1}`;
+                            name = `${t("ui.nodes.mixedOutput")} ${i + 1}`;
                         } else {
                             name = items.find((item) => item.id === itemIds[0])?.name ?? itemIds[0];
                         }
@@ -1143,8 +1192,8 @@ function AppContent() {
         try {
             const result = authUser
                 ? await solveGraph(
-                    getRequiredValue(activeProjectId, "No active project selected"),
-                    getRequiredValue(activeGraphId, "No active graph selected")
+                    getRequiredValue(activeProjectId, t("ui.quickActions.errors.noProject")),
+                    getRequiredValue(activeGraphId, t("ui.quickActions.errors.noGraph"))
                 )
                 : await solveGuestGraph({
                     graph: buildGraphData(),
@@ -1160,7 +1209,7 @@ function AppContent() {
             console.log("Solve result:", result);
             setSolveResult(result);
         } catch (error) {
-            setSolveError(error instanceof Error ? error.message : "Solve failed");
+            setSolveError(error instanceof Error ? error.message : t("ui.quickActions.errors.solve"));
         } finally {
             setIsSolving(false);
         }
@@ -1205,8 +1254,8 @@ function AppContent() {
         nodeIds?: Iterable<string>,
         options?: { silent?: boolean }
     ) => {
-        const projectId = getRequiredValue(activeProjectId, "No active project selected");
-        const graphId = getRequiredValue(activeGraphId, "No active graph selected");
+        const projectId = getRequiredValue(activeProjectId, t("ui.quickActions.errors.noProject"));
+        const graphId = getRequiredValue(activeGraphId, t("ui.quickActions.errors.noGraph"));
         const payload = createGraphClipboardPayload({
             projectId,
             graphId,
@@ -1228,21 +1277,20 @@ function AppContent() {
         }
 
         if (!options?.silent) {
-            const nodeLabel = payload.nodes.length === 1 ? "node" : "nodes";
             showNotice({
                 message: systemClipboardAvailable
-                    ? `Copied ${payload.nodes.length} ${nodeLabel}.`
-                    : `Copied ${payload.nodes.length} ${nodeLabel} for this session.`,
+                    ? t("ui.quickActions.notice.copied", { count: payload.nodes.length })
+                    : t("ui.quickActions.notice.copiedSession", { count: payload.nodes.length }),
                 tone: "success"
             });
         }
-    }, [activeGraphId, activeProjectId, reactFlowInstance, showNotice]);
+    }, [activeGraphId, activeProjectId, reactFlowInstance, showNotice, t]);
 
     const handleCutNodes = useCallback(async (nodeIds?: Iterable<string>) => {
         const currentNodes = reactFlowInstance.getNodes();
         const ids = new Set(nodeIds ?? currentNodes.filter((node) => node.selected).map((node) => node.id));
         if (ids.size === 0) {
-            throw new Error("Select at least one node to cut.");
+            throw new Error(t("ui.quickActions.errors.cutSelection"));
         }
 
         await handleCopyNodes(ids, { silent: true });
@@ -1253,14 +1301,14 @@ function AppContent() {
         setMenu(null);
 
         showNotice({
-            message: `Cut ${ids.size} ${ids.size === 1 ? "node" : "nodes"}.`,
+            message: t("ui.quickActions.notice.cut", { count: ids.size }),
             tone: "success"
         });
-    }, [handleCopyNodes, reactFlowInstance, setEdges, setNodes, showNotice]);
+    }, [handleCopyNodes, reactFlowInstance, setEdges, setNodes, showNotice, t]);
 
     const handleDuplicateSelectedNodes = useCallback((nodeIds?: Iterable<string>) => {
-        const projectId = getRequiredValue(activeProjectId, "No active project selected");
-        const graphId = getRequiredValue(activeGraphId, "No active graph selected");
+        const projectId = getRequiredValue(activeProjectId, t("ui.quickActions.errors.noProject"));
+        const graphId = getRequiredValue(activeGraphId, t("ui.quickActions.errors.noGraph"));
         const currentNodes = reactFlowInstance.getNodes();
         const currentEdges = reactFlowInstance.getEdges();
         const payload = createGraphClipboardPayload({
@@ -1283,22 +1331,22 @@ function AppContent() {
         insertGraphSelection(duplicated);
         setMenu(null);
         showNotice({
-            message: `Duplicated ${duplicated.nodes.length} ${duplicated.nodes.length === 1 ? "node" : "nodes"}.`,
+            message: t("ui.quickActions.notice.duplicated", { count: duplicated.nodes.length }),
             tone: "success"
         });
-    }, [activeGraphId, activeProjectId, insertGraphSelection, reactFlowInstance, showNotice]);
+    }, [activeGraphId, activeProjectId, insertGraphSelection, reactFlowInstance, showNotice, t]);
 
     const handlePasteNodes = useCallback(async (position?: XYPosition) => {
-        const projectId = getRequiredValue(activeProjectId, "No active project selected");
-        getRequiredValue(activeGraphId, "No active graph selected");
+        const projectId = getRequiredValue(activeProjectId, t("ui.quickActions.errors.noProject"));
+        getRequiredValue(activeGraphId, t("ui.quickActions.errors.noGraph"));
         const clipboard = await readTextFromClipboard();
         if (!clipboard.text) {
-            throw new Error("The clipboard is empty.");
+            throw new Error(t("ui.quickActions.errors.emptyClipboard"));
         }
 
         const payload = parseGraphClipboardPayload(clipboard.text);
         if (!payload) {
-            throw new Error("The clipboard does not contain a GraphCalc node selection.");
+            throw new Error(t("ui.quickActions.errors.invalidClipboard"));
         }
         assertGraphClipboardProject(payload, projectId);
 
@@ -1322,13 +1370,16 @@ function AppContent() {
         insertGraphSelection(pasted);
         setMenu(null);
 
-        const nodeLabel = pasted.nodes.length === 1 ? "node" : "nodes";
-        const edgeLabel = pasted.edges.length === 1 ? "connection" : "connections";
         showNotice({
-            message: `Pasted ${pasted.nodes.length} ${nodeLabel} and ${pasted.edges.length} ${edgeLabel}.`,
+            message: t("ui.quickActions.notice.pasted", {
+                nodes: pasted.nodes.length,
+                nodeLabel: t(pasted.nodes.length === 1 ? "ui.quickActions.notice.node" : "ui.quickActions.notice.nodes"),
+                edges: pasted.edges.length,
+                edgeLabel: t(pasted.edges.length === 1 ? "ui.quickActions.notice.edge" : "ui.quickActions.notice.edges")
+            }),
             tone: "success"
         });
-    }, [activeGraphId, activeProjectId, getCanvasCenterPosition, insertGraphSelection, reactFlowInstance, showNotice]);
+    }, [activeGraphId, activeProjectId, getCanvasCenterPosition, insertGraphSelection, reactFlowInstance, showNotice, t]);
 
     const getMenuNodeIds = useCallback((): string[] => {
         if (!menu || menu.kind !== "node" || !menu.id) return [];
@@ -1394,13 +1445,13 @@ function AppContent() {
             if (key === "c" && selectedNodeCount > 0) {
                 event.preventDefault();
                 void handleCopyNodes().catch((error) => showNotice({
-                    message: error instanceof Error ? error.message : "The selection could not be copied.",
+                    message: error instanceof Error ? error.message : t("ui.quickActions.notice.copyFailed"),
                     tone: "error"
                 }));
             } else if (key === "x" && selectedNodeCount > 0) {
                 event.preventDefault();
                 void handleCutNodes().catch((error) => showNotice({
-                    message: error instanceof Error ? error.message : "The selection could not be cut.",
+                    message: error instanceof Error ? error.message : t("ui.quickActions.notice.cutFailed"),
                     tone: "error"
                 }));
             } else if (key === "d" && selectedNodeCount > 0) {
@@ -1409,14 +1460,14 @@ function AppContent() {
                     handleDuplicateSelectedNodes();
                 } catch (error) {
                     showNotice({
-                        message: error instanceof Error ? error.message : "The selection could not be duplicated.",
+                        message: error instanceof Error ? error.message : t("ui.quickActions.notice.duplicateFailed"),
                         tone: "error"
                     });
                 }
             } else if (key === "v") {
                 event.preventDefault();
                 void handlePasteNodes().catch((error) => showNotice({
-                    message: error instanceof Error ? error.message : "The selection could not be pasted.",
+                    message: error instanceof Error ? error.message : t("ui.quickActions.notice.pasteFailed"),
                     tone: "error"
                 }));
             }
@@ -1424,7 +1475,7 @@ function AppContent() {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [activeGraphId, activeProjectId, appMode, handleCopyNodes, handleCutNodes, handleDuplicateSelectedNodes, handlePasteNodes, selectedNodeCount, showNotice]);
+    }, [activeGraphId, activeProjectId, appMode, handleCopyNodes, handleCutNodes, handleDuplicateSelectedNodes, handlePasteNodes, selectedNodeCount, showNotice, t]);
 
     const handleQuickAddNode = useCallback((nodeType: NodeType) => {
         const position = getCanvasCenterPosition();
@@ -1438,17 +1489,17 @@ function AppContent() {
                     data: {}
                 }
             ]);
-            showNotice({ message: "Mixed Output node added.", tone: "success" });
+            showNotice({ message: t("ui.quickActions.notice.mixedAdded"), tone: "success" });
             return;
         }
 
         setPendingNodeType(nodeType);
         setPendingNodePosition(position);
-    }, [getCanvasCenterPosition, setNodes, showNotice]);
+    }, [getCanvasCenterPosition, setNodes, showNotice, t]);
 
     const handleApplyLayout = useCallback(async (preset: GraphLayoutPreset) => {
         if (nodes.length < 2) {
-            throw new Error("Add at least two nodes before rearranging the graph.");
+            throw new Error(t("ui.quickActions.errors.twoNodes"));
         }
 
         const previousPositions = new Map(nodes.map((node) => [node.id, node.position]));
@@ -1459,9 +1510,9 @@ function AppContent() {
         });
 
         showNotice({
-            message: "Node layout applied.",
+            message: t("ui.quickActions.notice.layoutApplied"),
             tone: "success",
-            actionLabel: "Undo",
+            actionLabel: t("ui.quickActions.notice.undo"),
             onAction: () => {
                 setNodes((current) => current.map((node) => ({
                     ...node,
@@ -1473,16 +1524,16 @@ function AppContent() {
                 setNotice(null);
             }
         });
-    }, [edges, nodes, reactFlowInstance, setNodes, showNotice]);
+    }, [edges, nodes, reactFlowInstance, setNodes, showNotice, t]);
 
     const handleDuplicateGraph = useCallback(async () => {
-        const projectId = getRequiredValue(activeProjectId, "No active project selected");
-        const graphId = getRequiredValue(activeGraphId, "No active graph selected");
+        const projectId = getRequiredValue(activeProjectId, t("ui.quickActions.errors.noProject"));
+        const graphId = getRequiredValue(activeGraphId, t("ui.quickActions.errors.noGraph"));
         await flushPendingGraphSave();
 
         const response = await listGraphs(projectId);
         const sourceGraph = response.graphs.find((graph) => graph.id === graphId);
-        if (!sourceGraph) throw new Error("The active graph could not be found.");
+        if (!sourceGraph) throw new Error(t("ui.quickActions.errors.graphMissing"));
 
         const usedNames = new Set(response.graphs.map((graph) => graph.name.toLowerCase()));
         const baseName = `${sourceGraph.name} (copy)`;
@@ -1497,28 +1548,28 @@ function AppContent() {
         await activateGraph(projectId, copiedGraph.id);
         setGraphListRevision((current) => current + 1);
         await handleGraphChange(copiedGraph.id);
-        showNotice({ message: `Duplicated as “${copyName}”.`, tone: "success" });
-    }, [activeGraphId, activeProjectId, flushPendingGraphSave, handleGraphChange, showNotice]);
+        showNotice({ message: t("ui.quickActions.notice.graphDuplicated", { name: copyName }), tone: "success" });
+    }, [activeGraphId, activeProjectId, flushPendingGraphSave, handleGraphChange, showNotice, t]);
 
     const handleCopyGraphJson = useCallback(async () => {
-        if (!activeGraphId) throw new Error("No active graph selected.");
+        if (!activeGraphId) throw new Error(t("ui.quickActions.errors.noGraph"));
         await copyTextToClipboard(toPrettyJson(buildGraphData()));
-        showNotice({ message: "Graph JSON copied.", tone: "success" });
-    }, [activeGraphId, buildGraphData, showNotice]);
+        showNotice({ message: t("ui.quickActions.notice.graphCopied"), tone: "success" });
+    }, [activeGraphId, buildGraphData, showNotice, t]);
 
     const handleCopyProjectJson = useCallback(async () => {
-        const projectId = getRequiredValue(activeProjectId, "No active project selected");
+        const projectId = getRequiredValue(activeProjectId, t("ui.quickActions.errors.noProject"));
         await Promise.all([flushPendingGraphSave(), flushPendingStoreSave()]);
         const project = await getProjectSnapshot(projectId);
         await copyTextToClipboard(toPrettyJson({ schemaVersion: 1, project }));
-        showNotice({ message: "Project JSON copied.", tone: "success" });
-    }, [activeProjectId, flushPendingGraphSave, showNotice]);
+        showNotice({ message: t("ui.quickActions.notice.projectCopied"), tone: "success" });
+    }, [activeProjectId, flushPendingGraphSave, showNotice, t]);
 
     const handleCopySolveResultJson = useCallback(async () => {
-        if (!solveResult) throw new Error("Run Solve successfully before copying its result.");
+        if (!solveResult) throw new Error(t("ui.quickActions.errors.solveFirst"));
         await copyTextToClipboard(toPrettyJson(solveResult));
-        showNotice({ message: "Solve result JSON copied.", tone: "success" });
-    }, [showNotice, solveResult]);
+        showNotice({ message: t("ui.quickActions.notice.solveCopied"), tone: "success" });
+    }, [showNotice, solveResult, t]);
 
     const handleQuickAction = useCallback(async (action: CommandAction) => {
         const nodeType = NODE_ACTION_TYPES[action.id];
@@ -1565,7 +1616,7 @@ function AppContent() {
                 await handleCopySolveResultJson();
                 return;
             default:
-                throw new Error("Unknown quick action.");
+                throw new Error(t("ui.quickActions.errors.unknown"));
         }
     }, [handleApplyLayout, handleCopyGraphJson, handleCopyNodes, handleCopyProjectJson, handleCopySolveResultJson, handleCutNodes, handleDuplicateGraph, handleDuplicateSelectedNodes, handlePasteNodes, handleQuickAddNode, handleSolve, reactFlowInstance]);
 
@@ -1576,7 +1627,7 @@ function AppContent() {
 
         try {
             const [profile, localSnapshot, remoteSnapshot] = await Promise.all([
-                getMe(),
+                getMe().then(applyAccountLanguage),
                 getLocalWorkspaceSnapshot(),
                 getRemoteWorkspaceSnapshot(),
             ]);
@@ -1594,7 +1645,7 @@ function AppContent() {
             await rollbackPendingLogin("login error");
             throw error;
         }
-    }, [finalizeAuthenticatedSession, flushPendingGraphSave, rollbackPendingLogin]);
+    }, [applyAccountLanguage, finalizeAuthenticatedSession, flushPendingGraphSave, rollbackPendingLogin]);
 
     const handleMergeCancel = useCallback(async () => {
         setMergeDialogError(null);
@@ -1617,7 +1668,7 @@ function AppContent() {
 
             finalizeAuthenticatedSession(pendingMerge.profile);
         } catch (error) {
-            setMergeDialogError(error instanceof Error ? error.message : "Failed to apply workspace merge.");
+            setMergeDialogError(error instanceof Error ? error.message : t("ui.quickActions.errors.merge"));
         } finally {
             setIsMergeApplying(false);
         }
@@ -1630,7 +1681,7 @@ function AppContent() {
 
         try {
             await syncLocalWorkspaceToRemote();
-            const profile = await getMe();
+            const profile = await applyAccountLanguage(await getMe());
             finalizeAuthenticatedSession(profile);
         } catch (error) {
             setPersistenceMode("local");
@@ -1641,11 +1692,29 @@ function AppContent() {
         }
 
         setIsAuthDialogOpen(false);
-    }, [finalizeAuthenticatedSession, flushPendingGraphSave]);
+    }, [applyAccountLanguage, finalizeAuthenticatedSession, flushPendingGraphSave]);
 
     const handlePasswordChange = useCallback(async (currentPassword: string, newPassword: string) => {
         const profile = await changePassword(currentPassword, newPassword);
         setAuthUser(profile);
+    }, []);
+
+    const handleLanguageChange = useCallback(async (language: SupportedLanguage) => {
+        if (authUser) {
+            const settings = await updateAccountSettings({ language });
+            setAuthUser((current) => current ? { ...current, settings } : current);
+        }
+        await setCurrentLanguage(language);
+    }, [authUser]);
+
+    const handleProfileImageUpload = useCallback(async (file: File) => {
+        const profileImageId = await uploadProfileImage(file);
+        setAuthUser((current) => current ? { ...current, profileImageId } : current);
+    }, []);
+
+    const handleProfileImageDelete = useCallback(async () => {
+        await removeProfileImage();
+        setAuthUser((current) => current ? { ...current, profileImageId: null } : current);
     }, []);
 
     const handleDeleteAccount = useCallback(async (currentPassword: string) => {
@@ -1677,131 +1746,131 @@ function AppContent() {
             actions.push(
                 {
                     id: "node.add.input",
-                    label: "Add Input Node",
-                    description: "Choose an item after selecting this action.",
-                    group: "Add nodes",
+                    label: t("ui.quickActions.addInput.label"),
+                    description: t("ui.quickActions.addInput.description"),
+                    group: t("ui.quickActions.groups.add"),
                     icon: "📥",
                     keywords: ["source", "item"],
                     disabled: !hasActiveGraph,
-                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                    disabledReason: !hasActiveGraph ? t("ui.quickActions.disabled.selectGraph") : undefined
                 },
                 {
                     id: "node.add.output",
-                    label: "Add Output Node",
-                    description: "Choose an output item after selecting this action.",
-                    group: "Add nodes",
+                    label: t("ui.quickActions.addOutput.label"),
+                    description: t("ui.quickActions.addOutput.description"),
+                    group: t("ui.quickActions.groups.add"),
                     icon: "📤",
                     keywords: ["target", "item"],
                     disabled: !hasActiveGraph,
-                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                    disabledReason: !hasActiveGraph ? t("ui.quickActions.disabled.selectGraph") : undefined
                 },
                 {
                     id: "node.add.requester",
-                    label: "Add Requester Node",
-                    description: "Choose the requested item after selecting this action.",
-                    group: "Add nodes",
+                    label: t("ui.quickActions.addRequester.label"),
+                    description: t("ui.quickActions.addRequester.description"),
+                    group: t("ui.quickActions.groups.add"),
                     icon: "🎯",
                     keywords: ["demand", "target"],
                     disabled: !hasActiveGraph,
-                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                    disabledReason: !hasActiveGraph ? t("ui.quickActions.disabled.selectGraph") : undefined
                 },
                 {
                     id: "node.add.recipe",
-                    label: "Add Recipe Node",
-                    description: "Choose a configured recipe after selecting this action.",
-                    group: "Add nodes",
+                    label: t("ui.quickActions.addRecipe.label"),
+                    description: t("ui.quickActions.addRecipe.description"),
+                    group: t("ui.quickActions.groups.add"),
                     icon: "⚙️",
                     keywords: ["production", "machine"],
                     disabled: !hasActiveGraph,
-                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                    disabledReason: !hasActiveGraph ? t("ui.quickActions.disabled.selectGraph") : undefined
                 },
                 {
                     id: "node.add.input-recipe",
-                    label: "Add Input Recipe Node",
-                    description: "Choose a recipe to use as an input source.",
-                    group: "Add nodes",
+                    label: t("ui.quickActions.addInputRecipe.label"),
+                    description: t("ui.quickActions.addInputRecipe.description"),
+                    group: t("ui.quickActions.groups.add"),
                     icon: "⚡",
                     keywords: ["source", "recipe"],
                     disabled: !hasActiveGraph,
-                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                    disabledReason: !hasActiveGraph ? t("ui.quickActions.disabled.selectGraph") : undefined
                 },
                 {
                     id: "node.add.recipe-tag",
-                    label: "Add Recipe Tag Node",
-                    description: "Choose a configured recipe tag.",
-                    group: "Add nodes",
+                    label: t("ui.quickActions.addRecipeTag.label"),
+                    description: t("ui.quickActions.addRecipeTag.description"),
+                    group: t("ui.quickActions.groups.add"),
                     icon: "🏷️",
                     keywords: ["group", "pattern"],
                     disabled: !hasActiveGraph,
-                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                    disabledReason: !hasActiveGraph ? t("ui.quickActions.disabled.selectGraph") : undefined
                 },
                 {
                     id: "node.add.input-recipe-tag",
-                    label: "Add Input Recipe Tag Node",
-                    description: "Choose a recipe tag to use as an input source.",
-                    group: "Add nodes",
+                    label: t("ui.quickActions.addInputRecipeTag.label"),
+                    description: t("ui.quickActions.addInputRecipeTag.description"),
+                    group: t("ui.quickActions.groups.add"),
                     icon: "🔖",
                     keywords: ["source", "group", "pattern"],
                     disabled: !hasActiveGraph,
-                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                    disabledReason: !hasActiveGraph ? t("ui.quickActions.disabled.selectGraph") : undefined
                 },
                 {
                     id: "node.add.mixed-output",
-                    label: "Add Mixed Output Node",
-                    description: "Create an output node for mixed incoming items.",
-                    group: "Add nodes",
+                    label: t("ui.quickActions.addMixed.label"),
+                    description: t("ui.quickActions.addMixed.description"),
+                    group: t("ui.quickActions.groups.add"),
                     icon: "🎲",
                     keywords: ["output", "mixed"],
                     disabled: !hasActiveGraph,
-                    disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                    disabledReason: !hasActiveGraph ? t("ui.quickActions.disabled.selectGraph") : undefined
                 },
                 {
                     id: "graph.rearrange",
-                    label: "Rearrange Nodes",
-                    description: "Choose an automatic graph layout.",
-                    group: "Graph",
+                    label: t("ui.quickActions.rearrange.label"),
+                    description: t("ui.quickActions.rearrange.description"),
+                    group: t("ui.quickActions.groups.graph"),
                     icon: "✨",
                     keywords: ["layout", "organize", "arrange"],
                     disabled: nodes.length < 2,
-                    disabledReason: nodes.length < 2 ? "Add at least two nodes first." : undefined,
+                    disabledReason: nodes.length < 2 ? t("ui.quickActions.disabled.twoNodes") : undefined,
                     children: [
                         {
                             id: "layout.production",
-                            label: "Production Flow",
-                            description: "Readable left-to-right layered production flow.",
-                            group: "Layout",
+                            label: t("ui.quickActions.production.label"),
+                            description: t("ui.quickActions.production.description"),
+                            group: t("ui.quickActions.groups.layout"),
                             icon: "→",
                             keywords: ["layered", "horizontal", "default"]
                         },
                         {
                             id: "layout.compact",
-                            label: "Compact Flow",
-                            description: "Tighter left-to-right layout for large graphs.",
-                            group: "Layout",
+                            label: t("ui.quickActions.compact.label"),
+                            description: t("ui.quickActions.compact.description"),
+                            group: t("ui.quickActions.groups.layout"),
                             icon: "⇥",
                             keywords: ["layered", "dense", "tight"]
                         },
                         {
                             id: "layout.cascade",
-                            label: "Cascade Flow",
-                            description: "Stagger branches while preserving left-to-right item flow.",
-                            group: "Layout",
+                            label: t("ui.quickActions.cascade.label"),
+                            description: t("ui.quickActions.cascade.description"),
+                            group: t("ui.quickActions.groups.layout"),
                             icon: "⇘",
                             keywords: ["cascade", "staggered", "branches", "flow"]
                         },
                         {
                             id: "layout.tree",
-                            label: "Tree Flow",
-                            description: "Emphasize parent-child recipe branches from left to right.",
-                            group: "Layout",
+                            label: t("ui.quickActions.tree.label"),
+                            description: t("ui.quickActions.tree.description"),
+                            group: t("ui.quickActions.groups.layout"),
                             icon: "⑂",
                             keywords: ["tree", "branch", "parent", "hierarchy"]
                         },
                         {
                             id: "layout.hierarchical",
-                            label: "Hierarchical Flow",
-                            description: "Strict Sugiyama layers with uniformly rightward edges.",
-                            group: "Layout",
+                            label: t("ui.quickActions.hierarchical.label"),
+                            description: t("ui.quickActions.hierarchical.description"),
+                            group: t("ui.quickActions.groups.layout"),
                             icon: "≡→",
                             keywords: ["layered", "sugiyama", "hierarchy", "flow"]
                         }
@@ -1809,23 +1878,23 @@ function AppContent() {
                 },
                 {
                     id: "graph.solve",
-                    label: "Solve Graph",
-                    description: isSolving ? "A solve is already running." : "Run the production solver.",
-                    group: "Graph",
+                    label: t("ui.quickActions.solve.label"),
+                    description: isSolving ? t("ui.quickActions.solve.running") : t("ui.quickActions.solve.description"),
+                    group: t("ui.quickActions.groups.graph"),
                     icon: "▶",
                     keywords: ["calculate", "result"],
                     disabled: !hasActiveGraph || isSolving,
-                    disabledReason: !hasActiveGraph ? "Select a graph first." : isSolving ? "Solve in progress." : undefined
+                    disabledReason: !hasActiveGraph ? t("ui.quickActions.disabled.selectGraph") : isSolving ? t("ui.quickActions.disabled.solving") : undefined
                 },
                 {
                     id: "graph.fit-view",
-                    label: "Fit Graph to View",
-                    description: "Center all nodes in the canvas.",
-                    group: "Graph",
+                    label: t("ui.quickActions.fit.label"),
+                    description: t("ui.quickActions.fit.description"),
+                    group: t("ui.quickActions.groups.graph"),
                     icon: "⊡",
                     keywords: ["center", "zoom"],
                     disabled: nodes.length === 0,
-                    disabledReason: nodes.length === 0 ? "The graph is empty." : undefined
+                    disabledReason: nodes.length === 0 ? t("ui.quickActions.disabled.emptyGraph") : undefined
                 }
             );
         }
@@ -1833,91 +1902,91 @@ function AppContent() {
         actions.push(
             {
                 id: "graph.duplicate",
-                label: "Duplicate Graph",
-                description: "Create and open a copy containing the latest edits.",
-                group: "Graph",
+                label: t("ui.quickActions.duplicateGraph.label"),
+                description: t("ui.quickActions.duplicateGraph.description"),
+                group: t("ui.quickActions.groups.graph"),
                 icon: "▣",
                 keywords: ["copy", "clone"],
                 disabled: !hasActiveGraph,
-                disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                disabledReason: !hasActiveGraph ? t("ui.quickActions.disabled.selectGraph") : undefined
             },
             {
                 id: "clipboard.nodes.copy",
-                label: "Copy Selected Nodes",
-                description: "Copy selected nodes and the connections between them (Ctrl/Cmd+C).",
-                group: "Clipboard",
+                label: t("ui.quickActions.copyNodes.label"),
+                description: t("ui.quickActions.copyNodes.description"),
+                group: t("ui.quickActions.groups.clipboard"),
                 icon: "⧉",
                 keywords: ["copy", "selection", "nodes", "ctrl c", "command c"],
                 disabled: appMode !== "edit" || selectedNodeCount === 0,
                 disabledReason: appMode !== "edit"
-                    ? "Open a graph in edit mode first."
-                    : selectedNodeCount === 0 ? "Select one or more nodes first." : undefined
+                    ? t("ui.quickActions.disabled.editGraph")
+                    : selectedNodeCount === 0 ? t("ui.quickActions.disabled.selectNodes") : undefined
             },
             {
                 id: "clipboard.nodes.paste",
-                label: "Paste Nodes",
-                description: "Paste copied nodes into this graph (Ctrl/Cmd+V).",
-                group: "Clipboard",
+                label: t("ui.quickActions.pasteNodes.label"),
+                description: t("ui.quickActions.pasteNodes.description"),
+                group: t("ui.quickActions.groups.clipboard"),
                 icon: "▣",
                 keywords: ["paste", "selection", "nodes", "ctrl v", "command v"],
                 disabled: appMode !== "edit" || !hasActiveGraph,
                 disabledReason: appMode !== "edit"
-                    ? "Open a graph in edit mode first."
-                    : !hasActiveGraph ? "Select a graph first." : undefined
+                    ? t("ui.quickActions.disabled.editGraph")
+                    : !hasActiveGraph ? t("ui.quickActions.disabled.selectGraph") : undefined
             },
             {
                 id: "clipboard.nodes.cut",
-                label: "Cut Selected Nodes",
-                description: "Copy and remove selected nodes (Ctrl/Cmd+X).",
-                group: "Clipboard",
+                label: t("ui.quickActions.cutNodes.label"),
+                description: t("ui.quickActions.cutNodes.description"),
+                group: t("ui.quickActions.groups.clipboard"),
                 icon: "✂",
                 keywords: ["cut", "selection", "nodes", "ctrl x", "command x"],
                 disabled: appMode !== "edit" || selectedNodeCount === 0,
                 disabledReason: appMode !== "edit"
-                    ? "Open a graph in edit mode first."
-                    : selectedNodeCount === 0 ? "Select one or more nodes first." : undefined
+                    ? t("ui.quickActions.disabled.editGraph")
+                    : selectedNodeCount === 0 ? t("ui.quickActions.disabled.selectNodes") : undefined
             },
             {
                 id: "clipboard.nodes.duplicate",
-                label: "Duplicate Selected Nodes",
-                description: "Duplicate selected nodes and their internal connections (Ctrl/Cmd+D).",
-                group: "Clipboard",
+                label: t("ui.quickActions.duplicateNodes.label"),
+                description: t("ui.quickActions.duplicateNodes.description"),
+                group: t("ui.quickActions.groups.clipboard"),
                 icon: "⧉",
                 keywords: ["duplicate", "clone", "selection", "nodes", "ctrl d", "command d"],
                 disabled: appMode !== "edit" || selectedNodeCount === 0,
                 disabledReason: appMode !== "edit"
-                    ? "Open a graph in edit mode first."
-                    : selectedNodeCount === 0 ? "Select one or more nodes first." : undefined
+                    ? t("ui.quickActions.disabled.editGraph")
+                    : selectedNodeCount === 0 ? t("ui.quickActions.disabled.selectNodes") : undefined
             },
             {
                 id: "clipboard.graph",
-                label: "Copy Graph JSON",
-                description: "Copy the current graph without temporary solve decorations.",
-                group: "Clipboard",
+                label: t("ui.quickActions.copyGraph.label"),
+                description: t("ui.quickActions.copyGraph.description"),
+                group: t("ui.quickActions.groups.clipboard"),
                 icon: "{}",
                 keywords: ["export", "nodes", "edges"],
                 disabled: !hasActiveGraph,
-                disabledReason: !hasActiveGraph ? "Select a graph first." : undefined
+                disabledReason: !hasActiveGraph ? t("ui.quickActions.disabled.selectGraph") : undefined
             },
             {
                 id: "clipboard.project",
-                label: "Copy Project JSON",
-                description: "Copy project configuration and every graph.",
-                group: "Clipboard",
+                label: t("ui.quickActions.copyProject.label"),
+                description: t("ui.quickActions.copyProject.description"),
+                group: t("ui.quickActions.groups.clipboard"),
                 icon: "📦",
                 keywords: ["export", "store", "workspace"],
                 disabled: !activeProjectId,
-                disabledReason: !activeProjectId ? "Select a project first." : undefined
+                disabledReason: !activeProjectId ? t("ui.quickActions.disabled.selectProject") : undefined
             },
             {
                 id: "clipboard.solve-result",
-                label: "Copy Solve Result JSON",
-                description: "Copy the latest complete solver response.",
-                group: "Clipboard",
+                label: t("ui.quickActions.copySolve.label"),
+                description: t("ui.quickActions.copySolve.description"),
+                group: t("ui.quickActions.groups.clipboard"),
                 icon: "✓",
                 keywords: ["export", "flows", "result"],
                 disabled: !solveResult,
-                disabledReason: !solveResult ? "Run Solve successfully first." : undefined
+                disabledReason: !solveResult ? t("ui.quickActions.disabled.solveFirst") : undefined
             }
         );
 
@@ -1929,8 +1998,8 @@ function AppContent() {
             <div className="top-bar">
                 <div className="top-bar-main">
                     <div className="top-bar-main-left">
-                        <div className="brand">GraphCalc</div>
-                        {!isAuthChecking && (
+                        <div className="brand">{t("app.brand")}</div>
+                        {!isAuthChecking && appView === "workspace" && (
                             <>
                                 <ProjectSelector
                                     key={`project-selector:${workspaceSelectorKey}`}
@@ -1951,32 +2020,41 @@ function AppContent() {
                             </>
                         )}
                     </div>
-                    <button
+                    {appView === "workspace" && <button
                         type="button"
                         className="quick-actions-trigger"
                         onClick={() => setIsCommandPaletteOpen(true)}
                     >
                         <span className="quick-actions-trigger-icon" aria-hidden="true">⌕</span>
-                        <span className="quick-actions-trigger-label">Quick Actions</span>
+                        <span className="quick-actions-trigger-label">{t("ui.nav.quickActions")}</span>
                         <kbd>{navigator.platform.includes("Mac") ? "⌘I" : "Ctrl+I"}</kbd>
-                    </button>
+                    </button>}
                     <div className="top-bar-actions">
-                        {appMode === "edit" && (
+                        {appView === "workspace" && appMode === "edit" && (
                             <button className="primary" onClick={handleSolve} disabled={isSolving}>
-                                {isSolving ? "Solving..." : "Solve"}
+                                {isSolving ? t("ui.nav.solving") : t("ui.nav.solve")}
                             </button>
                         )}
                         <button
                             className="auth-secondary auth-button"
-                            onClick={() => openAuthDialog("login")}
+                            onClick={() => setAppView("settings")}
                             disabled={isAuthChecking}
-                            title={authUser ? `${authUser.username} · ${authUser.projectCount} project${authUser.projectCount === 1 ? "" : "s"}` : "Guest mode · workspace is stored in this browser"}
+                            title={t("settings.open")}
                         >
-                            {isAuthChecking ? "Checking..." : authUser ? `${authUser.username} · ${authUser.projectCount}` : "Guest Mode"}
+                            {isAuthChecking ? t("common.state.checking") : (
+                                <>
+                                    <span className={`top-bar-account-avatar ${authUser ? "authenticated" : "guest"}`} aria-hidden="true">
+                                        {authUser && profileImageUrl
+                                            ? <img src={profileImageUrl} alt="" />
+                                            : authUser?.username.slice(0, 1).toLocaleUpperCase() ?? "⚙"}
+                                    </span>
+                                    <span>{authUser?.username ?? t("settings.title")}</span>
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>
-                {appMode === "config" && (
+                {appView === "workspace" && appMode === "config" && (
                     <div className="top-bar-subnav">
                         <ConfigSubmodeSelector
                             configSubMode={configSubMode}
@@ -1988,13 +2066,9 @@ function AppContent() {
             <AuthDialog
                 isOpen={isAuthDialogOpen}
                 initialMode={authDialogMode}
-                currentUser={authUser}
                 onClose={() => setIsAuthDialogOpen(false)}
                 onLogin={handleLogin}
                 onRegister={handleRegister}
-                onPasswordChange={handlePasswordChange}
-                onDeleteAccount={handleDeleteAccount}
-                onLogout={handleLogout}
             />
             <WorkspaceMergeDialog
                 isOpen={Boolean(pendingMerge)}
@@ -2012,7 +2086,20 @@ function AppContent() {
                 onActionSelected={handleQuickAction}
             />
 
-            {appMode === "edit" ? (
+            {appView === "settings" ? (
+                <SettingsPage
+                    currentUser={authUser}
+                    profileImageUrl={profileImageUrl}
+                    onBack={() => setAppView("workspace")}
+                    onOpenAuth={openAuthDialog}
+                    onPasswordChange={handlePasswordChange}
+                    onDeleteAccount={handleDeleteAccount}
+                    onLogout={handleLogout}
+                    onProfileImageUpload={handleProfileImageUpload}
+                    onProfileImageDelete={handleProfileImageDelete}
+                    onLanguageChange={handleLanguageChange}
+                />
+            ) : appMode === "edit" ? (
                 <div className="layout">
                     <NodeTypeSelector onNodeTypeSelected={handleNodeTypeSelected} />
                     <ReactFlow
@@ -2048,28 +2135,28 @@ function AppContent() {
                         />
                         <Controls showInteractive={false} />
                         <Panel position="top-right" className="panel">
-                            <div className="panel-title">Live Stats</div>
-                            <div className="panel-row">Nodes: {nodes.length}</div>
-                            <div className="panel-row">Edges: {edges.length}</div>
+                            <div className="panel-title">{t("ui.stats.title")}</div>
+                            <div className="panel-row">{t("ui.stats.nodes", { count: nodes.length })}</div>
+                            <div className="panel-row">{t("ui.stats.edges", { count: edges.length })}</div>
                             {solveResult && solveResult.status === "error" && (
                                 <div className="panel-error" style={{ marginTop: 8 }}>
-                                    Solve failed
+                                    {t("ui.stats.solveFailed")}
                                 </div>
                             )}
                             {solveResult && solveResult.status === "ok" && (
                                 <div className="panel-row" style={{ color: "#10b981", marginTop: 4 }}>
-                                    Solved ({Object.keys(solveResult.machineCounts).length} recipes)
+                                    {t("ui.stats.solved", { count: Object.keys(solveResult.machineCounts).length })}
                                 </div>
                             )}
                             {solveError && <div className="panel-error">{solveError}</div>}
                             {solveResult && solveResult.warnings && solveResult.warnings.length > 0 && (
                                 <div className="solve-warnings" style={{ marginTop: 8 }}>
                                     <div className="panel-subtitle" style={{ color: "#f59e0b" }}>
-                                        Warnings ({solveResult.warnings.length})
+                                        {t("solver.warningsTitle", { count: solveResult.warnings.length })}
                                     </div>
-                                    {solveResult.warnings.map((w, i) => (
+                                    {solveResult.warnings.map((warning, i) => (
                                         <div key={i} className="solve-warning-item">
-                                            {w}
+                                            {t(warning.code, warning.args)}
                                         </div>
                                     ))}
                                 </div>
@@ -2077,7 +2164,7 @@ function AppContent() {
                             {solveResult && solveResult.problemEdgeIds && solveResult.problemEdgeIds.length > 0 && (
                                 <div style={{ marginTop: 4 }}>
                                     <div className="panel-muted">
-                                        {solveResult.problemEdgeIds.length} problem edge{solveResult.problemEdgeIds.length !== 1 ? "s" : ""} highlighted
+                                        {t("ui.stats.problemEdges", { count: solveResult.problemEdgeIds.length })}
                                     </div>
                                 </div>
                             )}
@@ -2088,38 +2175,38 @@ function AppContent() {
                                 left={menu.left}
                                 onClose={() => setMenu(null)}
                                 copyLabel={menu.kind === "node" && menu.id && nodes.find((node) => node.id === menu.id)?.selected && selectedNodeCount > 1
-                                    ? `Copy ${selectedNodeCount} Selected Nodes`
-                                    : "Copy Node"}
+                                    ? t("ui.context.copyNodes", { count: selectedNodeCount })
+                                    : t("ui.context.copyNode")}
                                 onCopy={menu.kind === "node" ? () => {
                                     void handleCopyFromMenu().catch((error) => showNotice({
-                                        message: error instanceof Error ? error.message : "The selection could not be copied.",
+                                        message: error instanceof Error ? error.message : t("ui.quickActions.notice.copyFailed"),
                                         tone: "error"
                                     }));
                                 } : undefined}
                                 cutLabel={menu.kind === "node" && menu.id && nodes.find((node) => node.id === menu.id)?.selected && selectedNodeCount > 1
-                                    ? `Cut ${selectedNodeCount} Selected Nodes`
-                                    : "Cut Node"}
+                                    ? t("ui.context.cutNodes", { count: selectedNodeCount })
+                                    : t("ui.context.cutNode")}
                                 onCut={menu.kind === "node" ? () => {
                                     void handleCutFromMenu().catch((error) => showNotice({
-                                        message: error instanceof Error ? error.message : "The selection could not be cut.",
+                                        message: error instanceof Error ? error.message : t("ui.quickActions.notice.cutFailed"),
                                         tone: "error"
                                     }));
                                 } : undefined}
                                 onPaste={() => {
                                     void handlePasteFromMenu().catch((error) => showNotice({
-                                        message: error instanceof Error ? error.message : "The selection could not be pasted.",
+                                        message: error instanceof Error ? error.message : t("ui.quickActions.notice.pasteFailed"),
                                         tone: "error"
                                     }));
                                 }}
                                 duplicateLabel={menu.kind === "node" && menu.id && nodes.find((node) => node.id === menu.id)?.selected && selectedNodeCount > 1
-                                    ? `Duplicate ${selectedNodeCount} Selected Nodes`
-                                    : "Duplicate Node"}
+                                    ? t("ui.context.duplicateNodes", { count: selectedNodeCount })
+                                    : t("ui.context.duplicateNode")}
                                 onDuplicate={menu.kind === "node" ? () => {
                                     try {
                                         handleDuplicateFromMenu();
                                     } catch (error) {
                                         showNotice({
-                                            message: error instanceof Error ? error.message : "The selection could not be duplicated.",
+                                            message: error instanceof Error ? error.message : t("ui.quickActions.notice.duplicateFailed"),
                                             tone: "error"
                                         });
                                     }
@@ -2156,7 +2243,7 @@ function AppContent() {
                         type="button"
                         className="app-notice-close"
                         onClick={() => setNotice(null)}
-                        aria-label="Dismiss notification"
+                        aria-label={t("common.actions.close")}
                     >
                         ×
                     </button>

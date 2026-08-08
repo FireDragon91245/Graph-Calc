@@ -36,17 +36,17 @@ public sealed class AuthController : ControllerBase
         var username = (request.Username ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(username))
         {
-            throw new ApiException(StatusCodes.Status400BadRequest, "Username is required");
+            throw new ApiException(StatusCodes.Status400BadRequest, "backend.errors.usernameRequired");
         }
 
         if ((request.Password ?? string.Empty).Length <= 8)
         {
-            throw new ApiException(StatusCodes.Status400BadRequest, "Password must be longer than 8 characters");
+            throw new ApiException(StatusCodes.Status400BadRequest, "backend.errors.passwordTooShort");
         }
 
         if (await _store.GetUserByUsernameAsync(username, cancellationToken) is not null)
         {
-            throw new ApiException(StatusCodes.Status409Conflict, "Username already exists");
+            throw new ApiException(StatusCodes.Status409Conflict, "backend.errors.usernameExists");
         }
 
         var (salt, hash, iterations) = _passwordService.HashPassword(request.Password ?? string.Empty);
@@ -69,7 +69,7 @@ public sealed class AuthController : ControllerBase
         var user = await _store.GetUserByUsernameAsync(username, cancellationToken);
         if (user is null || !_passwordService.VerifyPassword(request.Password, user))
         {
-            throw new ApiException(StatusCodes.Status401Unauthorized, "Invalid username or password");
+            throw new ApiException(StatusCodes.Status401Unauthorized, "backend.errors.invalidCredentials");
         }
 
         var token = await _sessionTokenService.CreateTokenAsync(user, cancellationToken);

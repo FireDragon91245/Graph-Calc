@@ -1,7 +1,9 @@
 import { useState, DragEvent, useMemo } from "react";
 import { useGraphStore, RecipeTag, Recipe } from "../store/graphStore";
+import { useTranslation } from "react-i18next";
 
 export default function RecipeTagMode() {
+  const { t } = useTranslation();
   const recipeTags = useGraphStore((state) => state.recipeTags);
   const recipes = useGraphStore((state) => state.recipes);
   const addRecipeTag = useGraphStore((state) => state.addRecipeTag);
@@ -58,7 +60,7 @@ export default function RecipeTagMode() {
 
   const handleDeleteRecipeTag = (recipeTagId: string) => {
     const recipeTag = recipeTags.find((rt) => rt.id === recipeTagId);
-    if (confirm(`Delete recipe tag "${recipeTag?.name}"?`)) {
+    if (confirm(t("ui.config.recipeTag.deleteConfirm", { name: recipeTag?.name ?? "" }))) {
       deleteRecipeTag(recipeTagId);
     }
   };
@@ -99,7 +101,7 @@ export default function RecipeTagMode() {
     <div className="config-mode-content">
       <div className="config-sidebar">
         <div className="config-section">
-          <h3>Add Recipe Tag</h3>
+          <h3>{t("ui.config.recipeTag.add")}</h3>
           <p className="help-text">
             Recipe tags group multiple recipes that can be used polymorphically
           </p>
@@ -117,10 +119,10 @@ export default function RecipeTagMode() {
         </div>
 
         <div className="config-section">
-          <h3>Recipe Browser</h3>
+          <h3>{t("ui.config.recipeTag.browser")}</h3>
           <input
             type="text"
-            placeholder="Search recipes..."
+            placeholder={t("ui.config.recipeTag.search")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="config-input"
@@ -150,15 +152,15 @@ export default function RecipeTagMode() {
         </div>
 
         <div className="config-section">
-          <h3>Statistics</h3>
+          <h3>{t("ui.config.statistics")}</h3>
           <div className="stats-grid">
             <div className="stat-item">
               <div className="stat-value">{recipeTags.length}</div>
-              <div className="stat-label">Recipe Tags</div>
+              <div className="stat-label">{t("ui.config.recipeTags")}</div>
             </div>
             <div className="stat-item">
               <div className="stat-value">{recipes.length}</div>
-              <div className="stat-label">Recipes</div>
+              <div className="stat-label">{t("ui.config.recipes")}</div>
             </div>
           </div>
         </div>
@@ -206,7 +208,7 @@ export default function RecipeTagMode() {
                           e.stopPropagation();
                           handleStartRenameRecipeTag(recipeTag);
                         }}
-                        title="Rename recipe tag"
+                        title={t("ui.config.recipeTag.rename")}
                       >
                         ✏️
                       </button>
@@ -216,7 +218,7 @@ export default function RecipeTagMode() {
                           e.stopPropagation();
                           handleDeleteRecipeTag(recipeTag.id);
                         }}
-                        title="Delete recipe tag"
+                        title={t("ui.config.recipeTag.delete")}
                       >
                         🗑️
                       </button>
@@ -238,14 +240,14 @@ export default function RecipeTagMode() {
                         e.stopPropagation();
                         handleRemoveFromRecipeTag(recipeTag.id, recipe.id);
                       }}
-                      title="Remove from recipe tag"
+                      title={t("ui.config.recipeTag.remove")}
                     >
                       ×
                     </button>
                   </div>
                 ))}
                 {recipeTag.memberRecipeIds.length === 0 && (
-                  <div className="tag-empty">Drop recipes here</div>
+                  <div className="tag-empty">{t("ui.config.recipeTag.drop")}</div>
                 )}
               </div>
             </div>
@@ -253,7 +255,7 @@ export default function RecipeTagMode() {
 
           {recipeTags.length === 0 && (
             <div className="empty-state">
-              <p>No recipe tags yet. Create one to get started!</p>
+              <p>{t("ui.config.recipeTag.empty")}</p>
               <p className="help-text">
                 Example: Create @smelt to group all smelting recipes together
               </p>

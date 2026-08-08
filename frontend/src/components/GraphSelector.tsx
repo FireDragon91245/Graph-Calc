@@ -12,6 +12,7 @@ import {
   putGraphThumbnail
 } from "../api/persistence";
 import EntityThumbnail from "./EntityThumbnail";
+import { useTranslation } from "react-i18next";
 
 type GraphSelectorProps = {
   activeProjectId: string | null;
@@ -26,6 +27,7 @@ export default function GraphSelector({
   onGraphChange,
   refreshToken = 0
 }: GraphSelectorProps) {
+  const { t } = useTranslation();
   const [graphs, setGraphs] = useState<GraphInfo[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -154,7 +156,7 @@ export default function GraphSelector({
     const source = graphs.find((g) => g.id === id);
     if (!source) return;
     try {
-      const newG = await apiCopyGraph(activeProjectId, id, `${source.name} (copy)`);
+      const newG = await apiCopyGraph(activeProjectId, id, `${source.name} (${t("ui.defaults.copy")})`);
 
       setGraphs((current) => [...current, newG]);
       setContextMenu(null);
@@ -174,10 +176,10 @@ export default function GraphSelector({
   const handleDelete = async (id: string) => {
     if (!activeProjectId) return;
     if (graphs.length <= 1) {
-      alert("Cannot delete the last graph.");
+      alert(t("ui.graph.deleteLast"));
       return;
     }
-    if (!confirm("Delete this graph? This cannot be undone.")) return;
+    if (!confirm(t("ui.graph.deleteConfirm"))) return;
 
     const previousGraphs = graphs;
     const remainingGraphs = graphs.filter((graph) => graph.id !== id);
@@ -244,10 +246,10 @@ export default function GraphSelector({
         <button
           type="button"
           className="graph-selector-toggle"
-          title={activeGraph?.name ?? "Select graph"}
+          title={activeGraph?.name ?? t("ui.graph.select")}
         >
           <span className="graph-selector-label">
-            {activeGraph?.name ?? "Loading..."}
+            {activeGraph?.name ?? t("ui.graph.loading")}
           </span>
           <span className="graph-selector-chevron">{isOpen ? "▲" : "▼"}</span>
         </button>
@@ -255,7 +257,7 @@ export default function GraphSelector({
 
       {isOpen && (
         <div className="graph-dropdown">
-          <div className="graph-dropdown-header">Graphs</div>
+          <div className="graph-dropdown-header">{t("ui.graph.graphs")}</div>
           <div className="graph-list">
             {graphs.map((g) => (
               <div
@@ -297,7 +299,7 @@ export default function GraphSelector({
                             : { id: g.id, x: e.clientX, y: e.clientY }
                         );
                       }}
-                      title="Graph actions"
+                      title={t("ui.graph.actions")}
                     >
                       ⋯
                     </button>
@@ -312,7 +314,7 @@ export default function GraphSelector({
               <input
                 ref={inputRef}
                 className="graph-edit-input"
-                placeholder="Graph name..."
+                placeholder={t("ui.graph.namePlaceholder")}
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => {
@@ -332,7 +334,7 @@ export default function GraphSelector({
                 setNewName("");
               }}
             >
-              + New Graph
+              + {t("ui.graph.new")}
             </button>
           )}
         </div>
@@ -354,17 +356,17 @@ export default function GraphSelector({
               }
             }}
           >
-            ✏️ Rename
+            ✏️ {t("common.actions.rename")}
           </button>
-          <button onClick={() => void handleCopy(contextMenu.id)}>📋 Duplicate</button>
+          <button onClick={() => void handleCopy(contextMenu.id)}>📋 {t("ui.graph.duplicate")}</button>
           {graphs.find((graph) => graph.id === contextMenu.id)?.thumbnailId && (
-            <button onClick={() => void handleThumbnailDelete(contextMenu.id)}>Remove thumbnail</button>
+            <button onClick={() => void handleThumbnailDelete(contextMenu.id)}>{t("ui.graph.removeThumbnail")}</button>
           )}
           <button
             className="danger"
             onClick={() => void handleDelete(contextMenu.id)}
           >
-            🗑️ Delete
+            🗑️ {t("common.actions.delete")}
           </button>
         </div>
       )}

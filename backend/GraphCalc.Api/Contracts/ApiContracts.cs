@@ -44,6 +44,30 @@ public sealed class AccountProfileResponse
 
     [JsonPropertyName("activeProjectId")]
     public string? ActiveProjectId { get; init; }
+
+    [JsonPropertyName("profileImageId")]
+    public string? ProfileImageId { get; init; }
+
+    [JsonPropertyName("settings")]
+    public required AccountSettingsResponse Settings { get; init; }
+}
+
+public sealed class AccountSettingsResponse
+{
+    [JsonPropertyName("language")]
+    public string? Language { get; init; }
+}
+
+public sealed class AccountSettingsUpdateRequest
+{
+    [JsonPropertyName("language")]
+    public string? Language { get; init; }
+}
+
+public sealed class ProfileImageUpdateResponse
+{
+    [JsonPropertyName("profileImageId")]
+    public required string ProfileImageId { get; init; }
 }
 
 public sealed class PasswordChangeRequest
@@ -529,7 +553,7 @@ public sealed class SolveResponse
     public List<string> Bottlenecks { get; init; } = [];
 
     [JsonPropertyName("warnings")]
-    public List<string> Warnings { get; init; } = [];
+    public List<LocalizedMessage> Warnings { get; init; } = [];
 
     [JsonPropertyName("nodeFlows")]
     public Dictionary<string, NodeFlowData> NodeFlows { get; init; } = [];
@@ -539,4 +563,13 @@ public sealed class SolveResponse
 
     [JsonPropertyName("problemEdgeIds")]
     public List<string> ProblemEdgeIds { get; init; } = [];
+}
+
+public sealed class LocalizedMessage
+{
+    [JsonPropertyName("code")]
+    public required string Code { get; init; }
+
+    [JsonPropertyName("args")]
+    public Dictionary<string, object?> Args { get; init; } = [];
 }

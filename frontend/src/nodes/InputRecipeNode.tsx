@@ -3,6 +3,7 @@ import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
 import { useGraphStore } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
 import type { NodeFlowData } from "../api/solve";
+import { useTranslation } from "react-i18next";
 
 type Port = {
   id: string;
@@ -22,6 +23,7 @@ type InputRecipeNodeData = {
 };
 
 export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeData>) {
+  const { t } = useTranslation();
   const { setNodes, getEdges, setEdges } = useReactFlow();
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
@@ -112,7 +114,7 @@ export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeD
           value={data.recipeId}
           options={recipes.map((r) => ({ value: r.id, label: r.name }))}
           onChange={handleRecipeChange}
-          placeholder="Select recipe"
+          placeholder={t("ui.nodes.selectRecipe")}
         />
         <div className="node-meta">
           <input
@@ -122,12 +124,12 @@ export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeD
             step="1"
             value={multiplier}
             onChange={handleMultiplierChange}
-            aria-label="Recipe multiplier"
+            aria-label={t("ui.nodes.recipeMultiplier")}
           />
           <span className="node-sub">x</span>
           <span className="node-sub">{data.timeSeconds}s</span>
           {data.solveData?.totalOutput ? (
-            <span className="node-badge" title="Utilized production rate">
+            <span className="node-badge" title={t("ui.nodes.utilizedRate")}>
               ↑ {data.solveData.totalOutput.toFixed(2)}/s
             </span>
           ) : null}
@@ -135,7 +137,7 @@ export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeD
             className="node-detail-btn"
             onClick={() => hasSolveData && setShowDetails((prev) => !prev)}
             disabled={!hasSolveData}
-            title={hasSolveData ? "Show details" : "Run solver first"}
+            title={hasSolveData ? t("ui.nodes.showDetails") : t("ui.nodes.runSolver")}
           >
             ...
           </button>
@@ -147,7 +149,7 @@ export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeD
             {data.outputs.map((output) => (
               <div key={output.id} className="port-row right">
                 {data.solveData && (
-                  <span className="port-rate" title="Actual output flow">
+                  <span className="port-rate" title={t("ui.nodes.actualOutput")}>
                     {(data.solveData.outputFlows[resolveItemId(output)] ?? 0).toFixed(2)}/s
                   </span>
                 )}
@@ -168,7 +170,7 @@ export default function InputRecipeNode({ id, data }: NodeProps<InputRecipeNodeD
         </div>
         {showDetails && data.solveData ? (
           <div className="node-detail-panel">
-            <div className="node-detail-title">Input Recipe Details</div>
+            <div className="node-detail-title">{t("ui.nodes.inputRecipeDetails")}</div>
             <div className="node-detail-row">
               <span>{recipeTitle}</span>
               <span>x{multiplier} • {data.timeSeconds}s</span>

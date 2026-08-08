@@ -12,6 +12,7 @@ import {
   putProjectThumbnail
 } from "../api/persistence";
 import EntityThumbnail from "./EntityThumbnail";
+import { useTranslation } from "react-i18next";
 
 type ProjectSelectorProps = {
   activeProjectId: string | null;
@@ -22,6 +23,7 @@ export default function ProjectSelector({
   activeProjectId,
   onProjectChange
 }: ProjectSelectorProps) {
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -147,7 +149,7 @@ export default function ProjectSelector({
     const source = projects.find((p) => p.id === id);
     if (!source) return;
     try {
-      const newProj = await apiCopyProject(id, `${source.name} (copy)`);
+      const newProj = await apiCopyProject(id, `${source.name} (${t("ui.defaults.copy")})`);
       const previousProjectId = activeProjectId;
 
       setProjects((current) => [...current, newProj]);
@@ -173,10 +175,10 @@ export default function ProjectSelector({
 
   const handleDelete = (id: string) => {
     if (projects.length <= 1) {
-      alert("Cannot delete the last project.");
+      alert(t("ui.project.deleteLast"));
       return;
     }
-    if (!confirm("Delete this project? This cannot be undone.")) return;
+    if (!confirm(t("ui.project.deleteConfirm"))) return;
 
     const previousProjects = projects;
     const remainingProjects = projects.filter((project) => project.id !== id);
@@ -243,10 +245,10 @@ export default function ProjectSelector({
         <button
           type="button"
           className="project-selector-toggle"
-          title={activeProject?.name ?? "Select project"}
+          title={activeProject?.name ?? t("ui.project.select")}
         >
           <span className="project-selector-label">
-            {activeProject?.name ?? "Loading..."}
+            {activeProject?.name ?? t("ui.project.loading")}
           </span>
           <span className="project-selector-chevron">{isOpen ? "▲" : "▼"}</span>
         </button>
@@ -254,7 +256,7 @@ export default function ProjectSelector({
 
       {isOpen && (
         <div className="project-dropdown">
-          <div className="project-dropdown-header">Projects</div>
+          <div className="project-dropdown-header">{t("ui.project.projects")}</div>
           <div className="project-list">
             {projects.map((p) => (
               <div
@@ -296,7 +298,7 @@ export default function ProjectSelector({
                             : { id: p.id, x: e.clientX, y: e.clientY }
                         );
                       }}
-                      title="Project actions"
+                      title={t("ui.project.actions")}
                     >
                       ⋯
                     </button>
@@ -311,7 +313,7 @@ export default function ProjectSelector({
               <input
                 ref={inputRef}
                 className="project-edit-input"
-                placeholder="Project name..."
+                placeholder={t("ui.project.namePlaceholder")}
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => {
@@ -331,7 +333,7 @@ export default function ProjectSelector({
                 setNewName("");
               }}
             >
-              + New Project
+              + {t("ui.project.new")}
             </button>
           )}
         </div>
@@ -353,17 +355,17 @@ export default function ProjectSelector({
               }
             }}
           >
-            ✏️ Rename
+            ✏️ {t("common.actions.rename")}
           </button>
-          <button onClick={() => handleCopy(contextMenu.id)}>📋 Copy</button>
+          <button onClick={() => handleCopy(contextMenu.id)}>📋 {t("ui.project.copy")}</button>
           {projects.find((project) => project.id === contextMenu.id)?.thumbnailId && (
-            <button onClick={() => void handleThumbnailDelete(contextMenu.id)}>Remove thumbnail</button>
+            <button onClick={() => void handleThumbnailDelete(contextMenu.id)}>{t("ui.project.removeThumbnail")}</button>
           )}
           <button
             className="danger"
             onClick={() => handleDelete(contextMenu.id)}
           >
-            🗑️ Delete
+            🗑️ {t("common.actions.delete")}
           </button>
         </div>
       )}

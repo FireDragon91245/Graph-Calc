@@ -1,7 +1,9 @@
 import { useState, DragEvent, useMemo } from "react";
 import { useGraphStore, Tag, Item } from "../store/graphStore";
+import { useTranslation } from "react-i18next";
 
 export default function TagMode() {
+  const { t } = useTranslation();
   const tags = useGraphStore((state) => state.tags);
   const items = useGraphStore((state) => state.items);
   const categories = useGraphStore((state) => state.categories);
@@ -59,7 +61,7 @@ export default function TagMode() {
 
   const handleDeleteTag = (tagId: string) => {
     const tag = tags.find((t) => t.id === tagId);
-    if (confirm(`Delete tag "${tag?.name}"? This will remove it from all recipes.`)) {
+    if (confirm(t("ui.config.tag.deleteConfirm", { name: tag?.name ?? "" }))) {
       deleteTag(tagId);
     }
   };
@@ -114,7 +116,7 @@ export default function TagMode() {
     <div className="config-mode-content">
       <div className="config-sidebar">
         <div className="config-section">
-          <h3>Add Tag</h3>
+          <h3>{t("ui.config.tag.add")}</h3>
           <input
             type="text"
             placeholder="@tag_name"
@@ -129,10 +131,10 @@ export default function TagMode() {
         </div>
 
         <div className="config-section">
-          <h3>Item Browser</h3>
+          <h3>{t("ui.config.tag.browser")}</h3>
           <input
             type="text"
-            placeholder="Search items..."
+            placeholder={t("ui.config.tag.search")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="config-input"
@@ -166,15 +168,15 @@ export default function TagMode() {
         </div>
 
         <div className="config-section">
-          <h3>Statistics</h3>
+          <h3>{t("ui.config.statistics")}</h3>
           <div className="stats-grid">
             <div className="stat-item">
               <div className="stat-value">{tags.length}</div>
-              <div className="stat-label">Tags</div>
+              <div className="stat-label">{t("ui.config.tags")}</div>
             </div>
             <div className="stat-item">
               <div className="stat-value">{items.length}</div>
-              <div className="stat-label">Items</div>
+              <div className="stat-label">{t("ui.config.items")}</div>
             </div>
           </div>
         </div>
@@ -222,7 +224,7 @@ export default function TagMode() {
                           e.stopPropagation();
                           handleStartRenameTag(tag);
                         }}
-                        title="Rename tag"
+                        title={t("ui.config.tag.rename")}
                       >
                         ✏️
                       </button>
@@ -232,7 +234,7 @@ export default function TagMode() {
                           e.stopPropagation();
                           handleDeleteTag(tag.id);
                         }}
-                        title="Delete tag"
+                        title={t("ui.config.tag.delete")}
                       >
                         🗑️
                       </button>
@@ -251,14 +253,14 @@ export default function TagMode() {
                         e.stopPropagation();
                         handleRemoveFromTag(tag.id, item.id);
                       }}
-                      title="Remove from tag"
+                      title={t("ui.config.tag.remove")}
                     >
                       ×
                     </button>
                   </div>
                 ))}
                 {tag.memberItemIds.length === 0 && (
-                  <div className="tag-empty">Drop items here</div>
+                  <div className="tag-empty">{t("ui.config.tag.drop")}</div>
                 )}
               </div>
             </div>
@@ -266,7 +268,7 @@ export default function TagMode() {
 
           {tags.length === 0 && (
             <div className="empty-state">
-              <p>No tags yet. Create one to get started!</p>
+              <p>{t("ui.config.tag.empty")}</p>
             </div>
           )}
         </div>

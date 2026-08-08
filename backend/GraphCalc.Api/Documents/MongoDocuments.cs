@@ -22,6 +22,21 @@ public sealed class UserDocument
 
     [BsonElement("passwordIterations")]
     public int PasswordIterations { get; set; }
+
+    [BsonElement("profileImageId")]
+    [BsonIgnoreIfNull]
+    public string? ProfileImageId { get; set; }
+
+    [BsonElement("settings")]
+    public UserSettingsDocument Settings { get; set; } = new();
+}
+
+[BsonIgnoreExtraElements]
+public sealed class UserSettingsDocument
+{
+    [BsonElement("language")]
+    [BsonIgnoreIfNull]
+    public string? Language { get; set; }
 }
 
 public sealed class WorkspaceDocument

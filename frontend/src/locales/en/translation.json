@@ -1,0 +1,241 @@
+{
+  "app": {
+    "documentTitle": "GraphCalc Node Editor",
+    "brand": "GraphCalc"
+  },
+  "language": {
+    "english": "English",
+    "german": "German",
+    "system": "Browser language"
+  },
+  "common": {
+    "actions": {
+      "add": "Add",
+      "apply": "Apply",
+      "back": "Back",
+      "cancel": "Cancel",
+      "change": "Change",
+      "close": "Close",
+      "confirm": "Confirm",
+      "copy": "Copy",
+      "create": "Create",
+      "delete": "Delete",
+      "discard": "Discard",
+      "duplicate": "Duplicate",
+      "edit": "Edit",
+      "keep": "Keep",
+      "merge": "Merge",
+      "remove": "Remove",
+      "rename": "Rename",
+      "replace": "Replace",
+      "save": "Save",
+      "search": "Search",
+      "select": "Select",
+      "undo": "Undo"
+    },
+    "state": {
+      "checking": "Checking…",
+      "deleting": "Deleting…",
+      "loading": "Loading…",
+      "none": "None",
+      "saving": "Saving…",
+      "working": "Working…"
+    },
+    "fields": {
+      "username": "Username",
+      "password": "Password",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password"
+    },
+    "counts": {
+      "project_one": "{{count}} project",
+      "project_other": "{{count}} projects",
+      "graph_one": "{{count}} graph",
+      "graph_other": "{{count}} graphs",
+      "item_one": "{{count}} item",
+      "item_other": "{{count}} items",
+      "recipe_one": "{{count}} recipe",
+      "recipe_other": "{{count}} recipes",
+      "warning_one": "{{count}} warning",
+      "warning_other": "{{count}} warnings"
+    }
+  },
+  "auth": {
+    "title": "Sign in to GraphCalc",
+    "registerTitle": "Create your account",
+    "login": "Sign in",
+    "register": "Create account",
+    "loggingIn": "Signing in…",
+    "registering": "Creating account…",
+    "guestDescription": "Guest work is stored in this browser. Signing in lets you sync it with an account.",
+    "loginDescription": "Open your account workspace. If it differs from your guest workspace, you can choose what to keep.",
+    "registerDescription": "Create an account and import the projects currently stored in this browser.",
+    "passwordRule": "Use at least 9 characters.",
+    "privacyNotice": "Privacy notice",
+    "closeLabel": "Close sign-in dialog"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage language, account, security, and privacy preferences.",
+    "backToWorkspace": "Back to workspace",
+    "open": "Open settings",
+    "sections": {
+      "general": "General",
+      "account": "Account",
+      "security": "Security",
+      "privacy": "Data & Privacy",
+      "danger": "Danger Zone"
+    },
+    "general": {
+      "title": "Language",
+      "description": "Choose the language used for GraphCalc.",
+      "label": "Interface language",
+      "savedLocally": "This preference is stored in this browser and also applies in guest mode.",
+      "saveFailed": "The language preference could not be saved."
+    },
+    "account": {
+      "title": "Account",
+      "signedInAs": "Signed in as {{username}}",
+      "synced": "Your workspace is stored with your account and synchronized with the server.",
+      "guestTitle": "Local guest workspace",
+      "guestDescription": "Your projects are stored only in this browser. Create an account or sign in to use them on another device.",
+      "activeProject": "Active project",
+      "projectCount": "Projects",
+      "signOut": "Sign out",
+      "signingOut": "Signing out…",
+      "signOutHelp": "Signing out keeps a local copy of your current account workspace in this browser.",
+      "image": {
+        "change": "Change picture",
+        "upload": "Upload picture",
+        "remove": "Remove picture",
+        "uploading": "Uploading…",
+        "removing": "Removing…",
+        "help": "Click the picture to upload or replace it. PNG, JPEG, or WebP; maximum 5 MB.",
+        "alt": "Profile picture for {{username}}",
+        "loadFailed": "The profile picture could not be loaded.",
+        "uploadFailed": "The profile picture could not be uploaded.",
+        "removeFailed": "The profile picture could not be removed."
+      }
+    },
+    "security": {
+      "title": "Change password",
+      "description": "Updating your password signs older sessions out of your account.",
+      "submit": "Change password",
+      "success": "Password updated successfully.",
+      "mismatch": "The new passwords do not match."
+    },
+    "privacy": {
+      "title": "Data and privacy",
+      "description": "Learn where guest and account workspaces are stored and how service data is handled.",
+      "openNotice": "Read privacy notice"
+    },
+    "danger": {
+      "title": "Delete account",
+      "description": "Permanently delete your account and all projects, graphs, recipes, tags, and configuration stored with it.",
+      "button": "Delete account",
+      "dialogTitle": "Permanently delete account?",
+      "dialogDescription": "This action cannot be undone. Enter your current password to confirm deletion of {{username}} and all account data.",
+      "confirm": "Delete my account",
+      "passwordRequired": "Enter your current password to delete the account."
+    }
+  },
+  "privacy": {
+    "title": "Privacy Notice",
+    "lastUpdated": "Last updated March 9, 2026. This notice describes how GraphCalc handles guest workspaces, accounts, sessions, and technical operations.",
+    "closeLabel": "Close privacy notice",
+    "close": "Close notice",
+    "scope": { "title": "Scope", "body": "This notice applies to everyone using this service. It covers both anonymous guest usage and optional account-based usage." },
+    "account": { "title": "Account model", "items": ["Accounts are optional. The calculator can be used without signing in.", "Guest workspaces are stored locally in your browser on your device.", "Account workspaces are stored on the server and are tied to the account you sign in with.", "We only ask for a username and password for account creation and sign-in."] },
+    "guestStorage": { "title": "Guest storage", "body": "When you use the app without an account, your projects, graphs, recipes, tags, and related configuration are kept in browser local storage. That data stays on the device and browser profile you are using unless you clear it, switch browsers, or explicitly merge it into an account." },
+    "sessions": { "title": "Session management", "body": "Signed-in sessions use a secure HTTP-only session cookie. The cookie is used only to keep you signed in and authorize requests to your account data. It is not intended for analytics, advertising, or cross-site tracking." },
+    "processed": { "title": "Data we process", "items": ["Username for account identification.", "Password in hashed form only. Passwords are not stored in plain text.", "User-created workspace content such as projects, graphs, recipes, tags, item definitions, and solver configuration.", "Technical request data needed to operate the service, including request paths, response status, origin header values, trace identifiers, and request duration."] },
+    "notUsed": { "title": "What we do not use your data for", "items": ["No advertising profiles.", "No telemetry or analytics SDKs in the frontend.", "No sale of account or workspace data."] },
+    "security": { "title": "Security", "callout": "Transport is protected over HTTPS, account passwords are hashed, and authenticated requests are validated server-side before account-scoped data is accessed.", "items": ["Passwords are stored only as derived hashes with salt and configured iteration cost.", "Database access is restricted to the configured backend service.", "Session tokens are validated on each authenticated request.", "Rate limits are applied to authentication, CRUD, and solve endpoints, including separate limits for guest solves."] },
+    "retention": { "title": "Backups and retention", "warning": "No backup or recovery guarantee is provided for guest data or account data. Data may be lost because of browser clearing, breaking changes, server issues, or manual deletion.", "body": "You should treat this as a convenience tool, not as a guaranteed archival system." },
+    "restriction": { "title": "Important use restriction", "body": "Do not store personal, confidential, or regulated information in usernames, projects, graphs, recipes, notes, or any other user-defined content. This service is intended for non-personal calculation and configuration data only." },
+    "administration": { "title": "Administrative access", "body": "Operators with infrastructure or database access may be able to access server-stored account data when needed for maintenance, debugging, abuse handling, or security response." },
+    "disclaimer": { "title": "Disclaimer", "items": ["No guarantee of uptime or uninterrupted availability.", "No guarantee of persistence, backup, or recovery.", "No guarantee that calculations are always correct, complete, or fit for a particular purpose.", "Use of the service is at your own risk."] },
+    "changes": { "title": "Changes", "body": "This notice may be updated as the project changes. Continued use after an update means the revised notice applies from that point onward." }
+  },
+  "apiErrors": { "solve": "The graph could not be solved." },
+  "backendDefaults": { "project": "Default project", "graph": "Main" },
+  "errors": {
+    "unknown": "Something went wrong.",
+    "network": "The server could not be reached.",
+    "requestCancelled": "The request was cancelled.",
+    "internal": "Internal server error.",
+    "rateLimited": "Too many requests. Please wait and try again.",
+    "authenticationFailed": "Authentication failed.",
+    "unauthorized": "Authentication required.",
+    "usernameRequired": "Username is required.",
+    "passwordTooShort": "Password must be longer than 8 characters.",
+    "usernameExists": "That username already exists.",
+    "invalidCredentials": "Invalid username or password.",
+    "currentPasswordIncorrect": "The current password is incorrect.",
+    "userNotFound": "User not found.",
+    "projectNotFound": "Project not found.",
+    "graphNotFound": "Graph not found.",
+    "projectNameRequired": "Project name is required.",
+    "graphNameRequired": "Graph name is required.",
+    "guestGraphRequired": "A graph is required for a guest solve.",
+    "guestStoreRequired": "Store data is required for a guest solve.",
+    "loadAccount": "Failed to load the account.",
+    "changePassword": "Failed to change the password.",
+    "deleteAccount": "Failed to delete the account.",
+    "logout": "Failed to sign out.",
+    "thumbnail": "Failed to save the thumbnail.",
+    "passwordMismatch": "The new passwords do not match."
+  },
+  "backend": {
+    "defaults": { "project": "Default project", "graph": "Main" },
+    "errors": {
+      "requestCancelled": "The request was cancelled.",
+      "internal": "Internal server error.",
+      "rateLimited": "Too many requests. Please wait and try again.",
+      "authenticationRequired": "Authentication required.",
+      "userNotFound": "User not found.",
+      "usernameRequired": "Username is required.",
+      "passwordTooShort": "Password must be longer than 8 characters.",
+      "usernameExists": "That username already exists.",
+      "invalidCredentials": "Invalid username or password.",
+      "currentPasswordIncorrect": "The current password is incorrect.",
+      "projectNotFound": "Project not found.",
+      "graphNotFound": "Graph not found.",
+      "projectNameRequired": "Project name is required.",
+      "graphNameRequired": "Graph name is required.",
+      "guestGraphRequired": "A graph is required for a guest solve.",
+      "guestStoreRequired": "Store data is required for a guest solve."
+      ,"invalidRequest": "The request was invalid."
+      ,"thumbnailNotFound": "Thumbnail not found."
+      ,"solverQueueFull": "The solver queue is full."
+      ,"solverTimedOut": "The solver timed out."
+      ,"imageRequired": "An image file is required."
+      ,"imageTooLarge": "Image files must not exceed 5 MB."
+      ,"imageAnimated": "Animated or multi-frame images are not supported."
+      ,"imageValidation": "The image format could not be validated consistently."
+      ,"imageInvalid": "The uploaded file is not a valid supported image."
+      ,"imageType": "Only PNG, JPEG, and WebP images are supported."
+      ,"imageDimensions": "Image dimensions must be between 16×16 and 1024×1024 pixels."
+      ,"languageUnsupported": "That language is not supported."
+    }
+  },
+  "solver": {
+    "status": { "success": "Solved successfully", "error": "The graph could not be solved" },
+    "warningsTitle": "Warnings ({{count}})",
+    "warning": {
+      "emptyGraph": "No recipes or inputs were found in the graph.",
+      "createFailed": "The linear solver could not be created.",
+      "edgeMismatch": "{{source}} provides {{sourceItems}}, but {{target}} expects {{targetItems}}. Connected recipes were disabled.",
+      "requesterMissingSupply": "Requester demands {{item}} ({{target}}/s), but no supplying edge exists.",
+      "cycleFallback": "The circular preference pass failed. The primary cycle solution may require another attempt.",
+      "cycleRunawayItem": "Circular reference is runaway for {{item}}: {{available}}/s is available inside the cycle, but only {{consumed}}/s can be consumed or removed.",
+      "demandNotMet": "Demand for {{item}} ({{target}}/s) was not fully met; {{delivered}}/s is delivered.",
+      "unexpected": "Solver error: {{message}}",
+      "subgraphInfeasible": "Subgraph {{index}} is infeasible ({{description}}).",
+      "cycleRunaway": "A circular reference can produce more reusable output than it can consume.",
+      "cycleUnbalanced": "A circular reference cannot be balanced with the available fresh inputs.",
+      "infeasible": "No feasible solution was found ({{status}}). Check the constraints; demand may exceed supply limits."
+    }
+  }
+}

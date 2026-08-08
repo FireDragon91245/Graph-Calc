@@ -1,7 +1,9 @@
 import { useState, useMemo, DragEvent } from "react";
 import { useGraphStore, Recipe, RecipeInput, RecipeOutput, Item, Tag } from "../store/graphStore";
+import { useTranslation } from "react-i18next";
 
 export default function RecipeMode() {
+  const { t } = useTranslation();
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
   const tags = useGraphStore((state) => state.tags);
@@ -26,7 +28,7 @@ export default function RecipeMode() {
   const handleAddRecipe = () => {
     if (!recipeName.trim()) return;
     if (inputs.length === 0 || outputs.length === 0) {
-      alert("Recipe must have at least one input and one output");
+      alert(t("ui.config.recipe.needsIo"));
       return;
     }
 
@@ -74,7 +76,7 @@ export default function RecipeMode() {
 
   const handleDeleteRecipe = (recipeId: string) => {
     const recipe = recipes.find((r) => r.id === recipeId);
-    if (confirm(`Delete recipe "${recipe?.name}"? This will remove it from all recipe tags.`)) {
+    if (confirm(t("ui.config.recipe.deleteConfirm", { name: recipe?.name ?? "" }))) {
       deleteRecipe(recipeId);
       // If the deleted recipe was being edited, clear the form
       if (editingRecipe === recipeId) {
@@ -344,10 +346,10 @@ export default function RecipeMode() {
     <div className="config-mode-content recipe-mode">
       <div className="config-sidebar">
         <div className="config-section">
-          <h3>Items & Tags</h3>
+          <h3>{t("ui.config.recipe.itemsAndTags")}</h3>
           <input
             type="text"
-            placeholder="Search..."
+            placeholder={t("ui.config.recipe.search")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="config-input"
@@ -355,7 +357,7 @@ export default function RecipeMode() {
           
           <div className="items-and-tags-browser">
             <div className="browser-section">
-              <h4>Tags (for inputs)</h4>
+              <h4>{t("ui.config.recipe.inputTags")}</h4>
               <div className="browser-list">
                 {filteredTags.map((tag) => (
                   <div
@@ -373,7 +375,7 @@ export default function RecipeMode() {
             </div>
             
             <div className="browser-section">
-              <h4>Items</h4>
+              <h4>{t("ui.config.items")}</h4>
               <div className="browser-list">
                 {filteredItems.map((item) => {
                   const itemTags = getItemTags(item.id);
@@ -406,11 +408,11 @@ export default function RecipeMode() {
         </div>
 
         <div className="config-section">
-          <h3>Statistics</h3>
+          <h3>{t("ui.config.statistics")}</h3>
           <div className="stats-grid">
             <div className="stat-item">
               <div className="stat-value">{recipes.length}</div>
-              <div className="stat-label">Recipes</div>
+              <div className="stat-label">{t("ui.config.recipes")}</div>
             </div>
           </div>
         </div>
@@ -419,23 +421,23 @@ export default function RecipeMode() {
       <div className="config-main">
         <div className="recipe-builder">
           <div className="builder-header">
-            <h3>Recipe Builder</h3>
+            <h3>{t("ui.config.recipe.builder")}</h3>
           </div>
           
           <div className="recipe-form">
             {editingRecipe && (
               <div className="editing-notice">
-                <span>✏️ Editing Recipe</span>
+                <span>✏️ {t("ui.config.recipe.editing")}</span>
                 <button onClick={handleClearForm} className="btn-secondary btn-sm">
                   Clear Form
                 </button>
               </div>
             )}
             <div className="form-row">
-              <label>Recipe Name</label>
+              <label>{t("ui.config.recipe.name")}</label>
               <input
                 type="text"
-                placeholder="e.g., Macerate Iron"
+                placeholder={t("ui.config.recipe.nameExample")}
                 value={recipeName}
                 onChange={(e) => setRecipeName(e.target.value)}
                 className="config-input"
@@ -443,7 +445,7 @@ export default function RecipeMode() {
             </div>
             
             <div className="form-row">
-              <label>Processing Time (seconds)</label>
+              <label>{t("ui.config.recipe.time")}</label>
               <input
                 type="number"
                 min="0.1"
@@ -460,7 +462,7 @@ export default function RecipeMode() {
                 onDragOver={handleDragOver}
                 onDrop={handleDropOnInputs}
               >
-                <h4>Inputs</h4>
+                <h4>{t("ui.config.recipe.inputs")}</h4>
                 <div className="io-list">
                   {inputs.map((input, index) => (
                     <div 
@@ -492,7 +494,7 @@ export default function RecipeMode() {
                     </div>
                   ))}
                   {inputs.length === 0 && (
-                    <div className="io-empty">Drop items or tags here</div>
+                    <div className="io-empty">{t("ui.config.recipe.drop")}</div>
                   )}
                 </div>
               </div>
@@ -502,7 +504,7 @@ export default function RecipeMode() {
                 onDragOver={handleDragOver}
                 onDrop={handleDropOnOutputs}
               >
-                <h4>Outputs</h4>
+                <h4>{t("ui.config.recipe.outputs")}</h4>
                 <div className="io-list">
                   {outputs.map((output, index) => (
                     <div 
@@ -522,7 +524,7 @@ export default function RecipeMode() {
                         value={output.amount}
                         onChange={(e) => updateOutputAmount(output.id, parseInt(e.target.value))}
                         className="amount-input"
-                        placeholder="Amount"
+                        placeholder={t("ui.config.recipe.amount")}
                         onMouseDown={(e) => e.stopPropagation()}
                       />
                       <input
@@ -533,7 +535,7 @@ export default function RecipeMode() {
                         value={output.probability}
                         onChange={(e) => updateOutputProbability(output.id, parseFloat(e.target.value))}
                         className="amount-input"
-                        placeholder="Prob"
+                        placeholder={t("ui.config.recipe.probability")}
                         onMouseDown={(e) => e.stopPropagation()}
                       />
                       <button 
@@ -546,7 +548,7 @@ export default function RecipeMode() {
                     </div>
                   ))}
                   {outputs.length === 0 && (
-                    <div className="io-empty">Drop items or tags here</div>
+                    <div className="io-empty">{t("ui.config.recipe.drop")}</div>
                   )}
                 </div>
               </div>
@@ -554,11 +556,11 @@ export default function RecipeMode() {
 
             <div className="form-actions">
               <button onClick={handleAddRecipe} className="btn-primary btn-large">
-                {editingRecipe ? "Update Recipe" : "Create Recipe"}
+                {editingRecipe ? t("common.actions.save") : t("common.actions.create")}
               </button>
               {editingRecipe && (
                 <button onClick={handleClearForm} className="btn-secondary btn-large">
-                  Cancel
+                  {t("common.actions.cancel")}
                 </button>
               )}
             </div>
@@ -567,10 +569,10 @@ export default function RecipeMode() {
 
         <div className="recipes-list-panel">
           <div className="recipes-list-header">
-            <h3>Existing Recipes</h3>
+            <h3>{t("ui.config.recipe.existing")}</h3>
             <input
               type="text"
-              placeholder="Search recipes..."
+              placeholder={t("ui.config.recipe.searchRecipes")}
               value={recipeSearchTerm}
               onChange={(e) => setRecipeSearchTerm(e.target.value)}
               className="config-input recipe-search"
@@ -587,7 +589,7 @@ export default function RecipeMode() {
                   key={recipe.id}
                   className={`recipe-card ${selectedRecipe === recipe.id ? "selected" : ""} ${editingRecipe === recipe.id ? "editing" : ""}`}
                   onClick={() => handleLoadRecipe(recipe)}
-                  title="Click to edit this recipe"
+                  title={t("ui.config.recipe.editHint")}
                   style={{ cursor: "pointer" }}
                 >
                   <div className="recipe-card-header">
@@ -618,7 +620,7 @@ export default function RecipeMode() {
                               e.stopPropagation();
                               handleCopyRecipe(recipe);
                             }}
-                            title="Copy recipe"
+                            title={t("ui.config.recipe.copy")}
                           >
                             📋
                           </button>
@@ -628,7 +630,7 @@ export default function RecipeMode() {
                               e.stopPropagation();
                               handleStartRenameRecipe(recipe);
                             }}
-                            title="Rename recipe"
+                            title={t("ui.config.recipe.rename")}
                           >
                             ✏️
                           </button>
@@ -638,7 +640,7 @@ export default function RecipeMode() {
                               e.stopPropagation();
                               handleDeleteRecipe(recipe.id);
                             }}
-                            title="Delete recipe"
+                            title={t("ui.config.recipe.delete")}
                           >
                             🗑️
                           </button>
@@ -648,11 +650,11 @@ export default function RecipeMode() {
                   </div>
                   <div className="recipe-card-io">
                     <div className="recipe-io-line">
-                      <span className="io-label">In:</span>
+                      <span className="io-label">{t("ui.config.recipe.in")}</span>
                       <span className="io-value">{info.inputsDisplay}</span>
                     </div>
                     <div className="recipe-io-line">
-                      <span className="io-label">Out:</span>
+                      <span className="io-label">{t("ui.config.recipe.out")}</span>
                       <span className="io-value">{info.outputsDisplay}</span>
                     </div>
                   </div>

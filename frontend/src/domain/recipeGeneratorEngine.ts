@@ -5,6 +5,7 @@ import type {
   RecipeSlotRule,
   RecipeTransformStep,
 } from "./recipeBlueprint";
+import i18n from "../i18n";
 
 export type RecipeCandidateStatus = "ready" | "error" | "conflict";
 
@@ -98,15 +99,16 @@ function findRelatedItem(
     return true;
   });
   const constraints = [
-    slot.targetTagId ? `tag ${context.tags.find((tag) => tag.id === slot.targetTagId)?.name ?? slot.targetTagId}` : "",
+    slot.targetTagId ? i18n.t("ui.recipeEngine.tag", { name: context.tags.find((tag) => tag.id === slot.targetTagId)?.name ?? slot.targetTagId }) : "",
     slot.targetCategoryId
-      ? `category ${context.categories.find((category) => category.id === slot.targetCategoryId)?.name ?? slot.targetCategoryId}`
+      ? i18n.t("ui.recipeEngine.category", { name: context.categories.find((category) => category.id === slot.targetCategoryId)?.name ?? slot.targetCategoryId })
       : "",
   ].filter(Boolean);
-  const trace = `Looked up name “${targetValue}”${constraints.length ? ` inside ${constraints.join(" and ")}` : ""}`;
-  if (matches.length === 0) return { error: `${trace}: no match`, trace };
-  if (matches.length > 1) return { error: `${trace}: ${matches.length} ambiguous matches`, trace };
-  return { item: matches[0], trace: `${trace} → ${matches[0].name}` };
+  const constraintText = constraints.length ? ` (${constraints.join(i18n.t("ui.recipeEngine.and"))})` : "";
+  const trace = i18n.t("ui.recipeEngine.lookup", { name: targetValue, constraints: constraintText });
+  if (matches.length === 0) return { error: i18n.t("ui.recipeEngine.noMatch", { trace }), trace };
+  if (matches.length > 1) return { error: i18n.t("ui.recipeEngine.ambiguous", { trace, count: matches.length }), trace };
+  return { item: matches[0], trace: i18n.t("ui.recipeEngine.resolved", { trace, name: matches[0].name }) };
 }
 
 function resolveInput(
@@ -116,33 +118,33 @@ function resolveInput(
   context: RecipeGeneratorContext,
 ): { input?: RecipeInput; item?: Item; name?: string; error?: string; trace: string } {
   if (!Number.isFinite(slot.amount) || slot.amount <= 0) {
-    return { error: `Input ${index + 1} amount must be greater than zero`, trace: `Input ${index + 1} has invalid amount` };
+    return { error: i18n.t("ui.recipeEngine.inputAmount", { number: index + 1 }), trace: i18n.t("ui.recipeEngine.inputInvalidAmount", { number: index + 1 }) };
   }
   if (slot.resolver === "source") {
     return {
       input: { id: `i${index + 1}`, refType: "item", refId: source.id, amount: slot.amount },
       item: source,
       name: source.name,
-      trace: `Input ${index + 1} uses source item ${source.name}`,
+      trace: i18n.t("ui.recipeEngine.inputSource", { number: index + 1, name: source.name }),
     };
   }
   if (slot.resolver === "fixedTag") {
     const tag = context.tags.find((entry) => entry.id === slot.refId);
-    if (!tag) return { error: `Input ${index + 1} fixed tag is missing`, trace: `Input ${index + 1} could not resolve fixed tag` };
+    if (!tag) return { error: i18n.t("ui.recipeEngine.inputTagMissing", { number: index + 1 }), trace: i18n.t("ui.recipeEngine.inputTagUnresolved", { number: index + 1 }) };
     return {
       input: { id: `i${index + 1}`, refType: "tag", refId: tag.id, amount: slot.amount },
       name: tag.name,
-      trace: `Input ${index + 1} always uses tag ${tag.name}`,
+      trace: i18n.t("ui.recipeEngine.inputTag", { number: index + 1, name: tag.name }),
     };
   }
   if (slot.resolver === "fixedItem") {
     const item = context.items.find((entry) => entry.id === slot.refId);
-    if (!item) return { error: `Input ${index + 1} fixed item is missing`, trace: `Input ${index + 1} could not resolve fixed item` };
+    if (!item) return { error: i18n.t("ui.recipeEngine.inputItemMissing", { number: index + 1 }), trace: i18n.t("ui.recipeEngine.inputItemUnresolved", { number: index + 1 }) };
     return {
       input: { id: `i${index + 1}`, refType: "item", refId: item.id, amount: slot.amount },
       item,
       name: item.name,
-      trace: `Input ${index + 1} always uses ${item.name}`,
+      trace: i18n.t("ui.recipeEngine.inputItem", { number: index + 1, name: item.name }),
     };
   }
   const related = findRelatedItem(slot, source, context);
@@ -151,9 +153,9 @@ function resolveInput(
         input: { id: `i${index + 1}`, refType: "item", refId: related.item.id, amount: slot.amount },
         item: related.item,
         name: related.item.name,
-        trace: `Input ${index + 1}: ${related.trace}`,
+        trace: i18n.t("ui.recipeEngine.inputDetail", { number: index + 1, detail: related.trace }),
       }
-    : { error: `Input ${index + 1}: ${related.error}`, trace: `Input ${index + 1}: ${related.trace}` };
+    : { error: i18n.t("ui.recipeEngine.inputDetail", { number: index + 1, detail: related.error }), trace: i18n.t("ui.recipeEngine.inputDetail", { number: index + 1, detail: related.trace }) };
 }
 
 function resolveOutput(
@@ -163,26 +165,26 @@ function resolveOutput(
   context: RecipeGeneratorContext,
 ): { output?: RecipeOutput; item?: Item; name?: string; error?: string; trace: string } {
   if (!Number.isFinite(slot.amount) || slot.amount <= 0) {
-    return { error: `Output ${index + 1} amount must be greater than zero`, trace: `Output ${index + 1} has invalid amount` };
+    return { error: i18n.t("ui.recipeEngine.outputAmount", { number: index + 1 }), trace: i18n.t("ui.recipeEngine.outputInvalidAmount", { number: index + 1 }) };
   }
   if (!Number.isFinite(slot.probability) || slot.probability <= 0 || slot.probability > 1) {
-    return { error: `Output ${index + 1} probability must be between 0 and 1`, trace: `Output ${index + 1} has invalid probability` };
+    return { error: i18n.t("ui.recipeEngine.outputProbability", { number: index + 1 }), trace: i18n.t("ui.recipeEngine.outputInvalidProbability", { number: index + 1 }) };
   }
   let item: Item | undefined;
   let trace = "";
   if (slot.resolver === "source") {
     item = source;
-    trace = `Output ${index + 1} uses source item ${source.name}`;
+    trace = i18n.t("ui.recipeEngine.outputSource", { number: index + 1, name: source.name });
   } else if (slot.resolver === "fixedItem") {
     item = context.items.find((entry) => entry.id === slot.refId);
-    trace = item ? `Output ${index + 1} always uses ${item.name}` : `Output ${index + 1} could not resolve fixed item`;
+    trace = item ? i18n.t("ui.recipeEngine.outputItem", { number: index + 1, name: item.name }) : i18n.t("ui.recipeEngine.outputItemUnresolved", { number: index + 1 });
   } else {
     const related = findRelatedItem(slot, source, context);
     item = related.item;
-    trace = `Output ${index + 1}: ${related.trace}`;
-    if (!item) return { error: `Output ${index + 1}: ${related.error}`, trace };
+    trace = i18n.t("ui.recipeEngine.outputDetail", { number: index + 1, detail: related.trace });
+    if (!item) return { error: i18n.t("ui.recipeEngine.outputDetail", { number: index + 1, detail: related.error }), trace };
   }
-  if (!item) return { error: `Output ${index + 1} fixed item is missing`, trace };
+  if (!item) return { error: i18n.t("ui.recipeEngine.outputItemMissing", { number: index + 1 }), trace };
   return {
     output: { id: `o${index + 1}`, itemId: item.id, amount: slot.amount, probability: slot.probability },
     item,
@@ -211,7 +213,7 @@ export function generateRecipeCandidates(blueprint: RecipeBlueprint, context: Re
 
   return sources.map((source) => {
     const messages: string[] = [];
-    const trace = [`Source item: ${source.name}`];
+    const trace = [i18n.t("ui.recipeEngine.source", { name: source.name })];
     const resolvedInputs = blueprint.inputs.map((slot, index) => resolveInput(slot, source, index, context));
     const resolvedOutputs = blueprint.outputs.map((slot, index) => resolveOutput(slot, source, index, context));
     resolvedInputs.forEach((result) => {
@@ -222,9 +224,9 @@ export function generateRecipeCandidates(blueprint: RecipeBlueprint, context: Re
       trace.push(result.trace);
       if (result.error) messages.push(result.error);
     });
-    if (blueprint.inputs.length === 0) messages.push("Recipe needs at least one input");
-    if (blueprint.outputs.length === 0) messages.push("Recipe needs at least one output");
-    if (!Number.isFinite(blueprint.timeSeconds) || blueprint.timeSeconds <= 0) messages.push("Duration must be greater than zero");
+    if (blueprint.inputs.length === 0) messages.push(i18n.t("ui.recipeEngine.needsInput"));
+    if (blueprint.outputs.length === 0) messages.push(i18n.t("ui.recipeEngine.needsOutput"));
+    if (!Number.isFinite(blueprint.timeSeconds) || blueprint.timeSeconds <= 0) messages.push(i18n.t("ui.recipeEngine.duration"));
 
     const friendlyNameItem = blueprint.recipeNameItem === "input1"
       ? resolvedInputs[0]?.name ?? ""
@@ -239,8 +241,8 @@ export function generateRecipeCandidates(blueprint: RecipeBlueprint, context: Re
       .join(" ")
       .replace(/\s+/g, " ");
     const id = slugifyRecipeValue(name);
-    if (!name) messages.push("Recipe name is empty");
-    if (!id) messages.push("Generated recipe ID is empty");
+    if (!name) messages.push(i18n.t("ui.recipeEngine.emptyName"));
+    if (!id) messages.push(i18n.t("ui.recipeEngine.emptyId"));
 
     if (messages.length > 0) return { id: `${blueprint.id}:${source.id}`, sourceItem: source, status: "error", messages, trace };
 
@@ -251,13 +253,13 @@ export function generateRecipeCandidates(blueprint: RecipeBlueprint, context: Re
       inputs: resolvedInputs.map((result) => result.input!),
       outputs: resolvedOutputs.map((result) => result.output!),
     };
-    if (context.recipes.some((entry) => entry.id === id)) messages.push(`Recipe ID “${id}” already exists`);
-    if (context.recipes.some((entry) => entry.name.toLowerCase() === name.toLowerCase())) messages.push(`Recipe name “${name}” already exists`);
-    if (existingSignatures.has(recipeSignature(recipe))) messages.push("An equivalent recipe already exists");
-    if (generatedIds.has(id) || generatedNames.has(name.toLowerCase())) messages.push("Another preview row produces the same ID or name");
+    if (context.recipes.some((entry) => entry.id === id)) messages.push(i18n.t("ui.recipeEngine.idExists", { id }));
+    if (context.recipes.some((entry) => entry.name.toLowerCase() === name.toLowerCase())) messages.push(i18n.t("ui.recipeEngine.nameExists", { name }));
+    if (existingSignatures.has(recipeSignature(recipe))) messages.push(i18n.t("ui.recipeEngine.equivalent"));
+    if (generatedIds.has(id) || generatedNames.has(name.toLowerCase())) messages.push(i18n.t("ui.recipeEngine.duplicatePreview"));
     generatedIds.add(id);
     generatedNames.add(name.toLowerCase());
-    trace.push(`Recipe: ${name} (${id})`);
+    trace.push(i18n.t("ui.recipeEngine.recipe", { name, id }));
     return {
       id: `${blueprint.id}:${source.id}`,
       sourceItem: source,

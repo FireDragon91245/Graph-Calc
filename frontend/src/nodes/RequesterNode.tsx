@@ -2,6 +2,7 @@ import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
 import { useGraphStore } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
 import type { NodeFlowData } from "../api/solve";
+import { useTranslation } from "react-i18next";
 
 type RequesterItem = {
   id: string;
@@ -15,6 +16,7 @@ type RequesterNodeData = {
 };
 
 export default function RequesterNode({ id, data }: NodeProps<RequesterNodeData>) {
+  const { t } = useTranslation();
   const { setNodes, getEdges, setEdges } = useReactFlow();
   const items = useGraphStore((state) => state.items);
 
@@ -86,9 +88,9 @@ export default function RequesterNode({ id, data }: NodeProps<RequesterNodeData>
   return (
     <div className="node io requester">
       <div className="node-header">
-        <span className="node-title">Requester</span>
+        <span className="node-title">{t("ui.nodes.requester")}</span>
         {data.solveData && data.solveData.totalInput > 0 && (
-          <span className="node-badge" title="Total requested rate">
+          <span className="node-badge" title={t("ui.nodes.totalRequested")}>
             ↓ {data.solveData.totalInput.toFixed(2)}/s
           </span>
         )}
@@ -109,7 +111,7 @@ export default function RequesterNode({ id, data }: NodeProps<RequesterNodeData>
                   value={req.itemId}
                   options={items.map((i) => ({ value: i.id, label: i.name }))}
                   onChange={(value) => updateItem(req.id, { itemId: value })}
-                  placeholder="Select item"
+                  placeholder={t("ui.nodes.selectItem")}
                 />
                 <div className="row-actions">
                     <input

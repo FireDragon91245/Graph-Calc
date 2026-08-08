@@ -32,7 +32,7 @@ internal static class GraphLpSolver
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var warnings = new List<string>();
+        var warnings = new List<LocalizedMessage>();
         var problemEdgeIds = new List<string>();
         var nameToId = BuildNameToIdMap(storeData);
 
@@ -85,7 +85,7 @@ internal static class GraphLpSolver
                     MachineCounts = new Dictionary<string, double>(StringComparer.Ordinal),
                     FlowsPerSecond = new Dictionary<string, double>(StringComparer.Ordinal),
                     Bottlenecks = [],
-                    Warnings = ["No recipes or inputs found in graph"],
+                    Warnings = [Message("solver.warning.emptyGraph")],
                     NodeFlows = new Dictionary<string, NodeFlowData>(StringComparer.Ordinal),
                     EdgeFlows = new Dictionary<string, EdgeFlowData>(StringComparer.Ordinal),
                     ProblemEdgeIds = []
@@ -133,7 +133,7 @@ internal static class GraphLpSolver
                 return new SolveResponse
                 {
                     Status = "error",
-                    Warnings = ["Failed to create LP solver"],
+                    Warnings = [Message("solver.warning.createFailed")],
                     ProblemEdgeIds = problemEdgeIds
                 };
             }
@@ -243,7 +243,11 @@ internal static class GraphLpSolver
 
                 if (sourceItems.Count > 0 && targetSpecific.Count > 0 && !sourceItems.Overlaps(targetSpecific))
                 {
-                    warnings.Add($"Edge item mismatch: '{GetNodeDisplayName(nodeById.GetValueOrDefault(edge.Source))}' provides {FormatItemSet(sourceItems)} but '{GetNodeDisplayName(nodeById.GetValueOrDefault(edge.Target))}' expects {FormatItemSet(targetSpecific)}. Connected recipes disabled.");
+                    warnings.Add(Message("solver.warning.edgeMismatch",
+                        ("source", GetNodeDisplayName(nodeById.GetValueOrDefault(edge.Source))),
+                        ("sourceItems", FormatItemSet(sourceItems)),
+                        ("target", GetNodeDisplayName(nodeById.GetValueOrDefault(edge.Target))),
+                        ("targetItems", FormatItemSet(targetSpecific))));
                     if (!problemEdgeIds.Contains(edge.Id, StringComparer.Ordinal))
                     {
                         problemEdgeIds.Add(edge.Id);
@@ -402,7 +406,7 @@ internal static class GraphLpSolver
                     }
                     else
                     {
-                        warnings.Add($"Requester demands {itemId} ({targetValue}/s) but no supplying edge exists");
+                        warnings.Add(Message("solver.warning.requesterMissingSupply", ("item", itemId), ("target", targetValue)));
                     }
 
                     outputDemands[itemId] = outputDemands.GetValueOrDefault(itemId) + targetValue;
@@ -646,7 +650,7 @@ internal static class GraphLpSolver
                 status = solver.Solve();
                 if (status is not Solver.ResultStatus.OPTIMAL and not Solver.ResultStatus.FEASIBLE)
                 {
-                    warnings.Add("Circular preference pass failed; falling back to the primary cycle solution may require a retry.");
+                    warnings.Add(Message("solver.warning.cycleFallback"));
                 }
             }
 
@@ -753,7 +757,10 @@ internal static class GraphLpSolver
                                 }
                             }
 
-                            warnings.Add($"Circular reference is runaway for {itemId}: {Round3(internalProduction + externalEntry)}/s available inside the cycle but only {Round3(internalConsumption + externalExit)}/s can be consumed or removed.");
+                            warnings.Add(Message("solver.warning.cycleRunawayItem",
+                                ("item", itemId),
+                                ("available", Round3(internalProduction + externalEntry)),
+                                ("consumed", Round3(internalConsumption + externalExit))));
                             return new SolveResponse
                             {
                                 Status = "error",
@@ -1080,7 +1087,7 @@ internal static class GraphLpSolver
 
                     if (total < targetValue * 0.95)
                     {
-                        warnings.Add($"Demand for {itemId} ({targetValue}/s) not fully met (delivering {Round3(total)}/s)");
+                        warnings.Add(Message("solver.warning.demandNotMet", ("item", itemId), ("target", targetValue), ("delivered", Round3(total))));
                     }
                 }
             }
@@ -1126,17 +1133,17 @@ internal static class GraphLpSolver
             return new SolveResponse
             {
                 Status = "error",
-                Warnings = [$"Solver error: {exception.Message}", $"Details: {exception}"]
+                Warnings = [Message("solver.warning.unexpected", ("message", exception.Message))]
             };
         }
     }
 
-    private static SolveResponse SolveComponentsIndependently(ParsedGraph graph, StoreData? storeData, List<HashSet<string>> components, List<string> baseWarnings, ILogger logger, CancellationToken cancellationToken)
+    private static SolveResponse SolveComponentsIndependently(ParsedGraph graph, StoreData? storeData, List<HashSet<string>> components, List<LocalizedMessage> baseWarnings, ILogger logger, CancellationToken cancellationToken)
     {
         var mergedMachineCounts = new Dictionary<string, double>(StringComparer.Ordinal);
         var mergedFlowsPerSecond = new Dictionary<string, double>(StringComparer.Ordinal);
         var mergedBottlenecks = new List<string>();
-        var mergedWarnings = new List<string>(baseWarnings);
+        var mergedWarnings = new List<LocalizedMessage>(baseWarnings);
         var mergedNodeFlows = new Dictionary<string, NodeFlowData>(StringComparer.Ordinal);
         var mergedEdgeFlows = new Dictionary<string, EdgeFlowData>(StringComparer.Ordinal);
         var mergedProblemEdgeIds = new List<string>();
@@ -1169,7 +1176,7 @@ internal static class GraphLpSolver
                     })
                     .Take(6);
                 mergedWarnings.AddRange(result.Warnings);
-                mergedWarnings.Add($"Subgraph {index + 1} infeasible [{string.Join(", ", descriptions)}]");
+                mergedWarnings.Add(Message("solver.warning.subgraphInfeasible", ("index", index + 1), ("description", string.Join(", ", descriptions))));
                 mergedProblemEdgeIds.AddRange(result.ProblemEdgeIds);
                 foreach (var edge in graph.Edges.Where(edge => component.Contains(edge.Source) && component.Contains(edge.Target)))
                 {
@@ -1843,7 +1850,7 @@ internal static class GraphLpSolver
         return Math.Pow(10.0, Math.Min(Math.Max(cappedDepth - nodeDepth.GetValueOrDefault(edge.Source, 0), 0) + 1, 8));
     }
 
-    private static void HandleFailedSolve(Solver.ResultStatus status, HashSet<string> cycleEdgeIds, List<string> warnings, List<string> problemEdgeIds)
+    private static void HandleFailedSolve(Solver.ResultStatus status, HashSet<string> cycleEdgeIds, List<LocalizedMessage> warnings, List<string> problemEdgeIds)
     {
         var statusMessage = status switch
         {
@@ -1863,16 +1870,22 @@ internal static class GraphLpSolver
 
             if (status == Solver.ResultStatus.UNBOUNDED)
             {
-                warnings.Add("Circular reference is runaway: the cycle can produce more reusable output than it can consume.");
+                warnings.Add(Message("solver.warning.cycleRunaway"));
             }
             else if (status == Solver.ResultStatus.INFEASIBLE)
             {
-                warnings.Add("Circular reference cannot be balanced with the available fresh inputs.");
+                warnings.Add(Message("solver.warning.cycleUnbalanced"));
             }
         }
 
-        warnings.Add($"No feasible solution found ({statusMessage}). Check constraints - demands may exceed supply limits.");
+        warnings.Add(Message("solver.warning.infeasible", ("status", statusMessage)));
     }
+
+    private static LocalizedMessage Message(string code, params (string Key, object? Value)[] args) => new()
+    {
+        Code = code,
+        Args = args.ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal)
+    };
 
     private static void MergeNodeFlow(Dictionary<string, MutableNodeFlow> destination, string nodeId, MutableNodeFlow source)
     {

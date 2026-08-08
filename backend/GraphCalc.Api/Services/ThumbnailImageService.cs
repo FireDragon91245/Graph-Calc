@@ -16,19 +16,19 @@ public sealed class ThumbnailImageService
     {
         if (file is null || file.Length == 0)
         {
-            throw new ApiException(StatusCodes.Status400BadRequest, "An image file is required");
+            throw new ApiException(StatusCodes.Status400BadRequest, "backend.errors.imageRequired");
         }
 
         if (file.Length > MaxFileSize)
         {
-            throw new ApiException(StatusCodes.Status413PayloadTooLarge, "Image files must not exceed 5 MB");
+            throw new ApiException(StatusCodes.Status413PayloadTooLarge, "backend.errors.imageTooLarge");
         }
 
         await using var stream = new MemoryStream((int)file.Length);
         await file.CopyToAsync(stream, cancellationToken);
         if (stream.Length > MaxFileSize)
         {
-            throw new ApiException(StatusCodes.Status413PayloadTooLarge, "Image files must not exceed 5 MB");
+            throw new ApiException(StatusCodes.Status413PayloadTooLarge, "backend.errors.imageTooLarge");
         }
 
         var data = stream.ToArray();
@@ -42,13 +42,13 @@ public sealed class ThumbnailImageService
             using var images = new MagickImageCollection(data, readSettings);
             if (images.Count != 1)
             {
-                throw new ApiException(StatusCodes.Status400BadRequest, "Animated or multi-frame images are not supported");
+                throw new ApiException(StatusCodes.Status400BadRequest, "backend.errors.imageAnimated");
             }
 
             ValidateDimensions(images[0].Width, images[0].Height);
             if (GetContentType(images[0].Format) != contentType)
             {
-                throw new ApiException(StatusCodes.Status400BadRequest, "The image format could not be validated consistently");
+                throw new ApiException(StatusCodes.Status400BadRequest, "backend.errors.imageValidation");
             }
 
             return new ValidatedThumbnailImage(data, contentType, Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant());
@@ -59,7 +59,7 @@ public sealed class ThumbnailImageService
         }
         catch (MagickException)
         {
-            throw new ApiException(StatusCodes.Status400BadRequest, "The uploaded file is not a valid supported image");
+            throw new ApiException(StatusCodes.Status400BadRequest, "backend.errors.imageInvalid");
         }
     }
 
@@ -70,7 +70,7 @@ public sealed class ThumbnailImageService
             MagickFormat.Png => "image/png",
             MagickFormat.Jpeg => "image/jpeg",
             MagickFormat.WebP => "image/webp",
-            _ => throw new ApiException(StatusCodes.Status415UnsupportedMediaType, "Only PNG, JPEG, and WebP images are supported")
+            _ => throw new ApiException(StatusCodes.Status415UnsupportedMediaType, "backend.errors.imageType")
         };
     }
 
@@ -78,7 +78,7 @@ public sealed class ThumbnailImageService
     {
         if (width < MinDimension || height < MinDimension || width > MaxDimension || height > MaxDimension)
         {
-            throw new ApiException(StatusCodes.Status400BadRequest, "Image dimensions must be between 16x16 and 1024x1024 pixels");
+            throw new ApiException(StatusCodes.Status400BadRequest, "backend.errors.imageDimensions");
         }
     }
 }

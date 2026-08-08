@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export type AppMode = "edit" | "config";
 export type ConfigSubMode = "items" | "tags" | "recipes" | "recipeTags" | "recipeGenerator" | "itemGenerator";
@@ -17,6 +18,7 @@ export default function ModeSelector({
   currentMode,
   onModeChange
 }: ModeSelectorProps) {
+  const { t } = useTranslation();
   return (
     <div className="mode-selector">
       <div className="mode-tabs">
@@ -25,14 +27,14 @@ export default function ModeSelector({
           onClick={() => onModeChange("edit")}
         >
           <span className="mode-icon">✏️</span>
-          Edit Mode
+          {t("ui.nav.edit")}
         </button>
         <button
           className={`mode-tab ${currentMode === "config" ? "active" : ""}`}
           onClick={() => onModeChange("config")}
         >
           <span className="mode-icon">⚙️</span>
-          Config Mode
+          {t("ui.nav.config")}
         </button>
       </div>
     </div>
@@ -43,6 +45,7 @@ export function ConfigSubmodeSelector({
   configSubMode,
   onConfigSubModeChange
 }: ConfigSubmodeSelectorProps) {
+  const { t } = useTranslation();
   if (!onConfigSubModeChange) {
     return null;
   }
@@ -53,37 +56,37 @@ export function ConfigSubmodeSelector({
         className={`submode-tab ${configSubMode === "items" ? "active" : ""}`}
         onClick={() => onConfigSubModeChange("items")}
       >
-        Items & Categories
+        {t("ui.nav.items")}
       </button>
       <button
         className={`submode-tab ${configSubMode === "tags" ? "active" : ""}`}
         onClick={() => onConfigSubModeChange("tags")}
       >
-        Item Tags
+        {t("ui.nav.itemTags")}
       </button>
       <button
         className={`submode-tab ${configSubMode === "recipes" ? "active" : ""}`}
         onClick={() => onConfigSubModeChange("recipes")}
       >
-        Recipes
+        {t("ui.nav.recipes")}
       </button>
       <button
         className={`submode-tab ${configSubMode === "recipeTags" ? "active" : ""}`}
         onClick={() => onConfigSubModeChange("recipeTags")}
       >
-        Recipe Tags
+        {t("ui.nav.recipeTags")}
       </button>
       <button
         className={`submode-tab ${configSubMode === "recipeGenerator" ? "active" : ""}`}
         onClick={() => onConfigSubModeChange("recipeGenerator")}
       >
-        🤖 Recipe Generator
+        🤖 {t("ui.nav.recipeGenerator")}
       </button>
       <button
         className={`submode-tab ${configSubMode === "itemGenerator" ? "active" : ""}`}
         onClick={() => onConfigSubModeChange("itemGenerator")}
       >
-        🔮 Item Generator
+        🔮 {t("ui.nav.itemGenerator")}
       </button>
     </div>
   );

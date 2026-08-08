@@ -6,12 +6,12 @@ namespace GraphCalc.Api.Infrastructure;
 
 internal static class ApiRequestContext
 {
-    public static string NormalizeName(string? name, string errorMessage)
+    public static string NormalizeName(string? name, string errorCode)
     {
         var normalized = (name ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(normalized))
         {
-            throw new ApiException(StatusCodes.Status400BadRequest, errorMessage);
+            throw new ApiException(StatusCodes.Status400BadRequest, errorCode);
         }
 
         return normalized;
@@ -26,7 +26,7 @@ internal static class ApiRequestContext
 
         if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(username))
         {
-            throw new ApiException(StatusCodes.Status401Unauthorized, "Authentication required");
+            throw new ApiException(StatusCodes.Status401Unauthorized, "backend.errors.authenticationRequired");
         }
 
         return new AuthenticatedUser(id, username, sessionVersion > 0 ? sessionVersion : 1);
@@ -36,6 +36,6 @@ internal static class ApiRequestContext
     {
         var user = GetAuthenticatedUser(principal);
         return await store.GetUserByIdAsync(user.Id, cancellationToken)
-               ?? throw new ApiException(StatusCodes.Status404NotFound, "User not found");
+               ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.userNotFound");
     }
 }

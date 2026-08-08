@@ -1,3 +1,5 @@
+import i18n, { getCurrentLanguage } from "../i18n";
+
 const API_BASE = "/api";
 
 if (import.meta.env.DEV) {
@@ -9,6 +11,10 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
 
   if (!headers.has("Accept")) {
     headers.set("Accept", "application/json");
+  }
+
+  if (!headers.has("Accept-Language")) {
+    headers.set("Accept-Language", getCurrentLanguage());
   }
 
   if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
@@ -56,6 +62,10 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
 export async function getErrorMessage(response: Response, fallback: string): Promise<string> {
   try {
     const data = await response.json();
+    if (typeof data?.code === "string" && data.code && i18n.exists(data.code)) {
+      const values = data.args && typeof data.args === "object" ? data.args : undefined;
+      return String(i18n.t(data.code, values));
+    }
     if (typeof data?.detail === "string" && data.detail) {
       return data.detail;
     }
@@ -66,9 +76,9 @@ export async function getErrorMessage(response: Response, fallback: string): Pro
         return text;
       }
     } catch {
-      return fallback;
+      return i18n.exists(fallback) ? i18n.t(fallback) : fallback;
     }
   }
 
-  return fallback;
+  return i18n.exists(fallback) ? i18n.t(fallback) : fallback;
 }

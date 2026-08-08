@@ -8,6 +8,7 @@ import {
   RecipeInput,
   RecipeOutput
 } from "../store/graphStore";
+import { useTranslation } from "react-i18next";
 
 type LibraryPanelProps = {
   onCreateInputNode: (itemId: string) => void;
@@ -41,6 +42,7 @@ export default function LibraryPanel({
   onCreateOutputNode,
   onCreateRecipeNode
 }: LibraryPanelProps) {
+  const { t } = useTranslation();
   const categories = useGraphStore((state) => state.categories);
   const items = useGraphStore((state) => state.items);
   const tags = useGraphStore((state) => state.tags);
@@ -131,14 +133,14 @@ export default function LibraryPanel({
   return (
     <div className="sidebar">
       <div className="sidebar-section">
-        <div className="sidebar-title">Categories</div>
+        <div className="sidebar-title">{t("ui.library.categories")}</div>
         <div className="form-row">
           <input
             value={categoryName}
             onChange={(event) => setCategoryName(event.target.value)}
-            placeholder="New category"
+            placeholder={t("ui.library.newCategory")}
           />
-          <button onClick={handleAddCategory}>Add</button>
+          <button onClick={handleAddCategory}>{t("common.actions.add")}</button>
         </div>
         <div className="list">
           {categories.map((category) => (
@@ -150,30 +152,30 @@ export default function LibraryPanel({
       </div>
 
       <div className="sidebar-section">
-        <div className="sidebar-title">Ingredients</div>
+        <div className="sidebar-title">{t("ui.library.ingredients")}</div>
         <div className="form-grid">
           <input
             value={itemName}
             onChange={(event) => setItemName(event.target.value)}
-            placeholder="Item name"
+            placeholder={t("ui.library.itemName")}
           />
           <select value={itemCategoryId} onChange={(event) => setItemCategoryId(event.target.value)}>
-            <option value="">No category</option>
+            <option value="">{t("ui.library.noCategory")}</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
               </option>
             ))}
           </select>
-          <button onClick={handleAddItem}>Add</button>
+          <button onClick={handleAddItem}>{t("common.actions.add")}</button>
         </div>
         <div className="list">
           {items.map((item) => (
             <div key={item.id} className="list-row">
               <span>{item.name}</span>
               <div className="list-actions">
-                <button onClick={() => onCreateInputNode(item.id)}>Input</button>
-                <button onClick={() => onCreateOutputNode(item.id)}>Output</button>
+                <button onClick={() => onCreateInputNode(item.id)}>{t("ui.nodes.input")}</button>
+                <button onClick={() => onCreateOutputNode(item.id)}>{t("ui.nodes.output")}</button>
               </div>
             </div>
           ))}
@@ -181,7 +183,7 @@ export default function LibraryPanel({
       </div>
 
       <div className="sidebar-section">
-        <div className="sidebar-title">Tags</div>
+        <div className="sidebar-title">{t("ui.library.tags")}</div>
         <div className="form-grid">
           <input
             value={tagName}
@@ -201,7 +203,7 @@ export default function LibraryPanel({
               </option>
             ))}
           </select>
-          <button onClick={handleAddTag}>Add</button>
+          <button onClick={handleAddTag}>{t("common.actions.add")}</button>
         </div>
         <div className="list">
           {tags.map((tag) => (
@@ -214,12 +216,12 @@ export default function LibraryPanel({
       </div>
 
       <div className="sidebar-section">
-        <div className="sidebar-title">Recipes</div>
+        <div className="sidebar-title">{t("ui.library.recipes")}</div>
         <div className="form-grid">
           <input
             value={recipeForm.name}
             onChange={(event) => setRecipeForm((state) => ({ ...state, name: event.target.value }))}
-            placeholder="Recipe name"
+            placeholder={t("ui.library.recipeName")}
           />
           <input
             type="number"
@@ -229,11 +231,11 @@ export default function LibraryPanel({
             onChange={(event) =>
               setRecipeForm((state) => ({ ...state, timeSeconds: Number(event.target.value) }))
             }
-            placeholder="Time (s)"
+            placeholder={t("ui.library.time")}
           />
         </div>
         <div className="subsection">
-          <div className="subsection-title">Inputs</div>
+          <div className="subsection-title">{t("ui.library.inputs")}</div>
           {recipeForm.inputs.map((input, index) => (
             <div key={input.id} className="form-row">
               <select
@@ -242,14 +244,14 @@ export default function LibraryPanel({
                   updateRecipeInput(index, { refType: event.target.value as RecipeInput["refType"] })
                 }
               >
-                <option value="item">Item</option>
-                <option value="tag">Tag</option>
+                <option value="item">{t("ui.library.item")}</option>
+                <option value="tag">{t("ui.library.tag")}</option>
               </select>
               <select
                 value={input.refId}
                 onChange={(event) => updateRecipeInput(index, { refId: event.target.value })}
               >
-                <option value="">Select</option>
+                <option value="">{t("ui.library.select")}</option>
                 {(input.refType === "item" ? itemOptions : tagOptions).map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -278,14 +280,14 @@ export default function LibraryPanel({
           </button>
         </div>
         <div className="subsection">
-          <div className="subsection-title">Outputs</div>
+          <div className="subsection-title">{t("ui.library.outputs")}</div>
           {recipeForm.outputs.map((output, index) => (
             <div key={output.id} className="form-row">
               <select
                 value={output.itemId}
                 onChange={(event) => updateRecipeOutput(index, { itemId: event.target.value })}
               >
-                <option value="">Select</option>
+                <option value="">{t("ui.library.select")}</option>
                 {itemOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -332,7 +334,7 @@ export default function LibraryPanel({
             <div key={recipe.id} className="list-row">
               <span>{recipe.name}</span>
               <div className="list-actions">
-                <button onClick={() => onCreateRecipeNode(recipe.id)}>Add Node</button>
+                <button onClick={() => onCreateRecipeNode(recipe.id)}>{t("ui.library.addNode")}</button>
               </div>
             </div>
           ))}

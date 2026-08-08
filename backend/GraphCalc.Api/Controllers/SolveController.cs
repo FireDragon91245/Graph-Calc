@@ -27,12 +27,12 @@ public sealed class SolveController : ControllerBase
     {
         if (request.Graph is null)
         {
-            throw new ApiException(StatusCodes.Status400BadRequest, "Graph payload is required for guest solve");
+            throw new ApiException(StatusCodes.Status400BadRequest, "backend.errors.guestGraphRequired");
         }
 
         if (request.StoreData is null)
         {
-            throw new ApiException(StatusCodes.Status400BadRequest, "Store data payload is required for guest solve");
+            throw new ApiException(StatusCodes.Status400BadRequest, "backend.errors.guestStoreRequired");
         }
 
         var result = await _solverQueue.RunAsync(

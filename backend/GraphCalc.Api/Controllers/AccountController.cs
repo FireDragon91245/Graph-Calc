@@ -19,6 +19,7 @@ public sealed class AccountController : ControllerBase
     private readonly PasswordService _passwordService;
     private readonly SessionTokenService _sessionTokenService;
     private readonly SessionCookieService _sessionCookieService;
+    private readonly ThumbnailImageService _thumbnailImages;
     private readonly GraphCalcOptions _options;
 
     public AccountController(
@@ -26,12 +27,14 @@ public sealed class AccountController : ControllerBase
         PasswordService passwordService,
         SessionTokenService sessionTokenService,
         SessionCookieService sessionCookieService,
+        ThumbnailImageService thumbnailImages,
         IOptions<GraphCalcOptions> options)
     {
         _store = store;
         _passwordService = passwordService;
         _sessionTokenService = sessionTokenService;
         _sessionCookieService = sessionCookieService;
+        _thumbnailImages = thumbnailImages;
         _options = options.Value;
     }
 
@@ -42,18 +45,66 @@ public sealed class AccountController : ControllerBase
         return Ok(await _store.BuildAccountProfileAsync(user, cancellationToken));
     }
 
+    [HttpPatch("settings")]
+    public async Task<ActionResult<AccountSettingsResponse>> UpdateSettings([FromBody] AccountSettingsUpdateRequest request, CancellationToken cancellationToken)
+    {
+        var user = ApiRequestContext.GetAuthenticatedUser(User);
+        var normalizedLanguage = request.Language;
+        if (normalizedLanguage is not null)
+        {
+            normalizedLanguage = normalizedLanguage.Trim().ToLowerInvariant().Split('-', 2)[0];
+            if (normalizedLanguage is not ("en" or "de"))
+            {
+                throw new ApiException(StatusCodes.Status400BadRequest, "backend.errors.languageUnsupported");
+            }
+        }
+
+        return Ok(await _store.UpdateUserSettingsAsync(
+            user.Id,
+            new AccountSettingsUpdateRequest { Language = normalizedLanguage },
+            cancellationToken));
+    }
+
+    [HttpGet("profile-image")]
+    public async Task<IActionResult> GetProfileImage(CancellationToken cancellationToken)
+    {
+        var user = ApiRequestContext.GetAuthenticatedUser(User);
+        var image = await _store.GetProfileImageAsync(user.Id, cancellationToken)
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.thumbnailNotFound");
+        SetImageResponseHeaders(image.Sha256);
+        return File(image.Data, image.ContentType);
+    }
+
+    [HttpPut("profile-image")]
+    [RequestSizeLimit(5L * 1024L * 1024L + 64L * 1024L)]
+    public async Task<ActionResult<ProfileImageUpdateResponse>> PutProfileImage([FromForm] IFormFile image, CancellationToken cancellationToken)
+    {
+        var user = ApiRequestContext.GetAuthenticatedUser(User);
+        var validated = await _thumbnailImages.ValidateAsync(image, cancellationToken);
+        var profileImageId = await _store.SetProfileImageAsync(user.Id, validated, cancellationToken);
+        return Ok(new ProfileImageUpdateResponse { ProfileImageId = profileImageId });
+    }
+
+    [HttpDelete("profile-image")]
+    public async Task<IActionResult> DeleteProfileImage(CancellationToken cancellationToken)
+    {
+        var user = ApiRequestContext.GetAuthenticatedUser(User);
+        await _store.DeleteProfileImageAsync(user.Id, cancellationToken);
+        return NoContent();
+    }
+
     [HttpPut("password")]
     public async Task<ActionResult<PasswordChangeResponse>> ChangePassword([FromBody] PasswordChangeRequest request, CancellationToken cancellationToken)
     {
         if ((request.NewPassword ?? string.Empty).Length <= 8)
         {
-            throw new ApiException(StatusCodes.Status400BadRequest, "Password must be longer than 8 characters");
+            throw new ApiException(StatusCodes.Status400BadRequest, "backend.errors.passwordTooShort");
         }
 
         var user = await ApiRequestContext.GetRequiredUserDocumentAsync(User, _store, cancellationToken);
         if (!_passwordService.VerifyPassword(request.CurrentPassword, user))
         {
-            throw new ApiException(StatusCodes.Status401Unauthorized, "Current password is incorrect");
+            throw new ApiException(StatusCodes.Status401Unauthorized, "backend.errors.currentPasswordIncorrect");
         }
 
         var (salt, hash, iterations) = _passwordService.HashPassword(request.NewPassword ?? string.Empty);
@@ -80,7 +131,7 @@ public sealed class AccountController : ControllerBase
         var user = await ApiRequestContext.GetRequiredUserDocumentAsync(User, _store, cancellationToken);
         if (!_passwordService.VerifyPassword(request.CurrentPassword, user))
         {
-            throw new ApiException(StatusCodes.Status401Unauthorized, "Current password is incorrect");
+            throw new ApiException(StatusCodes.Status401Unauthorized, "backend.errors.currentPasswordIncorrect");
         }
 
         await _store.DeleteAccountAsync(user.Id, cancellationToken);
@@ -93,5 +144,12 @@ public sealed class AccountController : ControllerBase
     {
         _sessionCookieService.ClearSessionCookie(Response);
         return Ok(new StatusResponse { Status = "ok" });
+    }
+
+    private void SetImageResponseHeaders(string sha256)
+    {
+        Response.Headers.ETag = $"\"{sha256}\"";
+        Response.Headers.CacheControl = "private, no-cache";
+        Response.Headers.XContentTypeOptions = "nosniff";
     }
 }

@@ -3,6 +3,8 @@ import { Handle, NodeProps, Position, useReactFlow } from "reactflow";
 import { useGraphStore } from "../store/graphStore";
 import SearchableDropdown from "../editor/SearchableDropdown";
 import type { NodeFlowData } from "../api/solve";
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 
 type PortPattern = {
   id: string;
@@ -32,7 +34,7 @@ function analyzeRecipeOutputPattern(
   multiplier: number
 ): PortPattern[] {
   if (recipeIds.length === 0) {
-    return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1 * multiplier, isMixed: true }];
+    return [{ id: "o1", name: i18n.t("ui.nodes.mixedOutput"), amountPerCycle: 1 * multiplier, isMixed: true }];
   }
 
   const recipeData = recipeIds
@@ -40,7 +42,7 @@ function analyzeRecipeOutputPattern(
     .filter((r): r is NonNullable<typeof r> => r !== undefined);
   
   if (recipeData.length === 0) {
-    return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1 * multiplier, isMixed: true }];
+    return [{ id: "o1", name: i18n.t("ui.nodes.mixedOutput"), amountPerCycle: 1 * multiplier, isMixed: true }];
   }
 
   // Check if all recipes have the same number of outputs
@@ -49,7 +51,7 @@ function analyzeRecipeOutputPattern(
 
   // If structure doesn't match, fallback to 1 mixed output
   if (!sameOutputCount) {
-    return [{ id: "o1", name: "Mixed Output", amountPerCycle: 1 * multiplier, isMixed: true }];
+    return [{ id: "o1", name: i18n.t("ui.nodes.mixedOutput"), amountPerCycle: 1 * multiplier, isMixed: true }];
   }
 
   const numOutputs = outputCounts[0];
@@ -70,7 +72,7 @@ function analyzeRecipeOutputPattern(
     let name: string;
 
     if (isMixed) {
-      name = `Mixed Output ${i + 1}`;
+      name = `${i18n.t("ui.nodes.mixedOutput")} ${i + 1}`;
     } else {
       // Fixed output - get the name
       name = items.find((item) => item.id === itemIds[0])?.name ?? itemIds[0];
@@ -91,6 +93,7 @@ function analyzeRecipeOutputPattern(
 }
 
 export default function RecipeTagInputNode({ id, data }: NodeProps<RecipeTagInputNodeData>) {
+  const { t } = useTranslation();
   const { setNodes, getEdges, setEdges } = useReactFlow();
   const recipeTags = useGraphStore((state) => state.recipeTags);
   const recipes = useGraphStore((state) => state.recipes);
@@ -172,7 +175,7 @@ export default function RecipeTagInputNode({ id, data }: NodeProps<RecipeTagInpu
           value={data.recipeTagId}
           options={recipeTags.map((rt) => ({ value: rt.id, label: rt.name }))}
           onChange={handleRecipeTagChange}
-          placeholder="Select recipe tag"
+          placeholder={t("ui.nodes.selectRecipeTag")}
         />
         <div className="node-meta">
           <input
@@ -182,11 +185,11 @@ export default function RecipeTagInputNode({ id, data }: NodeProps<RecipeTagInpu
             step="1"
             value={multiplier}
             onChange={handleMultiplierChange}
-            aria-label="Recipe tag multiplier"
+            aria-label={t("ui.nodes.recipeTagMultiplier")}
           />
           <span className="node-sub">x</span>
           {data.solveData?.totalOutput ? (
-            <span className="node-badge" title="Utilized production rate">
+            <span className="node-badge" title={t("ui.nodes.utilizedRate")}>
               ↑ {data.solveData.totalOutput.toFixed(2)}/s
             </span>
           ) : null}
@@ -194,7 +197,7 @@ export default function RecipeTagInputNode({ id, data }: NodeProps<RecipeTagInpu
             className="node-detail-btn"
             onClick={() => hasSolveData && setShowDetails((prev) => !prev)}
             disabled={!hasSolveData}
-            title={hasSolveData ? "Show details" : "Run solver first"}
+            title={hasSolveData ? t("ui.nodes.showDetails") : t("ui.nodes.runSolver")}
           >
             ...
           </button>
@@ -206,7 +209,7 @@ export default function RecipeTagInputNode({ id, data }: NodeProps<RecipeTagInpu
             {data.outputs.map((output) => (
               <div key={output.id} className="port-row right">
                 {data.solveData && (
-                  <span className="port-rate" title="Actual output flow">
+                  <span className="port-rate" title={t("ui.nodes.actualOutput")}>
                     {(data.solveData.outputFlows[resolveItemId(output)] ?? 0).toFixed(2)}/s
                   </span>
                 )}
@@ -229,7 +232,7 @@ export default function RecipeTagInputNode({ id, data }: NodeProps<RecipeTagInpu
         </div>
         {showDetails && data.solveData ? (
           <div className="node-detail-panel">
-            <div className="node-detail-title">Input Recipe Tag Details</div>
+            <div className="node-detail-title">{t("ui.nodes.inputRecipeTagDetails")}</div>
             <div className="node-detail-row">
               <span>{recipeTagTitle}</span>
               <span>x{multiplier}</span>

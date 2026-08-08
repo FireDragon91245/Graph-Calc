@@ -16,14 +16,13 @@ namespace GraphCalc.Api.Services;
 
 public sealed class BackendStore
 {
-    private const string DefaultProjectName = "Default Project";
     private const string DefaultGraphId = "main";
-    private const string DefaultGraphName = "Main";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly GraphCalcOptions _options;
     private readonly ILogger<BackendStore> _logger;
+    private readonly JsonTranslationService _translations;
     private readonly string _backendRoot;
     private readonly string _configDirectory;
     private readonly string _dataDir;
@@ -43,10 +42,11 @@ public sealed class BackendStore
 
     private sealed record MongoConnectionCandidate(MongoClientSettings Settings, string ConnectionMode);
 
-    public BackendStore(IOptions<GraphCalcOptions> options, IWebHostEnvironment environment, ILogger<BackendStore> logger)
+    public BackendStore(IOptions<GraphCalcOptions> options, IWebHostEnvironment environment, ILogger<BackendStore> logger, JsonTranslationService translations)
     {
         _options = options.Value;
         _logger = logger;
+        _translations = translations;
         _backendRoot = Path.GetFullPath(Path.Combine(environment.ContentRootPath, ".."));
         _configDirectory = ResolveConfigDirectory(environment.ContentRootPath);
         _dataDir = Path.Combine(_backendRoot, "data");
@@ -185,6 +185,7 @@ public sealed class BackendStore
         var existingUser = await GetUserByIdAsync(userId, cancellationToken);
         var thumbnailIds = (await Projects().Find(x => x.UserId == userId).Project(x => x.ThumbnailId).ToListAsync(cancellationToken))
             .Concat(await Graphs().Find(x => x.UserId == userId).Project(x => x.ThumbnailId).ToListAsync(cancellationToken))
+            .Append(existingUser?.ProfileImageId)
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Select(x => x!)
             .Distinct(StringComparer.Ordinal)
@@ -232,8 +233,80 @@ public sealed class BackendStore
             Id = user.Id,
             Username = user.Username,
             ProjectCount = await CountProjectsAsync(user.Id, cancellationToken),
-            ActiveProjectId = activeProjectId
+            ActiveProjectId = activeProjectId,
+            ProfileImageId = user.ProfileImageId,
+            Settings = ToSettingsResponse(user.Settings)
         };
+    }
+
+    public async Task<AccountSettingsResponse> UpdateUserSettingsAsync(string userId, AccountSettingsUpdateRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetUserByIdAsync(userId, cancellationToken)
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.userNotFound");
+
+        if (request.Language is not null)
+        {
+            await Users().UpdateOneAsync(
+                x => x.Id == userId,
+                Builders<UserDocument>.Update.Set(x => x.Settings.Language, request.Language),
+                cancellationToken: cancellationToken);
+            user.Settings.Language = request.Language;
+            CacheUser(user);
+        }
+
+        return ToSettingsResponse(user.Settings);
+    }
+
+    public async Task<ImageDocument?> GetProfileImageAsync(string userId, CancellationToken cancellationToken)
+    {
+        var user = await GetUserByIdAsync(userId, cancellationToken)
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.userNotFound");
+        return string.IsNullOrWhiteSpace(user.ProfileImageId)
+            ? null
+            : await Images().Find(x => x.Id == user.ProfileImageId).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<string> SetProfileImageAsync(string userId, ValidatedThumbnailImage image, CancellationToken cancellationToken)
+    {
+        var user = await GetUserByIdAsync(userId, cancellationToken)
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.userNotFound");
+        var storedImage = await GetOrCreateImageAsync(image, cancellationToken);
+        var updateResult = await Users().UpdateOneAsync(
+            x => x.Id == userId,
+            Builders<UserDocument>.Update.Set(x => x.ProfileImageId, storedImage.Id),
+            cancellationToken: cancellationToken);
+        if (updateResult.MatchedCount == 0)
+        {
+            await DeleteImageIfUnreferencedAsync(storedImage.Id, cancellationToken);
+            throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.userNotFound");
+        }
+
+        var previousImageId = user.ProfileImageId;
+        user.ProfileImageId = storedImage.Id;
+        CacheUser(user);
+        if (!string.IsNullOrWhiteSpace(previousImageId) && previousImageId != storedImage.Id)
+        {
+            await DeleteImageIfUnreferencedAsync(previousImageId, cancellationToken);
+        }
+
+        return storedImage.Id;
+    }
+
+    public async Task DeleteProfileImageAsync(string userId, CancellationToken cancellationToken)
+    {
+        var user = await GetUserByIdAsync(userId, cancellationToken)
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.userNotFound");
+        var previousImageId = user.ProfileImageId;
+        await Users().UpdateOneAsync(
+            x => x.Id == userId,
+            Builders<UserDocument>.Update.Unset(x => x.ProfileImageId),
+            cancellationToken: cancellationToken);
+        user.ProfileImageId = null;
+        CacheUser(user);
+        if (!string.IsNullOrWhiteSpace(previousImageId))
+        {
+            await DeleteImageIfUnreferencedAsync(previousImageId, cancellationToken);
+        }
     }
 
     public async Task<string> GetJwtSecretAsync(CancellationToken cancellationToken)
@@ -279,7 +352,7 @@ public sealed class BackendStore
         var sortOrder = await NextSortOrderAsync(Projects().Find(x => x.UserId == userId).Project(x => x.SortOrder), cancellationToken);
         var project = DefaultProjectDocument(userId, projectId, name, sortOrder);
         await Projects().InsertOneAsync(project, cancellationToken: cancellationToken);
-        var defaultGraph = DefaultGraphDocument(userId, projectId, DefaultGraphId, DefaultGraphName, 0);
+        var defaultGraph = DefaultGraphDocument(userId, projectId, DefaultGraphId, _translations.Translate("backendDefaults.graph"), 0);
         await Graphs().InsertOneAsync(defaultGraph, cancellationToken: cancellationToken);
         await SetActiveProjectIfMissingAsync(userId, projectId, cancellationToken);
         CacheProject(project);
@@ -305,7 +378,7 @@ public sealed class BackendStore
     {
         await InitializeAsync(cancellationToken);
         var sourceProject = await GetProjectAsync(userId, projectId, cancellationToken)
-            ?? throw new ApiException(StatusCodes.Status404NotFound, $"Project {projectId} not found");
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.projectNotFound");
 
         var newProjectId = GenerateId();
         var sortOrder = await NextSortOrderAsync(Projects().Find(x => x.UserId == userId).Project(x => x.SortOrder), cancellationToken);
@@ -324,7 +397,7 @@ public sealed class BackendStore
 
         if (graphs.Count == 0)
         {
-            var defaultGraph = DefaultGraphDocument(userId, newProjectId, DefaultGraphId, DefaultGraphName, 0);
+            var defaultGraph = DefaultGraphDocument(userId, newProjectId, DefaultGraphId, _translations.Translate("backendDefaults.graph"), 0);
             await Graphs().InsertOneAsync(defaultGraph, cancellationToken: cancellationToken);
             CacheGraph(defaultGraph);
         }
@@ -428,21 +501,21 @@ public sealed class BackendStore
             return firstProject.ProjectId;
         }
 
-        return (await CreateProjectAsync(userId, DefaultProjectName, cancellationToken)).Id;
+        return (await CreateProjectAsync(userId, _translations.Translate("backendDefaults.project"), cancellationToken)).Id;
     }
 
     public async Task RequireProjectAccessAsync(string userId, string projectId, CancellationToken cancellationToken)
     {
         if (await GetProjectAsync(userId, projectId, cancellationToken) is null)
         {
-            throw new ApiException(StatusCodes.Status404NotFound, "Project not found");
+            throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.projectNotFound");
         }
     }
 
     public async Task<ImageDocument?> GetProjectThumbnailAsync(string userId, string projectId, CancellationToken cancellationToken)
     {
         var project = await GetProjectAsync(userId, projectId, cancellationToken)
-            ?? throw new ApiException(StatusCodes.Status404NotFound, "Project not found");
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.projectNotFound");
         return string.IsNullOrWhiteSpace(project.ThumbnailId)
             ? null
             : await Images().Find(x => x.Id == project.ThumbnailId).FirstOrDefaultAsync(cancellationToken);
@@ -451,7 +524,7 @@ public sealed class BackendStore
     public async Task<string> SetProjectThumbnailAsync(string userId, string projectId, ValidatedThumbnailImage image, CancellationToken cancellationToken)
     {
         var project = await GetProjectAsync(userId, projectId, cancellationToken)
-            ?? throw new ApiException(StatusCodes.Status404NotFound, "Project not found");
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.projectNotFound");
         var storedImage = await GetOrCreateImageAsync(image, cancellationToken);
         var result = await Projects().UpdateOneAsync(
             x => x.UserId == userId && x.ProjectId == projectId,
@@ -460,7 +533,7 @@ public sealed class BackendStore
         if (result.MatchedCount == 0)
         {
             await DeleteImageIfUnreferencedAsync(storedImage.Id, cancellationToken);
-            throw new ApiException(StatusCodes.Status404NotFound, "Project not found");
+            throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.projectNotFound");
         }
 
         UpdateCachedProject(userId, projectId, cached => cached.ThumbnailId = storedImage.Id, markDirty: false);
@@ -495,7 +568,7 @@ public sealed class BackendStore
     {
         await InitializeAsync(cancellationToken);
         var graph = await Graphs().Find(x => x.UserId == userId && x.ProjectId == projectId && x.GraphId == graphId).FirstOrDefaultAsync(cancellationToken)
-            ?? throw new ApiException(StatusCodes.Status404NotFound, "Graph not found");
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.graphNotFound");
         return string.IsNullOrWhiteSpace(graph.ThumbnailId)
             ? null
             : await Images().Find(x => x.Id == graph.ThumbnailId).FirstOrDefaultAsync(cancellationToken);
@@ -505,7 +578,7 @@ public sealed class BackendStore
     {
         await InitializeAsync(cancellationToken);
         var graph = await Graphs().Find(x => x.UserId == userId && x.ProjectId == projectId && x.GraphId == graphId).FirstOrDefaultAsync(cancellationToken)
-            ?? throw new ApiException(StatusCodes.Status404NotFound, "Graph not found");
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.graphNotFound");
         var storedImage = await GetOrCreateImageAsync(image, cancellationToken);
         var result = await Graphs().UpdateOneAsync(
             x => x.UserId == userId && x.ProjectId == projectId && x.GraphId == graphId,
@@ -514,7 +587,7 @@ public sealed class BackendStore
         if (result.MatchedCount == 0)
         {
             await DeleteImageIfUnreferencedAsync(storedImage.Id, cancellationToken);
-            throw new ApiException(StatusCodes.Status404NotFound, "Graph not found");
+            throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.graphNotFound");
         }
 
         UpdateCachedGraph(userId, projectId, graphId, cached => cached.ThumbnailId = storedImage.Id, markDirty: false);
@@ -608,7 +681,7 @@ public sealed class BackendStore
     {
         await InitializeAsync(cancellationToken);
         var sourceGraph = await Graphs().Find(x => x.UserId == userId && x.ProjectId == projectId && x.GraphId == graphId).FirstOrDefaultAsync(cancellationToken)
-            ?? throw new ApiException(StatusCodes.Status404NotFound, $"Graph {graphId} not found in project {projectId}");
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.graphNotFound");
         var newGraphId = GenerateId();
         var sortOrder = await NextSortOrderAsync(Graphs().Find(x => x.UserId == userId && x.ProjectId == projectId).Project(x => x.SortOrder), cancellationToken);
         var graph = DefaultGraphDocument(userId, projectId, newGraphId, newName, sortOrder);
@@ -985,7 +1058,11 @@ public sealed class BackendStore
 
     private async Task EnsureIndexesAsync(CancellationToken cancellationToken)
     {
-        await Users().Indexes.CreateOneAsync(new CreateIndexModel<UserDocument>(Builders<UserDocument>.IndexKeys.Ascending(x => x.Username), new CreateIndexOptions { Unique = true }), cancellationToken: cancellationToken);
+        await Users().Indexes.CreateManyAsync(
+        [
+            new CreateIndexModel<UserDocument>(Builders<UserDocument>.IndexKeys.Ascending(x => x.Username), new CreateIndexOptions { Unique = true }),
+            new CreateIndexModel<UserDocument>(Builders<UserDocument>.IndexKeys.Ascending(x => x.ProfileImageId))
+        ], cancellationToken);
         await Projects().Indexes.CreateManyAsync(
         [
             new CreateIndexModel<ProjectDocument>(Builders<ProjectDocument>.IndexKeys.Ascending(x => x.UserId).Ascending(x => x.ProjectId), new CreateIndexOptions { Unique = true }),
@@ -1219,7 +1296,7 @@ public sealed class BackendStore
         var count = await Graphs().CountDocumentsAsync(x => x.UserId == userId && x.ProjectId == projectId, cancellationToken: cancellationToken);
         if (count == 0)
         {
-            var defaultGraph = DefaultGraphDocument(userId, projectId, DefaultGraphId, DefaultGraphName, 0);
+            var defaultGraph = DefaultGraphDocument(userId, projectId, DefaultGraphId, _translations.Translate("backendDefaults.graph"), 0);
             await Graphs().InsertOneAsync(defaultGraph, cancellationToken: cancellationToken);
             await Projects().UpdateOneAsync(
                 x => x.UserId == userId && x.ProjectId == projectId,
@@ -1326,6 +1403,12 @@ public sealed class BackendStore
 
         var referencedByProject = await Projects().Find(x => x.ThumbnailId == imageId).AnyAsync(cancellationToken);
         if (referencedByProject)
+        {
+            return;
+        }
+
+        var referencedByUser = await Users().Find(x => x.ProfileImageId == imageId).AnyAsync(cancellationToken);
+        if (referencedByUser)
         {
             return;
         }
@@ -1717,8 +1800,18 @@ public sealed class BackendStore
             SessionVersion = user.SessionVersion,
             PasswordSalt = user.PasswordSalt,
             PasswordHash = user.PasswordHash,
-            PasswordIterations = user.PasswordIterations
+            PasswordIterations = user.PasswordIterations,
+            ProfileImageId = user.ProfileImageId,
+            Settings = new UserSettingsDocument
+            {
+                Language = user.Settings.Language
+            }
         };
+    }
+
+    private static AccountSettingsResponse ToSettingsResponse(UserSettingsDocument settings)
+    {
+        return new AccountSettingsResponse { Language = settings.Language };
     }
 
     private static WorkspaceDocument CloneWorkspaceDocument(WorkspaceDocument workspace)

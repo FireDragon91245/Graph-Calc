@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useGraphStore } from "../store/graphStore";
+import { useTranslation } from "react-i18next";
 
 type Option = {
   value: string;
@@ -18,9 +19,10 @@ export default function SearchableDropdown({
   value,
   options,
   onChange,
-  placeholder = "Select...",
+  placeholder,
   className = ""
 }: SearchableDropdownProps) {
+  const { t } = useTranslation();
   const items = useGraphStore((state) => state.items);
   const categories = useGraphStore((state) => state.categories);
   const tags = useGraphStore((state) => state.tags);
@@ -132,7 +134,7 @@ export default function SearchableDropdown({
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
       >
-        <span className="dropdown-label">{selectedOption?.label || placeholder}</span>
+        <span className="dropdown-label">{selectedOption?.label || placeholder || t("ui.dropdown.select")}</span>
         <span className="dropdown-arrow">{isOpen ? "▲" : "▼"}</span>
       </button>
 
@@ -143,7 +145,7 @@ export default function SearchableDropdown({
               ref={searchRef}
               type="text"
               className="dropdown-search"
-              placeholder="Search..."
+              placeholder={t("ui.dropdown.search")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -151,7 +153,7 @@ export default function SearchableDropdown({
           </div>
           <div className="dropdown-list" ref={listRef}>
             {filteredOptions.length === 0 ? (
-              <div className="dropdown-empty">No results</div>
+              <div className="dropdown-empty">{t("ui.dropdown.noResults")}</div>
             ) : (
               filteredOptions.map((option, index) => {
                 const metadata = getItemMetadata(option.value);
