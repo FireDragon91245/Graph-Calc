@@ -282,7 +282,8 @@ function buildMergedSnapshot(
 
     const preferredActiveNames = [remoteProject.activeGraphName, localProject.activeGraphName].filter((name): name is string => Boolean(name));
     const activeGraphName = preferredActiveNames.find((name) => mergedGraphs.some((graph) => graph.name === name)) ?? mergedGraphs[0].name;
-    const store = comparison.storeDifferent ? clone((projectStoreChoices[comparison.key] ?? "account") === "local" ? localProject.store : remoteProject.store) : clone(remoteProject.store);
+    const chosenStoreProject = comparison.storeDifferent && (projectStoreChoices[comparison.key] ?? "account") === "local" ? localProject : remoteProject;
+    const store = clone(chosenStoreProject.store);
     const projectName = uniqueName(remoteProject.name, usedProjectNames);
 
     mergedProjects.push({
@@ -290,7 +291,8 @@ function buildMergedSnapshot(
       activeGraphName,
       store,
       graphs: mergedGraphs,
-      thumbnail: clone(remoteProject.thumbnail)
+      thumbnail: clone(remoteProject.thumbnail),
+      moduleResources: clone(chosenStoreProject.moduleResources ?? [])
     });
   }
 

@@ -183,11 +183,18 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
         const memberSupport = recipe.moduleSupport?.find((candidate) => candidate.systemId === support.systemId);
         return Boolean(memberSupport && isModuleEnabledForSupport(moduleId, memberSupport));
       }));
+      const memberSupports = memberRecipes.map((recipe) => recipe.moduleSupport?.find((candidate) => candidate.systemId === support.systemId));
+      const parameterKeys = Array.from(new Set(memberSupports.flatMap((candidate) => Object.keys(candidate?.parameters ?? {}))));
+      const parameters = Object.fromEntries(parameterKeys.flatMap((key) => {
+        const values = memberSupports.map((candidate) => candidate?.parameters?.[key]).filter((value) => value !== undefined);
+        if (!values.length) return [];
+        if (values.every((value) => typeof value === "number")) return [[key, Math.min(...values as number[])]];
+        if (values.every((value) => typeof value === "boolean")) return [[key, values.every((value) => value === true)]];
+        return [[key, values.every((value) => value === values[0]) ? values[0] : String(values[0])]];
+      }));
       return {
         ...support,
-        slotCount: compatibleModuleIds.length > 0
-          ? Math.min(...memberRecipes.map((recipe) => recipe.moduleSupport?.find((candidate) => candidate.systemId === support.systemId)?.slotCount ?? 0))
-          : 0,
+        parameters,
         disabledModuleIds: systemModuleIds.filter((moduleId) => !compatibleModuleIds.includes(moduleId))
       };
     });

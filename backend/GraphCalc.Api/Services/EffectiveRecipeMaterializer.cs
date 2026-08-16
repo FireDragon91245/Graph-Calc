@@ -50,8 +50,24 @@ internal static class EffectiveRecipeMaterializer
                 continue;
             }
 
-            var state = ReadSystemState(nodeData, system, support);
+            var state = ReadSystemState(nodeData, system);
             var disabled = support.DisabledModuleIds.ToHashSet(StringComparer.Ordinal);
+            var enabledModules = store.ModuleDefinitions
+                .Where(entry => entry.SystemId == system.Id && !entry.Archived && !disabled.Contains(entry.Id))
+                .ToArray();
+            var moduleProperties = new Dictionary<string, IReadOnlyDictionary<string, object?>>(StringComparer.Ordinal);
+            foreach (var module in enabledModules)
+            {
+                var propertyResult = LuaModuleRuntime.ReadProperties(module.Lua);
+                moduleProperties[module.Id] = propertyResult.Properties;
+                if (propertyResult.Error is not null) diagnostics.Add($"{module.Name}: {propertyResult.Error}");
+            }
+            var parameterResult = LuaModuleRuntime.ResolveParameters(system.Lua, support.Parameters);
+            if (parameterResult.Error is not null) diagnostics.Add($"{system.Name}: {parameterResult.Error}");
+            var slotResult = LuaModuleRuntime.ConstrainSlots(system.Lua, BuildLuaContext(recipe, parameterResult.Parameters, state, system, enabledModules, moduleProperties, new Dictionary<string, object?>(), 1, timeSeconds, inputs, outputs), state.Slots);
+            if (slotResult.Error is not null) diagnostics.Add($"{system.Name}: {slotResult.Error}");
+            state.Slots.Clear();
+            state.Slots.AddRange(slotResult.Slots);
             var moduleCounts = state.Slots
                 .Where(moduleId => !string.IsNullOrWhiteSpace(moduleId))
                 .GroupBy(moduleId => moduleId!, StringComparer.Ordinal)
@@ -77,15 +93,19 @@ internal static class EffectiveRecipeMaterializer
                     continue;
                 }
 
-                foreach (var effect in module.Effects)
+                var result = LuaModuleRuntime.RunEffects(module.Lua, BuildLuaContext(recipe, parameterResult.Parameters, state, system, enabledModules, moduleProperties, moduleProperties.GetValueOrDefault(module.Id) ?? new Dictionary<string, object?>(), count, timeSeconds, inputs, outputs));
+                if (result.Error is not null) diagnostics.Add($"{module.Name}: {result.Error}");
+                foreach (var effect in result.Effects)
                 {
-                    ApplyEffect(effect, state, count, $"module:{system.Id}:{module.Id}", ref timeSeconds, ref inputs, ref outputs, diagnostics);
+                    ApplyEffect(effect, $"module:{system.Id}:{module.Id}", ref timeSeconds, ref inputs, ref outputs, diagnostics);
                 }
             }
 
-            foreach (var effect in system.Effects)
+            var systemResult = LuaModuleRuntime.RunEffects(system.Lua, BuildLuaContext(recipe, parameterResult.Parameters, state, system, enabledModules, moduleProperties, new Dictionary<string, object?>(), 1, timeSeconds, inputs, outputs));
+            if (systemResult.Error is not null) diagnostics.Add($"{system.Name}: {systemResult.Error}");
+            foreach (var effect in systemResult.Effects)
             {
-                ApplyEffect(effect, state, 1, $"system:{system.Id}", ref timeSeconds, ref inputs, ref outputs, diagnostics);
+                ApplyEffect(effect, $"system:{system.Id}", ref timeSeconds, ref inputs, ref outputs, diagnostics);
             }
         }
 
@@ -128,15 +148,11 @@ internal static class EffectiveRecipeMaterializer
         return new MaterializedRecipe(recipe.Id, recipe.Name, timeSeconds, inputs, outputs, diagnostics, diagnostics.Count == 0);
     }
 
-    private static SystemState ReadSystemState(JsonElement? nodeData, ModuleSystemDefinitionDto system, RecipeModuleSupportDto support)
+    private static SystemState ReadSystemState(JsonElement? nodeData, ModuleSystemDefinitionDto system)
     {
-        var values = new Dictionary<string, object?>(StringComparer.Ordinal);
-        foreach (var control in system.Controls.Where(control => control.Type != "slots"))
-        {
-            values[control.StateKey] = ReadDefaultValue(control);
-        }
-
-        var slots = Enumerable.Repeat<string?>(null, Math.Max(0, support.SlotCount)).ToList();
+        var defaults = LuaModuleRuntime.ReadDefaults(system.Lua);
+        var values = new Dictionary<string, object?>(defaults.Defaults, StringComparer.Ordinal);
+        var slots = new List<string?>();
         if (nodeData is null || nodeData.Value.ValueKind != JsonValueKind.Object ||
             !nodeData.Value.TryGetProperty("moduleState", out var moduleState) || moduleState.ValueKind != JsonValueKind.Object ||
             !moduleState.TryGetProperty("systems", out var systems) || systems.ValueKind != JsonValueKind.Object ||
@@ -150,8 +166,7 @@ internal static class EffectiveRecipeMaterializer
             var index = 0;
             foreach (var slotValue in slotValues.EnumerateArray())
             {
-                if (index >= slots.Count) break;
-                if (slotValue.ValueKind == JsonValueKind.String) slots[index] = slotValue.GetString();
+                slots.Add(slotValue.ValueKind == JsonValueKind.String ? slotValue.GetString() : null);
                 index += 1;
             }
         }
@@ -165,50 +180,79 @@ internal static class EffectiveRecipeMaterializer
                     JsonValueKind.Number when property.Value.TryGetDouble(out var number) => number,
                     JsonValueKind.True => true,
                     JsonValueKind.False => false,
+                    JsonValueKind.String => property.Value.GetString(),
                     _ => values.GetValueOrDefault(property.Name)
                 };
             }
         }
 
-        foreach (var control in system.Controls.Where(control => control.Type != "slots"))
-        {
-            if (control.Type == "toggle")
-            {
-                values[control.StateKey] = values.GetValueOrDefault(control.StateKey) is true;
-                continue;
-            }
-
-            var fallback = ReadDefaultValue(control) is double defaultNumber ? defaultNumber : control.Min ?? 0.0;
-            var numeric = values.GetValueOrDefault(control.StateKey) is double current && double.IsFinite(current) ? current : fallback;
-            values[control.StateKey] = Math.Min(control.Max ?? double.PositiveInfinity, Math.Max(control.Min ?? double.NegativeInfinity, numeric));
-        }
-
         return new SystemState(slots, values);
     }
 
-    private static object? ReadDefaultValue(ModuleUiControlDto control)
+    private static IReadOnlyDictionary<string, object?> BuildLuaContext(
+        RecipeDto recipe,
+        IReadOnlyDictionary<string, object?> parameters,
+        SystemState state,
+        ModuleSystemDefinitionDto system,
+        IReadOnlyList<ModuleDefinitionDto> modules,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, object?>> moduleProperties,
+        IReadOnlyDictionary<string, object?> properties,
+        int count,
+        double timeSeconds,
+        IReadOnlyList<Dictionary<string, object?>> inputs,
+        IReadOnlyList<Dictionary<string, object?>> outputs)
     {
-        if (control.DefaultValue is not { } value) return control.Type == "toggle" ? false : control.Min ?? 0.0;
-        return value.ValueKind switch
+        return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
-            JsonValueKind.Number when value.TryGetDouble(out var number) => number,
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            _ => control.Type == "toggle" ? false : control.Min ?? 0.0
+            ["state"] = state.Values,
+            ["slots"] = state.Slots,
+            ["parameters"] = parameters,
+            ["count"] = count,
+            ["properties"] = properties,
+            ["modules"] = modules.Select(module => new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["id"] = module.Id,
+                ["name"] = module.Name,
+                ["description"] = module.Description ?? string.Empty,
+                ["properties"] = moduleProperties.GetValueOrDefault(module.Id) ?? new Dictionary<string, object?>()
+            }).ToList(),
+            ["resources"] = system.Resources.Select(resource => new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["id"] = resource.Id,
+                ["name"] = resource.Name
+            }).ToList(),
+            ["recipe"] = new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["id"] = recipe.Id,
+                ["name"] = recipe.Name,
+                ["time_seconds"] = timeSeconds,
+                ["inputs"] = inputs.Select(input => new Dictionary<string, object?>(StringComparer.Ordinal)
+                {
+                    ["id"] = GetString(input, "id"),
+                    ["ref_type"] = GetString(input, "refType"),
+                    ["ref_id"] = GetString(input, "refId"),
+                    ["amount"] = GetDouble(input, "amount")
+                }).ToList(),
+                ["outputs"] = outputs.Select(output => new Dictionary<string, object?>(StringComparer.Ordinal)
+                {
+                    ["id"] = GetString(output, "id"),
+                    ["item_id"] = GetString(output, "itemId"),
+                    ["amount"] = GetDouble(output, "amount"),
+                    ["probability"] = GetDouble(output, "probability", 1.0)
+                }).ToList()
+            }
         };
     }
 
     private static void ApplyEffect(
         ModuleEffectDto effect,
-        SystemState state,
-        int moduleCount,
         string effectNamespace,
         ref double timeSeconds,
         ref List<Dictionary<string, object?>> inputs,
         ref List<Dictionary<string, object?>> outputs,
         List<string> diagnostics)
     {
-        var value = EvaluateValue(effect, state, moduleCount);
+        var value = effect.Value ?? 1.0;
         if (!double.IsFinite(value))
         {
             diagnostics.Add($"Effect '{effect.Id}' produced an invalid number.");
@@ -322,20 +366,6 @@ internal static class EffectiveRecipeMaterializer
             result.Add(port);
         }
         return result;
-    }
-
-    private static double EvaluateValue(ModuleEffectDto effect, SystemState state, int moduleCount)
-    {
-        var source = effect.Source switch
-        {
-            "moduleCount" => moduleCount,
-            "stateNumber" => state.Values.GetValueOrDefault(effect.StateKey ?? string.Empty) is double number ? number : 0.0,
-            "stateBoolean" => state.Values.GetValueOrDefault(effect.StateKey ?? string.Empty) is true ? 1.0 : 0.0,
-            _ => effect.Value ?? 1.0
-        };
-        var baseValue = (effect.Offset ?? 0.0) + (effect.Coefficient ?? 1.0) * source;
-        var divisor = effect.Divisor ?? 1.0;
-        return divisor == 0 ? double.NaN : Math.Pow(baseValue, effect.Exponent ?? 1.0) / divisor;
     }
 
     private static double? Mutate(double current, string operation, double value) => operation switch

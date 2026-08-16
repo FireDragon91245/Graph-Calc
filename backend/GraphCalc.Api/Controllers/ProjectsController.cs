@@ -110,6 +110,26 @@ public sealed class ProjectsController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("{projectId}/module-resources/{imageId}")]
+    public async Task<IActionResult> GetModuleResourceImage(string projectId, string imageId, CancellationToken cancellationToken)
+    {
+        var user = ApiRequestContext.GetAuthenticatedUser(User);
+        var image = await _store.GetModuleResourceImageAsync(user.Id, projectId, imageId, cancellationToken)
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.thumbnailNotFound");
+        SetThumbnailResponseHeaders(image.Sha256);
+        return File(image.Data, image.ContentType);
+    }
+
+    [HttpPut("{projectId}/module-resources")]
+    [RequestSizeLimit(5L * 1024L * 1024L + 64L * 1024L)]
+    public async Task<ActionResult<ModuleResourceImageResponse>> PutModuleResourceImage(string projectId, [FromForm] IFormFile image, CancellationToken cancellationToken)
+    {
+        var user = ApiRequestContext.GetAuthenticatedUser(User);
+        var validated = await _thumbnailImages.ValidateAsync(image, cancellationToken);
+        var imageId = await _store.AddModuleResourceImageAsync(user.Id, projectId, validated, cancellationToken);
+        return Ok(new ModuleResourceImageResponse { ImageId = imageId });
+    }
+
     [HttpGet("{projectId}/graphs")]
     public async Task<ActionResult<GraphsResponse>> ListGraphs(string projectId, CancellationToken cancellationToken)
     {

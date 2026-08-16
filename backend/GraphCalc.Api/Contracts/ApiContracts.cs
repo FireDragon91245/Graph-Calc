@@ -109,6 +109,12 @@ public sealed class ThumbnailUpdateResponse
     public required string ThumbnailId { get; init; }
 }
 
+public sealed class ModuleResourceImageResponse
+{
+    [JsonPropertyName("imageId")]
+    public required string ImageId { get; init; }
+}
+
 public sealed class ProjectsResponse
 {
     [JsonPropertyName("projects")]
@@ -261,8 +267,8 @@ public sealed class RecipeModuleSupportDto
     [JsonPropertyName("order")]
     public int Order { get; init; }
 
-    [JsonPropertyName("slotCount")]
-    public int SlotCount { get; init; }
+    [JsonPropertyName("parameters")]
+    public Dictionary<string, JsonElement> Parameters { get; init; } = new(StringComparer.Ordinal);
 
     [JsonPropertyName("disabledModuleIds")]
     public List<string> DisabledModuleIds { get; init; } = [];
@@ -300,26 +306,8 @@ public sealed class ModuleEffectDto
     [JsonPropertyName("operation")]
     public required string Operation { get; init; }
 
-    [JsonPropertyName("source")]
-    public string? Source { get; init; }
-
-    [JsonPropertyName("stateKey")]
-    public string? StateKey { get; init; }
-
     [JsonPropertyName("value")]
     public double? Value { get; init; }
-
-    [JsonPropertyName("coefficient")]
-    public double? Coefficient { get; init; }
-
-    [JsonPropertyName("offset")]
-    public double? Offset { get; init; }
-
-    [JsonPropertyName("exponent")]
-    public double? Exponent { get; init; }
-
-    [JsonPropertyName("divisor")]
-    public double? Divisor { get; init; }
 
     [JsonPropertyName("selectorPortId")]
     public string? SelectorPortId { get; init; }
@@ -345,47 +333,23 @@ public sealed class ModuleDefinitionDto
     [JsonPropertyName("description")]
     public string? Description { get; init; }
 
-    [JsonPropertyName("effects")]
-    public List<ModuleEffectDto> Effects { get; init; } = [];
+    [JsonPropertyName("lua")]
+    public required string Lua { get; init; }
 
     [JsonPropertyName("archived")]
     public bool Archived { get; init; }
 }
 
-public sealed class ModuleUiControlDto
+public sealed class ModuleSystemResourceDto
 {
     [JsonPropertyName("id")]
     public required string Id { get; init; }
 
-    [JsonPropertyName("type")]
-    public required string Type { get; init; }
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
 
-    [JsonPropertyName("label")]
-    public required string Label { get; init; }
-
-    [JsonPropertyName("stateKey")]
-    public required string StateKey { get; init; }
-
-    [JsonPropertyName("drivesStateKey")]
-    public string? DrivesStateKey { get; init; }
-
-    [JsonPropertyName("targetPortId")]
-    public string? TargetPortId { get; init; }
-
-    [JsonPropertyName("min")]
-    public double? Min { get; init; }
-
-    [JsonPropertyName("max")]
-    public double? Max { get; init; }
-
-    [JsonPropertyName("step")]
-    public double? Step { get; init; }
-
-    [JsonPropertyName("defaultValue")]
-    public JsonElement? DefaultValue { get; init; }
-
-    [JsonPropertyName("suffix")]
-    public string? Suffix { get; init; }
+    [JsonPropertyName("imageId")]
+    public required string ImageId { get; init; }
 }
 
 public sealed class ModuleSystemDefinitionDto
@@ -402,11 +366,11 @@ public sealed class ModuleSystemDefinitionDto
     [JsonPropertyName("revision")]
     public int Revision { get; init; } = 1;
 
-    [JsonPropertyName("controls")]
-    public List<ModuleUiControlDto> Controls { get; init; } = [];
+    [JsonPropertyName("resources")]
+    public List<ModuleSystemResourceDto> Resources { get; init; } = [];
 
-    [JsonPropertyName("effects")]
-    public List<ModuleEffectDto> Effects { get; init; } = [];
+    [JsonPropertyName("lua")]
+    public required string Lua { get; init; }
 
     [JsonPropertyName("archived")]
     public bool Archived { get; init; }
@@ -630,7 +594,7 @@ public sealed class RecipeBlueprintDto
 public sealed class StoreData
 {
     [JsonPropertyName("schemaVersion")]
-    public int SchemaVersion { get; init; } = 3;
+    public int SchemaVersion { get; init; } = 5;
 
     [JsonPropertyName("projectRevision")]
     public long ProjectRevision { get; init; }

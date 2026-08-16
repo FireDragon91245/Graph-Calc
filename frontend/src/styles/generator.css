@@ -374,6 +374,81 @@
   gap: 14px;
 }
 
+.lua-module-workbench {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+}
+
+.lua-editor-card {
+  min-width: 0;
+}
+
+.lua-code-editor {
+  min-height: 460px;
+  tab-size: 2;
+}
+
+.lua-system-preview {
+  display: grid;
+  gap: 5px;
+}
+
+.lua-system-preview > small {
+  color: var(--muted);
+}
+
+.lua-preview-canvas {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 9px;
+  background: rgba(76, 29, 149, 0.09);
+}
+
+.module-resource-editor {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid rgba(139, 92, 246, 0.22);
+  border-radius: 9px;
+  background: rgba(76, 29, 149, 0.06);
+}
+
+.module-resource-editor > small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+.module-resource-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text); font-size: 12px; font-weight: 650; }
+.module-resource-upload { display: inline-flex !important; flex-direction: row !important; cursor: pointer; }
+.module-resource-upload.is-disabled { opacity: 0.55; cursor: default; }
+.module-resource-upload input { display: none; }
+.module-resource-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 7px; }
+.module-resource-card { position: relative; display: grid; grid-template-columns: 34px minmax(0, 1fr) 22px; grid-template-rows: auto auto; align-items: center; gap: 3px 6px; min-width: 0; padding: 6px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 7px; background: rgba(0, 0, 0, 0.22); }
+.module-resource-card > img,
+.module-resource-card > span { grid-row: 1 / 3; width: 34px; height: 34px; object-fit: contain; }
+.module-resource-card > input { min-width: 0; padding: 2px 4px; color: var(--text); border: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: transparent; font-size: 11px; }
+.module-resource-card > code { min-width: 0; overflow: hidden; color: #a78bfa; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.module-resource-card > button { grid-column: 3; grid-row: 1 / 3; width: 22px; height: 22px; padding: 0; color: var(--muted); border: 0; background: transparent; cursor: pointer; }
+.module-resource-card > button:hover { color: #fca5a5; }
+.module-resource-empty { padding: 8px; color: var(--muted); font-size: 11px; }
+
+.lua-api-reference {
+  grid-column: 1 / -1;
+}
+
+.lua-api-reference p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.lua-api-reference code {
+  color: #c4b5fd;
+}
+
 .module-builder-card {
   display: flex;
   flex-direction: column;
@@ -403,96 +478,13 @@
   gap: 7px;
 }
 
-.module-basic-builder {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  align-items: end;
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.module-basic-builder > strong {
-  grid-column: 1 / -1;
-}
-
-.module-basic-builder > .btn-secondary {
-  grid-column: 1 / -1;
-  width: 100%;
-  white-space: normal;
-}
-
-.module-basic-builder select,
-.module-basic-builder input {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 7px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  border-radius: 5px;
-  color: var(--text);
-  background: rgba(0, 0, 0, 0.32);
-}
-
-.module-basic-number {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 5px;
-}
-
-.module-basic-number input {
-  width: 100%;
-}
-
 .module-preset-row .btn-secondary {
   flex: 1 1 150px;
   min-width: 0;
   white-space: normal;
 }
 
-.module-advanced-editor {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 10px;
-}
-
-.module-advanced-editor summary {
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.module-advanced-editor .module-json-editor {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.module-schema-reference {
-  grid-column: 1 / -1;
-  padding: 12px 14px;
-  border: 1px solid rgba(139, 92, 246, 0.22);
-  border-radius: 10px;
-  color: var(--muted);
-  background: rgba(16, 20, 28, 0.72);
-}
-
-.module-schema-reference summary {
-  color: var(--text);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.module-schema-reference p {
-  margin: 9px 0 0;
-  line-height: 1.5;
-}
-
-.module-schema-reference code {
-  color: #c4b5fd;
-}
-
-.module-json-editor {
+.module-code-editor {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
@@ -546,29 +538,76 @@
 
 .module-support-options {
   display: grid;
-  grid-template-columns: 90px 1fr;
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  align-items: start;
+  gap: 16px;
   padding-top: 9px;
 }
 
 .module-support-options input[type="number"] {
-  width: 68px;
+  width: 100%;
 }
 
 .module-support-allowed {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 7px;
+}
+
+.module-support-module-list {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
-  gap: 6px 10px;
+  gap: 7px 12px;
 }
 
-.module-support-allowed > label {
-  flex-direction: row;
+.module-support-module-list > label {
+  display: inline-flex;
+  min-width: 0;
+  flex-direction: row !important;
   align-items: center;
+  gap: 5px !important;
 }
 
-.module-support-allowed > span,
+.module-support-module-list > label > span {
+  overflow-wrap: anywhere;
+}
+
+.module-support-allowed-title,
+.lua-recipe-parameter-label {
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.lua-recipe-parameter {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 5px;
+}
+
+.lua-recipe-parameter > input,
+.lua-recipe-parameter > select {
+  width: 100%;
+  min-width: 0;
+  max-width: 240px;
+  box-sizing: border-box;
+}
+
+.lua-recipe-parameter > small,
 .module-support-allowed > small {
-  flex-basis: 100%;
+  min-width: 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.lua-recipe-toggle {
+  display: inline-flex !important;
+  min-width: 0;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px !important;
 }
 
 /* Recipe Pattern Studio */
@@ -1287,8 +1326,7 @@
 }
 
 @media (max-width: 760px) {
-  .module-basic-builder { grid-template-columns: 1fr; }
-  .module-basic-builder > strong { grid-column: auto; }
+  .lua-module-workbench { grid-template-columns: 1fr; }
   .recipe-studio { display: flex; flex-direction: column; overflow-y: auto; }
   .recipe-studio-library { flex: 0 0 auto; max-height: 270px; border-right: 0; border-bottom: 1px solid var(--panel-border); }
   .recipe-studio-workspace { overflow: visible; }

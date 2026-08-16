@@ -1227,7 +1227,7 @@ function AppContent() {
                 : await solveGuestGraph({
                     graph: buildGraphData(),
                     storeData: {
-                        schemaVersion: 3,
+                        schemaVersion: 6,
                         projectRevision,
                         categories,
                         items,

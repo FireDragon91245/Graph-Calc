@@ -1,4 +1,5 @@
 import type { Item, Recipe, RecipeInput, RecipeOutput, Tag } from "../store/graphStore";
+import { constrainLuaModuleSlots, inspectLuaModule, inspectLuaSystem, renderLuaSystem, resolveLuaRecipeParameters, runLuaEffects, type LuaPropertyValue } from "./luaModuleRuntime";
 
 export type ModuleEffectTarget =
   | "cycleTime"
@@ -9,8 +10,6 @@ export type ModuleEffectTarget =
   | "addOutput";
 
 export type ModuleEffectOperation = "add" | "multiply" | "divide" | "set" | "remove";
-
-export type ModuleEffectSource = "constant" | "moduleCount" | "stateNumber" | "stateBoolean";
 
 export type ModulePortDefinition = {
   key: string;
@@ -25,13 +24,7 @@ export type ModuleEffect = {
   id: string;
   target: ModuleEffectTarget;
   operation: ModuleEffectOperation;
-  source?: ModuleEffectSource;
-  stateKey?: string;
   value?: number;
-  coefficient?: number;
-  offset?: number;
-  exponent?: number;
-  divisor?: number;
   selectorPortId?: string;
   selectorRefId?: string;
   port?: ModulePortDefinition;
@@ -42,22 +35,30 @@ export type ModuleDefinition = {
   systemId: string;
   name: string;
   description?: string;
-  effects: ModuleEffect[];
+  lua: string;
   archived?: boolean;
 };
 
-export type ModuleUiControl = {
+export type ModuleSystemResource = {
   id: string;
-  type: "slots" | "slider" | "number" | "toggle" | "targetOutputRate";
+  name: string;
+  imageId: string;
+};
+
+export type ModuleValue = number | boolean | string;
+
+export type RecipeParameterDefinition = {
+  id: string;
+  type: "number" | "toggle" | "text" | "select";
   label: string;
-  stateKey: string;
-  drivesStateKey?: string;
-  targetPortId?: string;
+  description?: string;
+  defaultValue?: ModuleValue;
   min?: number;
   max?: number;
   step?: number;
-  defaultValue?: number | boolean;
-  suffix?: string;
+  integer?: boolean;
+  placeholder?: string;
+  options?: Array<{ value: string; label: string }>;
 };
 
 export type ModuleSystemDefinition = {
@@ -65,8 +66,8 @@ export type ModuleSystemDefinition = {
   name: string;
   description?: string;
   revision: number;
-  controls: ModuleUiControl[];
-  effects: ModuleEffect[];
+  resources?: ModuleSystemResource[];
+  lua: string;
   archived?: boolean;
 };
 
@@ -74,7 +75,7 @@ export type RecipeModuleSupport = {
   systemId: string;
   enabled: boolean;
   order?: number;
-  slotCount?: number;
+  parameters?: Record<string, ModuleValue>;
   disabledModuleIds?: string[];
 };
 
@@ -84,7 +85,7 @@ export const isModuleEnabledForSupport = (moduleId: string, support: RecipeModul
 
 export type ModuleSystemNodeState = {
   slots?: Array<string | null>;
-  values?: Record<string, number | boolean>;
+  values?: Record<string, ModuleValue>;
 };
 
 export type NodeModuleState = {
@@ -129,38 +130,6 @@ export type ModuleProjectData = {
 
 const finite = (value: number, fallback: number) => Number.isFinite(value) ? value : fallback;
 
-const evaluateEffectValue = (
-  effect: ModuleEffect,
-  state: ModuleSystemNodeState,
-  moduleCount: number
-): number => {
-  let sourceValue: number;
-  switch (effect.source ?? "constant") {
-    case "moduleCount":
-      sourceValue = moduleCount;
-      break;
-    case "stateNumber": {
-      const value = effect.stateKey ? state.values?.[effect.stateKey] : undefined;
-      sourceValue = typeof value === "number" ? value : 0;
-      break;
-    }
-    case "stateBoolean": {
-      const value = effect.stateKey ? state.values?.[effect.stateKey] : undefined;
-      sourceValue = value === true ? 1 : 0;
-      break;
-    }
-    default:
-      sourceValue = effect.value ?? 1;
-      break;
-  }
-
-  const base = finite(effect.offset ?? 0, 0) + finite(effect.coefficient ?? 1, 1) * finite(sourceValue, 0);
-  const exponent = finite(effect.exponent ?? 1, 1);
-  const divisor = finite(effect.divisor ?? 1, 1);
-  if (divisor === 0) return Number.NaN;
-  return Math.pow(base, exponent) / divisor;
-};
-
 const mutateNumber = (current: number, operation: ModuleEffectOperation, value: number): number | null => {
   switch (operation) {
     case "add": return current + value;
@@ -171,15 +140,11 @@ const mutateNumber = (current: number, operation: ModuleEffectOperation, value: 
   }
 };
 
-const createDefaultSystemState = (system: ModuleSystemDefinition, support: RecipeModuleSupport): ModuleSystemNodeState => {
-  const values: Record<string, number | boolean> = {};
-  for (const control of system.controls) {
-    if (control.type === "slots") continue;
-    values[control.stateKey] = control.defaultValue ?? (control.type === "toggle" ? false : control.min ?? 0);
-  }
+const createDefaultSystemState = (system: ModuleSystemDefinition): ModuleSystemNodeState => {
+  const inspection = inspectLuaSystem(system.lua);
   return {
-    slots: Array.from({ length: Math.max(0, support.slotCount ?? 0) }, () => null),
-    values
+    slots: [],
+    values: inspection.value.defaults
   };
 };
 
@@ -193,24 +158,11 @@ export const normalizeNodeModuleState = (
     if (!support.enabled) continue;
     const system = systems.find((entry) => entry.id === support.systemId && !entry.archived);
     if (!system) continue;
-    const defaults = createDefaultSystemState(system, support);
+    const defaults = createDefaultSystemState(system);
     const existing = value?.systems?.[system.id];
-    const slotCount = Math.max(0, support.slotCount ?? 0);
     const values = { ...defaults.values, ...(existing?.values ?? {}) };
-    for (const control of system.controls) {
-      if (control.type === "slots") continue;
-      if (control.type === "toggle") {
-        values[control.stateKey] = values[control.stateKey] === true;
-        continue;
-      }
-      const fallback = typeof control.defaultValue === "number" ? control.defaultValue : control.min ?? 0;
-      const candidate = typeof values[control.stateKey] === "number" && Number.isFinite(values[control.stateKey])
-        ? values[control.stateKey] as number
-        : fallback;
-      values[control.stateKey] = Math.min(control.max ?? Number.POSITIVE_INFINITY, Math.max(control.min ?? Number.NEGATIVE_INFINITY, candidate));
-    }
     next.systems[system.id] = {
-      slots: Array.from({ length: slotCount }, (_, index) => existing?.slots?.[index] ?? defaults.slots?.[index] ?? null),
+      slots: [...(existing?.slots ?? defaults.slots ?? [])],
       values
     };
   }
@@ -251,8 +203,8 @@ export function materializeEffectiveRecipe(
     origin: "recipe"
   }));
 
-  const applyEffect = (effect: ModuleEffect, systemState: ModuleSystemNodeState, count: number, namespace: string) => {
-    const value = evaluateEffectValue(effect, systemState, count);
+  const applyEffect = (effect: ModuleEffect, namespace: string) => {
+    const value = finite(effect.value ?? 1, 1);
     if (!Number.isFinite(value)) {
       diagnostics.push({ severity: "error", code: "invalid-effect-value", message: `Effect ${effect.id} produced an invalid number.` });
       return;
@@ -341,7 +293,44 @@ export function materializeEffectiveRecipe(
       diagnostics.push({ severity: "error", code: "missing-system", message: `Upgrade system ${support.systemId} does not exist.` });
       continue;
     }
-    const systemState = state.systems[system.id] ?? createDefaultSystemState(system, support);
+    const systemState = state.systems[system.id] ?? createDefaultSystemState(system);
+    const recipeParameters = resolveLuaRecipeParameters(system.lua, support.parameters);
+    const enabledModules = project.moduleDefinitions.filter((entry) =>
+      entry.systemId === system.id && !entry.archived && isModuleEnabledForSupport(entry.id, support)
+    );
+    const moduleProperties = new Map<string, Record<string, LuaPropertyValue>>();
+    for (const moduleDefinition of enabledModules) {
+      const inspection = inspectLuaModule(moduleDefinition.lua);
+      moduleProperties.set(moduleDefinition.id, inspection.value.properties);
+      if (inspection.error) diagnostics.push({ severity: "error", code: "module-lua-properties-error", message: `${moduleDefinition.name}: ${inspection.error}` });
+    }
+    const luaModules = enabledModules.map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      description: entry.description ?? "",
+      properties: moduleProperties.get(entry.id) ?? {}
+    }));
+    const buildLuaContext = (count = 1, properties: Record<string, LuaPropertyValue> = {}) => ({
+      state: systemState.values ?? {},
+      slots: systemState.slots ?? [],
+      parameters: recipeParameters,
+      count,
+      properties,
+      modules: luaModules,
+      resources: (system.resources ?? []).map((entry) => ({ id: entry.id, name: entry.name })),
+      recipe: {
+        id: recipe.id,
+        name: recipe.name,
+        time_seconds: timeSeconds,
+        inputs: inputs.map((entry) => ({ id: entry.id, ref_type: entry.refType, ref_id: entry.refId, amount: entry.amount })),
+        outputs: outputs.map((entry) => ({ id: entry.id, item_id: entry.itemId, amount: entry.amount, probability: entry.probability }))
+      }
+    });
+    const uiResult = renderLuaSystem(system.lua, buildLuaContext());
+    if (uiResult.error) diagnostics.push({ severity: "error", code: "system-lua-ui-error", message: `${system.name}: ${uiResult.error}` });
+    const slotResult = constrainLuaModuleSlots(system.lua, buildLuaContext(), systemState.slots ?? []);
+    if (slotResult.error) diagnostics.push({ severity: "error", code: "system-lua-slot-error", message: `${system.name}: ${slotResult.error}` });
+    systemState.slots = slotResult.value;
     const counts = new Map<string, number>();
     for (const moduleId of systemState.slots ?? []) {
       if (!moduleId) continue;
@@ -361,9 +350,13 @@ export function materializeEffectiveRecipe(
         diagnostics.push({ severity: "error", code: "wrong-system-module", message: `Module ${moduleId} does not belong to ${system.name}.` });
         continue;
       }
-      for (const effect of moduleDefinition.effects) applyEffect(effect, systemState, count, `module:${system.id}:${moduleId}`);
+      const result = runLuaEffects(moduleDefinition.lua, buildLuaContext(count, moduleProperties.get(moduleId) ?? {}));
+      if (result.error) diagnostics.push({ severity: "error", code: "module-lua-error", message: `${moduleDefinition.name}: ${result.error}` });
+      for (const effect of result.value) applyEffect(effect, `module:${system.id}:${moduleId}`);
     }
-    for (const effect of system.effects) applyEffect(effect, systemState, 1, `system:${system.id}`);
+    const systemResult = runLuaEffects(system.lua, buildLuaContext());
+    if (systemResult.error) diagnostics.push({ severity: "error", code: "system-lua-error", message: `${system.name}: ${systemResult.error}` });
+    for (const effect of systemResult.value) applyEffect(effect, `system:${system.id}`);
   }
 
   if (!Number.isFinite(timeSeconds) || timeSeconds <= 0) {
@@ -442,7 +435,7 @@ export function solveTargetOutputRate(options: {
     return { driverValue, nextState, rate, outputName: output?.name };
   };
 
-  const steps = 64;
+  const steps = 16;
   const samples = Array.from({ length: steps + 1 }, (_, index) => sample(min + (max - min) * index / steps));
   const finiteSamples = samples.filter((entry) => Number.isFinite(entry.rate));
   if (finiteSamples.length === 0) return { possible: false, state };
@@ -458,7 +451,7 @@ export function solveTargetOutputRate(options: {
     if (!Number.isFinite(left.rate) || !Number.isFinite(right.rate)) continue;
     if ((targetRate - left.rate) * (targetRate - right.rate) > 0) continue;
 
-    for (let iteration = 0; iteration < 48; iteration += 1) {
+    for (let iteration = 0; iteration < 32; iteration += 1) {
       const middle = sample((left.driverValue + right.driverValue) / 2);
       if (!Number.isFinite(middle.rate)) break;
       if (Math.abs(middle.rate - targetRate) < Math.abs(best.rate - targetRate)) best = middle;
