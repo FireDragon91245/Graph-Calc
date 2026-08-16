@@ -11,6 +11,7 @@ type OutputItem = {
 
 type OutputNodeData = {
   items: OutputItem[];
+  unresolvedItemIds?: string[];
   solveData?: NodeFlowData;
 };
 
@@ -94,6 +95,7 @@ export default function OutputNode({ id, data }: NodeProps<OutputNodeData>) {
         )}
       </div>
       <div className="node-body io-body">
+        {(data.unresolvedItemIds ?? []).map((itemId) => <div className="node-project-warning" key={itemId}>Item {itemId} was removed from the project. Choose a replacement.</div>)}
         {nodeItems.map((item) => {
           const flowRate = data.solveData?.inputFlows[item.itemId] ?? 0;
           return (

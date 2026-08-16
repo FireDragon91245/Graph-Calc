@@ -1,6 +1,7 @@
 import { apiFetch, getErrorMessage } from "./client";
 import i18n from "../i18n";
 import type { RecipeBlueprint } from "../domain/recipeBlueprint";
+import type { ModuleDefinition, ModuleSystemDefinition, RecipeModuleSupport } from "../domain/moduleSystem";
 
 export interface GraphData {
   nodes: any[];
@@ -50,15 +51,20 @@ export interface Recipe {
   timeSeconds: number;
   inputs: RecipeInput[];
   outputs: RecipeOutput[];
+  moduleSupport?: RecipeModuleSupport[];
 }
 
 export interface StoreData {
+  schemaVersion: number;
+  projectRevision: number;
   categories: Category[];
   items: Item[];
   tags: Tag[];
   recipeTags: RecipeTag[];
   recipes: Recipe[];
   recipeBlueprints: RecipeBlueprint[];
+  moduleDefinitions: ModuleDefinition[];
+  moduleSystems: ModuleSystemDefinition[];
 }
 
 // ── Project types ──────────────────────────────────────────────
@@ -164,12 +170,16 @@ const cloneData = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 export function createEmptyStoreData(): StoreData {
   return {
+    schemaVersion: 3,
+    projectRevision: 0,
     categories: [],
     items: [],
     tags: [],
     recipeTags: [],
     recipes: [],
-    recipeBlueprints: []
+    recipeBlueprints: [],
+    moduleDefinitions: [],
+    moduleSystems: []
   };
 }
 
@@ -217,12 +227,16 @@ function createDefaultLocalWorkspace(): LocalWorkspaceRecord {
 function normalizeStoreData(value: unknown): StoreData {
   const candidate = value as Partial<StoreData> | null | undefined;
   return {
+    schemaVersion: typeof candidate?.schemaVersion === "number" ? candidate.schemaVersion : 1,
+    projectRevision: typeof candidate?.projectRevision === "number" ? candidate.projectRevision : 0,
     categories: Array.isArray(candidate?.categories) ? cloneData(candidate.categories) : [],
     items: Array.isArray(candidate?.items) ? cloneData(candidate.items) : [],
     tags: Array.isArray(candidate?.tags) ? cloneData(candidate.tags) : [],
     recipeTags: Array.isArray(candidate?.recipeTags) ? cloneData(candidate.recipeTags) : [],
     recipes: Array.isArray(candidate?.recipes) ? cloneData(candidate.recipes) : [],
-    recipeBlueprints: Array.isArray(candidate?.recipeBlueprints) ? cloneData(candidate.recipeBlueprints) : []
+    recipeBlueprints: Array.isArray(candidate?.recipeBlueprints) ? cloneData(candidate.recipeBlueprints) : [],
+    moduleDefinitions: Array.isArray(candidate?.moduleDefinitions) ? cloneData(candidate.moduleDefinitions) : [],
+    moduleSystems: Array.isArray(candidate?.moduleSystems) ? cloneData(candidate.moduleSystems) : []
   };
 }
 
@@ -359,7 +373,9 @@ function isStoreDataEmpty(store: StoreData): boolean {
     && store.tags.length === 0
     && store.recipeTags.length === 0
     && store.recipes.length === 0
-    && store.recipeBlueprints.length === 0;
+    && store.recipeBlueprints.length === 0
+    && store.moduleDefinitions.length === 0
+    && store.moduleSystems.length === 0;
 }
 
 function isGraphDataEmpty(graph: GraphData): boolean {
@@ -375,12 +391,16 @@ function normalizeSnapshotGraphData(graph: GraphData): GraphData {
 
 function normalizeSnapshotStoreData(store: StoreData): StoreData {
   return {
+    schemaVersion: store.schemaVersion,
+    projectRevision: store.projectRevision,
     categories: cloneData(store.categories).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
     items: cloneData(store.items).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
     tags: cloneData(store.tags).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
     recipeTags: cloneData(store.recipeTags).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
     recipes: cloneData(store.recipes).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
-    recipeBlueprints: cloneData(store.recipeBlueprints).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name))
+    recipeBlueprints: cloneData(store.recipeBlueprints).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
+    moduleDefinitions: cloneData(store.moduleDefinitions).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
+    moduleSystems: cloneData(store.moduleSystems).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name))
   };
 }
 
@@ -707,7 +727,7 @@ async function apiLoadStore(projectId: string): Promise<StoreData> {
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.loadStore")));
   }
-  return response.json();
+  return normalizeStoreData(await response.json());
 }
 
 async function apiSaveStore(store: StoreData, projectId: string): Promise<void> {
@@ -892,7 +912,7 @@ async function localSaveGraph(graph: GraphData, projectId: string, graphId: stri
 async function localLoadStore(projectId: string): Promise<StoreData> {
   const workspace = readLocalWorkspace();
   const project = getLocalProjectOrThrow(workspace, projectId);
-  return cloneData(project.store);
+  return normalizeStoreData(project.store);
 }
 
 async function localSaveStore(store: StoreData, projectId: string): Promise<void> {

@@ -40,12 +40,16 @@ type WorkspaceMergeDialogProps = {
 };
 
 const normalizeStore = (store: StoreData): StoreData => ({
+  schemaVersion: store.schemaVersion,
+  projectRevision: store.projectRevision,
   categories: [...store.categories].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
   items: [...store.items].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
   tags: [...store.tags].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
   recipeTags: [...store.recipeTags].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
   recipes: [...store.recipes].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
-  recipeBlueprints: [...store.recipeBlueprints].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name))
+  recipeBlueprints: [...store.recipeBlueprints].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
+  moduleDefinitions: [...store.moduleDefinitions].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
+  moduleSystems: [...store.moduleSystems].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name))
 });
 
 const normalizeGraph = (graph: GraphData): GraphData => ({

@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { saveStore, StoreData } from "../api/persistence";
 import type { RecipeBlueprint } from "../domain/recipeBlueprint";
+import type {
+  ModuleDefinition,
+  ModuleSystemDefinition,
+  RecipeModuleSupport
+} from "../domain/moduleSystem";
 import i18n from "../i18n";
 
 type Category = {
@@ -46,6 +51,7 @@ type Recipe = {
   timeSeconds: number;
   inputs: RecipeInput[];
   outputs: RecipeOutput[];
+  moduleSupport?: RecipeModuleSupport[];
 };
 
 type GraphStore = {
@@ -59,6 +65,9 @@ type GraphStore = {
   recipeTags: RecipeTag[];
   recipes: Recipe[];
   recipeBlueprints: RecipeBlueprint[];
+  moduleDefinitions: ModuleDefinition[];
+  moduleSystems: ModuleSystemDefinition[];
+  projectRevision: number;
   addCategory: (name: string) => void;
   deleteCategory: (categoryId: string) => void;
   renameCategory: (categoryId: string, newName: string) => void;
@@ -77,6 +86,10 @@ type GraphStore = {
   renameRecipe: (recipeId: string, newName: string) => void;
   upsertRecipeBlueprint: (blueprint: RecipeBlueprint) => void;
   deleteRecipeBlueprint: (blueprintId: string) => void;
+  upsertModuleDefinition: (definition: ModuleDefinition) => void;
+  deleteModuleDefinition: (definitionId: string) => void;
+  upsertModuleSystem: (system: ModuleSystemDefinition) => void;
+  deleteModuleSystem: (systemId: string) => void;
   loadStoreData: (data: StoreData) => void;
 };
 
@@ -103,14 +116,34 @@ let saveTimeout: number | null = null;
 let storeSaveInFlight: Promise<void> | null = null;
 let pendingStoreSave: { data: StoreData; projectId: string } | null = null;
 
-const buildStoreData = (state: Pick<GraphStore, "categories" | "items" | "tags" | "recipeTags" | "recipes" | "recipeBlueprints">): StoreData => ({
+const buildStoreData = (state: Pick<GraphStore, "categories" | "items" | "tags" | "recipeTags" | "recipes" | "recipeBlueprints" | "moduleDefinitions" | "moduleSystems" | "projectRevision">): StoreData => ({
+  schemaVersion: 3,
+  projectRevision: state.projectRevision,
   categories: state.categories,
   items: state.items,
   tags: state.tags,
   recipeTags: state.recipeTags,
   recipes: state.recipes,
-  recipeBlueprints: state.recipeBlueprints
+  recipeBlueprints: state.recipeBlueprints,
+  moduleDefinitions: state.moduleDefinitions,
+  moduleSystems: state.moduleSystems
 });
+
+const withRevision = <T extends object>(state: GraphStore, update: T): T & { projectRevision: number } => ({
+  ...update,
+  projectRevision: state.projectRevision + 1
+});
+
+const confirmGraphImpact = (message: string): boolean =>
+  typeof window === "undefined" || window.confirm(message);
+
+const finalizeProjectUpdate = <T extends object>(state: GraphStore, update: T): T & { projectRevision: number } => {
+  const next = "projectRevision" in update
+    ? update as T & { projectRevision: number }
+    : withRevision(state, update);
+  debouncedSave({ ...state, ...next });
+  return next;
+};
 
 const flushStoreSave = async (): Promise<void> => {
   if (storeSaveInFlight) {
@@ -181,6 +214,9 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
   recipeTags: [],
   recipes: [],
   recipeBlueprints: [],
+  moduleDefinitions: [],
+  moduleSystems: [],
+  projectRevision: 0,
   addCategory: (name) =>
     set((state) => {
       const newState = {
@@ -189,11 +225,12 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
           { id: slugify(name || `category_${state.categories.length + 1}`), name }
         ]
       };
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   deleteCategory: (categoryId) =>
     set((state) => {
+      const category = state.categories.find((entry) => entry.id === categoryId);
+      if (category && !confirmGraphImpact(`Deleting category "${category.name}" can change item and module eligibility across project graphs. Continue?`)) return state;
       const newState = {
         categories: state.categories.filter((c) => c.id !== categoryId),
         items: state.items.map((item) =>
@@ -202,18 +239,18 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
             : item
         )
       };
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   renameCategory: (categoryId, newName) =>
     set((state) => {
+      const category = state.categories.find((entry) => entry.id === categoryId);
+      if (category && category.name !== newName && !confirmGraphImpact(`Renaming category "${category.name}" can update nodes and module rules across project graphs. Continue?`)) return state;
       const newState = {
         categories: state.categories.map((c) =>
           c.id === categoryId ? { ...c, name: newName } : c
         )
       };
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   addItem: (item) =>
     set((state) => {
@@ -230,6 +267,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       
       // Check if updating existing item or adding new one
       const existingIndex = state.items.findIndex((i) => i.id === itemId);
+      if (existingIndex >= 0 && !confirmGraphImpact(`Updating item "${state.items[existingIndex].name}" will propagate to every affected graph node. Continue?`)) return state;
       let newState;
       if (existingIndex >= 0) {
         // Update existing item
@@ -253,11 +291,12 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
           ]
         };
       }
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   deleteItem: (itemId) =>
     set((state) => {
+      const item = state.items.find((entry) => entry.id === itemId);
+      if (item && !confirmGraphImpact(`Deleting item "${item.name}" can invalidate recipes, modules, and graph edges. Continue?`)) return state;
       const newState = {
         items: state.items.filter((i) => i.id !== itemId),
         // Remove item from all tags
@@ -266,11 +305,12 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
           memberItemIds: tag.memberItemIds.filter((id) => id !== itemId)
         }))
       };
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   renameItem: (itemId, newName) =>
     set((state) => {
+      const currentItem = state.items.find((entry) => entry.id === itemId);
+      if (currentItem && currentItem.name !== newName && !confirmGraphImpact(`Renaming item "${currentItem.name}" will update every affected graph node. Continue?`)) return state;
       // Check if new name conflicts with another item
       const existingByName = state.items.find(
         (i) => i.name === newName && i.id !== itemId
@@ -285,8 +325,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
           item.id === itemId ? { ...item, name: newName } : item
         )
       };
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   addTag: (tag) =>
     set((state) => {
@@ -294,6 +333,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       
       // Check if updating existing tag or adding new one
       const existingIndex = state.tags.findIndex((t) => t.id === tagId);
+      if (existingIndex >= 0 && !confirmGraphImpact(`Updating tag "${state.tags[existingIndex].name}" can change recipe inputs and project graphs. Continue?`)) return state;
       let newState;
       if (existingIndex >= 0) {
         // Update existing tag
@@ -317,11 +357,12 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
           ]
         };
       }
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   deleteTag: (tagId) =>
     set((state) => {
+      const currentTag = state.tags.find((entry) => entry.id === tagId);
+      if (currentTag && !confirmGraphImpact(`Deleting tag "${currentTag.name}" removes affected recipe inputs and updates project graphs. Continue?`)) return state;
       const newState = {
         tags: state.tags.filter((t) => t.id !== tagId),
         // Update recipes that reference this tag in inputs
@@ -332,12 +373,13 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
           )
         }))
       };
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   renameTag: (tagId, newName) =>
     set((state) => {
       const formattedName = newName.startsWith("@") ? newName : `@${newName}`;
+      const currentTag = state.tags.find((entry) => entry.id === tagId);
+      if (currentTag && currentTag.name !== formattedName && !confirmGraphImpact(`Renaming tag "${currentTag.name}" updates every affected graph node. Continue?`)) return state;
       // Check if new name conflicts
       const existingByName = state.tags.find(
         (t) => t.name === formattedName && t.id !== tagId
@@ -352,8 +394,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
           tag.id === tagId ? { ...tag, name: formattedName } : tag
         )
       };
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   addRecipeTag: (recipeTag) =>
     set((state) => {
@@ -361,6 +402,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       
       // Check if updating existing recipe tag or adding new one
       const existingIndex = state.recipeTags.findIndex((rt) => rt.id === recipeTagId);
+      if (existingIndex >= 0 && !confirmGraphImpact(`Updating recipe tag "${state.recipeTags[existingIndex].name}" changes every graph node that uses it. Continue?`)) return state;
       let newState;
       if (existingIndex >= 0) {
         // Update existing recipe tag
@@ -384,20 +426,22 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
           ]
         };
       }
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   deleteRecipeTag: (recipeTagId) =>
     set((state) => {
+      const currentTag = state.recipeTags.find((entry) => entry.id === recipeTagId);
+      if (currentTag && !confirmGraphImpact(`Deleting recipe tag "${currentTag.name}" leaves affected graph nodes unresolved. Continue?`)) return state;
       const newState = {
         recipeTags: state.recipeTags.filter((rt) => rt.id !== recipeTagId)
       };
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   renameRecipeTag: (recipeTagId, newName) =>
     set((state) => {
       const formattedName = newName.startsWith("@") ? newName : `@${newName}`;
+      const currentTag = state.recipeTags.find((entry) => entry.id === recipeTagId);
+      if (currentTag && currentTag.name !== formattedName && !confirmGraphImpact(`Renaming recipe tag "${currentTag.name}" updates every affected graph node. Continue?`)) return state;
       // Check if new name conflicts
       const existingByName = state.recipeTags.find(
         (rt) => rt.name === formattedName && rt.id !== recipeTagId
@@ -412,8 +456,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
           rt.id === recipeTagId ? { ...rt, name: formattedName } : rt
         )
       };
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   addRecipe: (recipe) =>
     set((state) => {
@@ -421,6 +464,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       
       // Check if updating existing recipe or adding new one
       const existingIndex = state.recipes.findIndex((r) => r.id === recipeId);
+      if (existingIndex >= 0 && !confirmGraphImpact(`Updating recipe "${state.recipes[existingIndex].name}" changes its nodes in every project graph. Continue?`)) return state;
       let newState;
       if (existingIndex >= 0) {
         // Update existing recipe
@@ -430,7 +474,8 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
           name: recipe.name,
           timeSeconds: recipe.timeSeconds,
           inputs: recipe.inputs,
-          outputs: recipe.outputs
+          outputs: recipe.outputs,
+          moduleSupport: recipe.moduleSupport ?? []
         };
         newState = { recipes: newRecipes };
       } else {
@@ -443,13 +488,13 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
               name: recipe.name,
               timeSeconds: recipe.timeSeconds,
               inputs: recipe.inputs,
-              outputs: recipe.outputs
+              outputs: recipe.outputs,
+              moduleSupport: recipe.moduleSupport ?? []
             }
           ]
         };
       }
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   addRecipesBatch: (incomingRecipes, recipeTagIds) => {
     let result = { added: 0, skipped: 0 };
@@ -471,6 +516,10 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       }
       result.added = accepted.length;
       if (accepted.length === 0) return state;
+      if (recipeTagIds.length > 0 && !confirmGraphImpact(`Adding ${accepted.length} recipes to recipe tags changes matching nodes across project graphs. Continue?`)) {
+        result = { added: 0, skipped: result.skipped };
+        return state;
+      }
       const acceptedIds = accepted.map((recipe) => recipe.id);
       const newState = {
         recipes: [...state.recipes, ...accepted],
@@ -480,13 +529,14 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
             : tag
         ),
       };
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     });
     return result;
   },
   deleteRecipe: (recipeId) =>
     set((state) => {
+      const currentRecipe = state.recipes.find((entry) => entry.id === recipeId);
+      if (currentRecipe && !confirmGraphImpact(`Deleting recipe "${currentRecipe.name}" leaves its graph nodes unresolved and changes recipe tags. Continue?`)) return state;
       const newState = {
         recipes: state.recipes.filter((r) => r.id !== recipeId),
         // Remove recipe from all recipe tags
@@ -495,11 +545,12 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
           memberRecipeIds: rt.memberRecipeIds.filter((id) => id !== recipeId)
         }))
       };
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   renameRecipe: (recipeId, newName) =>
     set((state) => {
+      const currentRecipe = state.recipes.find((entry) => entry.id === recipeId);
+      if (currentRecipe && currentRecipe.name !== newName && !confirmGraphImpact(`Renaming recipe "${currentRecipe.name}" updates every affected graph node. Continue?`)) return state;
       // Check if new name conflicts
       const existingByName = state.recipes.find(
         (r) => r.name === newName && r.id !== recipeId
@@ -514,8 +565,7 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
           recipe.id === recipeId ? { ...recipe, name: newName } : recipe
         )
       };
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   upsertRecipeBlueprint: (blueprint) =>
     set((state) => {
@@ -525,14 +575,62 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
           ? state.recipeBlueprints.map((entry) => (entry.id === blueprint.id ? blueprint : entry))
           : [...state.recipeBlueprints, blueprint]
       };
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
     }),
   deleteRecipeBlueprint: (blueprintId) =>
     set((state) => {
       const newState = { recipeBlueprints: state.recipeBlueprints.filter((entry) => entry.id !== blueprintId) };
-      debouncedSave({ ...state, ...newState });
-      return newState;
+      return finalizeProjectUpdate(state, newState);
+    }),
+  upsertModuleDefinition: (definition) =>
+    set((state) => {
+      if (!state.moduleSystems.some((system) => system.id === definition.systemId && !system.archived)) {
+        alert(`Module "${definition.name}" must belong to an active upgrade system.`);
+        return state;
+      }
+      const existing = state.moduleDefinitions.some((entry) => entry.id === definition.id);
+      if (existing && !confirmGraphImpact(`Updating module "${definition.name}" can change recipe nodes in every graph. Apply this project-wide update?`)) {
+        return state;
+      }
+      const newState = withRevision(state, {
+        moduleDefinitions: existing
+          ? state.moduleDefinitions.map((entry) => entry.id === definition.id ? definition : entry)
+          : [...state.moduleDefinitions, definition]
+      });
+      return finalizeProjectUpdate(state, newState);
+    }),
+  deleteModuleDefinition: (definitionId) =>
+    set((state) => {
+      const definition = state.moduleDefinitions.find((entry) => entry.id === definitionId);
+      if (!definition || !confirmGraphImpact(`Removing module "${definition.name}" can invalidate module slots in project graphs. Continue?`)) return state;
+      const newState = withRevision(state, {
+        moduleDefinitions: state.moduleDefinitions.map((entry) => entry.id === definitionId ? { ...entry, archived: true } : entry)
+      });
+      return finalizeProjectUpdate(state, newState);
+    }),
+  upsertModuleSystem: (system) =>
+    set((state) => {
+      const existing = state.moduleSystems.some((entry) => entry.id === system.id);
+      if (existing && !confirmGraphImpact(`Updating upgrade system "${system.name}" can alter node controls, ports, and solver rates in every graph. Apply this project-wide update?`)) {
+        return state;
+      }
+      const nextSystem = existing ? { ...system, revision: system.revision + 1 } : system;
+      const newState = withRevision(state, {
+        moduleSystems: existing
+          ? state.moduleSystems.map((entry) => entry.id === system.id ? nextSystem : entry)
+          : [...state.moduleSystems, nextSystem]
+      });
+      return finalizeProjectUpdate(state, newState);
+    }),
+  deleteModuleSystem: (systemId) =>
+    set((state) => {
+      const system = state.moduleSystems.find((entry) => entry.id === systemId);
+      if (!system || !confirmGraphImpact(`Removing upgrade system "${system.name}" affects every recipe and graph node that uses it. Continue?`)) return state;
+      const newState = withRevision(state, {
+        moduleSystems: state.moduleSystems.map((entry) => entry.id === systemId ? { ...entry, archived: true } : entry),
+        moduleDefinitions: state.moduleDefinitions.map((entry) => entry.systemId === systemId ? { ...entry, archived: true } : entry)
+      });
+      return finalizeProjectUpdate(state, newState);
     }),
   loadStoreData: (data) =>
     set(() => ({
@@ -541,8 +639,23 @@ export const useGraphStore = create<GraphStore>((set, get) => ({
       tags: data.tags,
       recipeTags: data.recipeTags,
       recipes: data.recipes,
-      recipeBlueprints: data.recipeBlueprints ?? []
+      recipeBlueprints: data.recipeBlueprints ?? [],
+      moduleDefinitions: data.moduleDefinitions ?? [],
+      moduleSystems: data.moduleSystems ?? [],
+      projectRevision: data.projectRevision ?? 0
     }))
 }));
 
-export type { Category, Item, Tag, RecipeTag, Recipe, RecipeInput, RecipeOutput, RecipeBlueprint };
+export type {
+  Category,
+  Item,
+  Tag,
+  RecipeTag,
+  Recipe,
+  RecipeInput,
+  RecipeOutput,
+  RecipeBlueprint,
+  ModuleDefinition,
+  ModuleSystemDefinition,
+  RecipeModuleSupport
+};

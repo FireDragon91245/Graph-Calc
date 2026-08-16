@@ -14,6 +14,7 @@ import ReactFlow, {
     NodeMouseHandler,
     ReactFlowProvider,
     useReactFlow,
+    useUpdateNodeInternals,
     XYPosition
 } from "reactflow";
 import { solveGraph, SolveResponse, solveGuestGraph } from "./api/solve";
@@ -60,6 +61,7 @@ import RecipeMode from "./components/RecipeMode";
 import RecipeTagMode from "./components/RecipeTagMode";
 import RecipeGenerator from "./components/RecipeGenerator";
 import ItemGenerator from "./components/ItemGenerator";
+import ModulesMode from "./components/modules/ModulesMode";
 import ProjectSelector from "./components/ProjectSelector";
 import GraphSelector from "./components/GraphSelector";
 import AuthDialog, { AuthDialogMode } from "./components/AuthDialog";
@@ -82,6 +84,7 @@ import {
     rememberClipboardText,
     toPrettyJson
 } from "./utils/clipboard";
+import { propagateProjectDataToNodes } from "./domain/projectPropagation";
 
 const nodeTypes = {
     recipe: RecipeNode,
@@ -198,8 +201,12 @@ function AppContent() {
     const items = useGraphStore((state) => state.items);
     const tags = useGraphStore((state) => state.tags);
     const recipeTags = useGraphStore((state) => state.recipeTags);
+    const moduleDefinitions = useGraphStore((state) => state.moduleDefinitions);
+    const moduleSystems = useGraphStore((state) => state.moduleSystems);
+    const projectRevision = useGraphStore((state) => state.projectRevision);
     const loadStoreData = useGraphStore((state) => state.loadStoreData);
     const reactFlowInstance = useReactFlow();
+    const updateNodeInternals = useUpdateNodeInternals();
     const selectionLoadRequestIdRef = useRef(0);
     const saveTimeoutRef = useRef<number | null>(null);
     const graphSaveInFlightRef = useRef<Promise<void> | null>(null);
@@ -629,6 +636,28 @@ function AppContent() {
             })
         );
     }, [solveResult, setNodes, setEdges]);
+
+    // Project definitions are live references. Re-materialize every production node whenever
+    // recipes, items, tags, modules, or upgrade systems change instead of leaving stale copies
+    // embedded in graph data.
+    useEffect(() => {
+        if (!isLoaded) return;
+        const result = propagateProjectDataToNodes(nodes, {
+            items,
+            tags,
+            recipes,
+            recipeTags,
+            moduleDefinitions,
+            moduleSystems,
+            projectRevision
+        }, edges);
+        if (result.changedNodeIds.length > 0) {
+            setNodes(result.nodes);
+            setSolveResult(null);
+            setSolveError(null);
+            window.setTimeout(() => result.changedNodeIds.forEach((nodeId) => updateNodeInternals(nodeId)), 0);
+        }
+    }, [isLoaded, nodes, edges, items, tags, recipes, recipeTags, moduleDefinitions, moduleSystems, projectRevision, setNodes, updateNodeInternals]);
 
     const onConnect = useCallback(
         (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -1198,12 +1227,16 @@ function AppContent() {
                 : await solveGuestGraph({
                     graph: buildGraphData(),
                     storeData: {
+                        schemaVersion: 3,
+                        projectRevision,
                         categories,
                         items,
                         tags,
                         recipeTags,
                         recipes,
                         recipeBlueprints: [],
+                        moduleDefinitions,
+                        moduleSystems,
                     }
                 });
             console.log("Solve result:", result);
@@ -1213,7 +1246,7 @@ function AppContent() {
         } finally {
             setIsSolving(false);
         }
-    }, [activeGraphId, activeProjectId, authUser, buildGraphData, categories, items, recipeTags, recipes, setNodes, setEdges, tags]);
+    }, [activeGraphId, activeProjectId, authUser, buildGraphData, categories, items, recipeTags, recipes, setNodes, setEdges, tags, projectRevision, moduleDefinitions, moduleSystems]);
 
     const selectedNodeCount = useMemo(
         () => nodes.filter((node) => node.selected).length,
@@ -2229,6 +2262,7 @@ function AppContent() {
                     {configSubMode === "tags" && <TagMode />}
                     {configSubMode === "recipes" && <RecipeMode />}
                     {configSubMode === "recipeTags" && <RecipeTagMode />}
+                    {configSubMode === "modules" && <ModulesMode />}
                     {configSubMode === "recipeGenerator" && <RecipeGenerator />}
                     {configSubMode === "itemGenerator" && <ItemGenerator />}
                 </div>

@@ -5,6 +5,9 @@ import SearchableDropdown from "../editor/SearchableDropdown";
 import type { NodeFlowData } from "../api/solve";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
+import { isModuleEnabledForSupport, normalizeNodeModuleState, type NodeModuleState, type RecipeModuleSupport } from "../domain/moduleSystem";
+import NodeModulePanel from "../components/modules/NodeModulePanel";
+import { formatCycleTime, formatNodeNumber } from "../utils/numberFormat";
 
 type PortPattern = {
   id: string;
@@ -23,6 +26,11 @@ type RecipeTagNodeData = {
   title: string;
   inputs: PortPattern[];
   outputs: PortPattern[];
+  ghostInputs?: PortPattern[];
+  ghostOutputs?: PortPattern[];
+  moduleState?: NodeModuleState;
+  unresolved?: boolean;
+  projectDiagnostics?: string[];
   solveData?: NodeFlowData;
 };
 
@@ -152,6 +160,8 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
   const recipes = useGraphStore((state) => state.recipes);
   const items = useGraphStore((state) => state.items);
   const tags = useGraphStore((state) => state.tags);
+  const moduleDefinitions = useGraphStore((state) => state.moduleDefinitions);
+  const moduleSystems = useGraphStore((state) => state.moduleSystems);
   const [showDetails, setShowDetails] = useState(false);
   const hasSolveData = Boolean(data.solveData);
   const itemNameById = useMemo(() => new Map(items.map((item) => [item.id, item.name])), [items]);
@@ -160,6 +170,31 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
   const resolveInputId = (port: PortPattern) => port.refId ?? port.fixedRefId ?? port.name;
   const resolveOutputId = (port: PortPattern) => port.itemId ?? port.fixedRefId ?? port.name;
   const recipeTagTitle = recipeTags.find((tag) => tag.id === data.recipeTagId)?.name ?? data.title;
+  const memberRecipes = (recipeTags.find((tag) => tag.id === data.recipeTagId)?.memberRecipeIds ?? [])
+    .map((recipeId) => recipes.find((recipe) => recipe.id === recipeId))
+    .filter((recipe): recipe is NonNullable<typeof recipe> => Boolean(recipe));
+  const commonSupports = useMemo<RecipeModuleSupport[]>(() => {
+    const first = memberRecipes[0]?.moduleSupport ?? [];
+    return first.filter((support) => support.enabled && memberRecipes.every((recipe) =>
+      recipe.moduleSupport?.some((candidate) => candidate.systemId === support.systemId && candidate.enabled)
+    )).map((support) => {
+      const systemModuleIds = moduleDefinitions.filter((definition) => definition.systemId === support.systemId && !definition.archived).map((definition) => definition.id);
+      const compatibleModuleIds = systemModuleIds.filter((moduleId) => memberRecipes.every((recipe) => {
+        const memberSupport = recipe.moduleSupport?.find((candidate) => candidate.systemId === support.systemId);
+        return Boolean(memberSupport && isModuleEnabledForSupport(moduleId, memberSupport));
+      }));
+      return {
+        ...support,
+        slotCount: compatibleModuleIds.length > 0
+          ? Math.min(...memberRecipes.map((recipe) => recipe.moduleSupport?.find((candidate) => candidate.systemId === support.systemId)?.slotCount ?? 0))
+          : 0,
+        disabledModuleIds: systemModuleIds.filter((moduleId) => !compatibleModuleIds.includes(moduleId))
+      };
+    });
+  }, [memberRecipes, moduleDefinitions]);
+  const commonState = useMemo(() => memberRecipes[0]
+    ? normalizeNodeModuleState({ ...memberRecipes[0], moduleSupport: commonSupports }, moduleSystems, data.moduleState)
+    : { systems: {} }, [memberRecipes, commonSupports, moduleSystems, data.moduleState]);
   const getInputLabel = (port: PortPattern) => {
     const referencedId = port.refId ?? port.fixedRefId;
     if (!referencedId || port.isMixed) {
@@ -205,6 +240,13 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
     );
   };
 
+  const handleModuleStateChange = (moduleState: NodeModuleState) => {
+    setNodes((nodes) => nodes.map((node) => node.id === id ? {
+      ...node,
+      data: { ...node.data, moduleState, effectiveFingerprint: undefined, solveData: undefined }
+    } : node));
+  };
+
   return (
     <div className="node recipe-tag">
       <div className="node-header">
@@ -240,6 +282,8 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
         </button>
       </div>
       <div className="node-body">
+        {data.unresolved ? <div className="node-project-warning">Recipe tag removed from project. Choose a replacement.</div> : null}
+        {(data.projectDiagnostics ?? []).map((message) => <div className="node-project-warning" key={message}>{message}</div>)}
         <div className="ports">
           <div className="port-col">
             {data.inputs.map((input) => (
@@ -254,12 +298,18 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
                 <span className={`port-name ${input.isMixed ? "mixed-label" : ""}`}>
                   {getInputLabel(input)}
                 </span>
-                <span className="port-amount">{input.amountPerCycle}</span>
+                <span className="port-amount">{formatNodeNumber(input.amountPerCycle)}</span>
                 {hasSolveData && !input.isMixed ? (
                   <span className="port-rate" title={t("ui.nodes.actualInput")}>
                     {(data.solveData?.inputFlows[resolveInputId(input)] ?? 0).toFixed(2)}/s
                   </span>
                 ) : null}
+              </div>
+            ))}
+            {(data.ghostInputs ?? []).map((input) => (
+              <div key={`ghost-${input.id}`} className="port-row ghost-port">
+                <Handle type="target" position={Position.Left} id={`input-${input.id}`} className="handle ghost" />
+                <span className="port-name">Removed: {getInputLabel(input)}</span>
               </div>
             ))}
           </div>
@@ -271,7 +321,7 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
                     {(data.solveData?.outputFlows[resolveOutputId(output)] ?? 0).toFixed(2)}/s
                   </span>
                 ) : null}
-                <span className="port-amount">{output.amountPerCycle}</span>
+                <span className="port-amount">{formatNodeNumber(output.amountPerCycle)}</span>
                 <span className={`port-name ${output.isMixed ? "mixed-label" : ""}`}>
                   {getOutputLabel(output)}
                 </span>
@@ -284,6 +334,12 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
                   id={`output-${output.id}`}
                   className={`handle ${output.isMixed ? "mixed" : ""}`}
                 />
+              </div>
+            ))}
+            {(data.ghostOutputs ?? []).map((output) => (
+              <div key={`ghost-${output.id}`} className="port-row right ghost-port">
+                <span className="port-name">Removed: {getOutputLabel(output)}</span>
+                <Handle type="source" position={Position.Right} id={`output-${output.id}`} className="handle ghost" />
               </div>
             ))}
           </div>
@@ -302,7 +358,7 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
                 <div key={recipeId} className="node-detail-item">
                   <div className="node-detail-row">
                     <span className="flow-name">{recipe.name}</span>
-                    <span>{runCount.toFixed(2)} machines • {recipe.timeSeconds}s</span>
+                    <span>{runCount.toFixed(2)} machines • {formatCycleTime(recipe.timeSeconds)}</span>
                   </div>
                   {recipe.inputs.map((input) => {
                     const inputItemId = input.refId;
@@ -333,6 +389,15 @@ export default function RecipeTagNode({ id, data }: NodeProps<RecipeTagNodeData>
               );
             })}
           </div>
+        ) : null}
+        {commonSupports.length > 0 ? (
+          <NodeModulePanel
+            supports={commonSupports}
+            systems={moduleSystems}
+            modules={moduleDefinitions}
+            value={commonState}
+            onChange={handleModuleStateChange}
+          />
         ) : null}
       </div>
     </div>

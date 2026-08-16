@@ -1494,12 +1494,16 @@ public sealed class BackendStore
     {
         return ToBsonDocument(new StoreData
         {
+            SchemaVersion = store.SchemaVersion,
+            ProjectRevision = store.ProjectRevision,
             Categories = store.Categories ?? [],
             Items = store.Items ?? [],
             Tags = store.Tags ?? [],
             RecipeTags = store.RecipeTags ?? [],
             Recipes = store.Recipes ?? [],
-            RecipeBlueprints = store.RecipeBlueprints ?? []
+            RecipeBlueprints = store.RecipeBlueprints ?? [],
+            ModuleDefinitions = store.ModuleDefinitions ?? [],
+            ModuleSystems = store.ModuleSystems ?? []
         });
     }
 

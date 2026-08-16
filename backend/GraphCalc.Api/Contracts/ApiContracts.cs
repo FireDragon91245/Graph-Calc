@@ -245,6 +245,171 @@ public sealed class RecipeDto
 
     [JsonPropertyName("outputs")]
     public List<RecipeOutputDto> Outputs { get; init; } = [];
+
+    [JsonPropertyName("moduleSupport")]
+    public List<RecipeModuleSupportDto> ModuleSupport { get; init; } = [];
+}
+
+public sealed class RecipeModuleSupportDto
+{
+    [JsonPropertyName("systemId")]
+    public required string SystemId { get; init; }
+
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; init; } = true;
+
+    [JsonPropertyName("order")]
+    public int Order { get; init; }
+
+    [JsonPropertyName("slotCount")]
+    public int SlotCount { get; init; }
+
+    [JsonPropertyName("disabledModuleIds")]
+    public List<string> DisabledModuleIds { get; init; } = [];
+}
+
+public sealed class ModulePortDefinitionDto
+{
+    [JsonPropertyName("key")]
+    public required string Key { get; init; }
+
+    [JsonPropertyName("refType")]
+    public string? RefType { get; init; }
+
+    [JsonPropertyName("refId")]
+    public required string RefId { get; init; }
+
+    [JsonPropertyName("amount")]
+    public double Amount { get; init; }
+
+    [JsonPropertyName("probability")]
+    public double? Probability { get; init; }
+
+    [JsonPropertyName("merge")]
+    public string? Merge { get; init; }
+}
+
+public sealed class ModuleEffectDto
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("target")]
+    public required string Target { get; init; }
+
+    [JsonPropertyName("operation")]
+    public required string Operation { get; init; }
+
+    [JsonPropertyName("source")]
+    public string? Source { get; init; }
+
+    [JsonPropertyName("stateKey")]
+    public string? StateKey { get; init; }
+
+    [JsonPropertyName("value")]
+    public double? Value { get; init; }
+
+    [JsonPropertyName("coefficient")]
+    public double? Coefficient { get; init; }
+
+    [JsonPropertyName("offset")]
+    public double? Offset { get; init; }
+
+    [JsonPropertyName("exponent")]
+    public double? Exponent { get; init; }
+
+    [JsonPropertyName("divisor")]
+    public double? Divisor { get; init; }
+
+    [JsonPropertyName("selectorPortId")]
+    public string? SelectorPortId { get; init; }
+
+    [JsonPropertyName("selectorRefId")]
+    public string? SelectorRefId { get; init; }
+
+    [JsonPropertyName("port")]
+    public ModulePortDefinitionDto? Port { get; init; }
+}
+
+public sealed class ModuleDefinitionDto
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
+
+    [JsonPropertyName("systemId")]
+    public required string SystemId { get; init; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; init; }
+
+    [JsonPropertyName("effects")]
+    public List<ModuleEffectDto> Effects { get; init; } = [];
+
+    [JsonPropertyName("archived")]
+    public bool Archived { get; init; }
+}
+
+public sealed class ModuleUiControlDto
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("type")]
+    public required string Type { get; init; }
+
+    [JsonPropertyName("label")]
+    public required string Label { get; init; }
+
+    [JsonPropertyName("stateKey")]
+    public required string StateKey { get; init; }
+
+    [JsonPropertyName("drivesStateKey")]
+    public string? DrivesStateKey { get; init; }
+
+    [JsonPropertyName("targetPortId")]
+    public string? TargetPortId { get; init; }
+
+    [JsonPropertyName("min")]
+    public double? Min { get; init; }
+
+    [JsonPropertyName("max")]
+    public double? Max { get; init; }
+
+    [JsonPropertyName("step")]
+    public double? Step { get; init; }
+
+    [JsonPropertyName("defaultValue")]
+    public JsonElement? DefaultValue { get; init; }
+
+    [JsonPropertyName("suffix")]
+    public string? Suffix { get; init; }
+}
+
+public sealed class ModuleSystemDefinitionDto
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; init; }
+
+    [JsonPropertyName("revision")]
+    public int Revision { get; init; } = 1;
+
+    [JsonPropertyName("controls")]
+    public List<ModuleUiControlDto> Controls { get; init; } = [];
+
+    [JsonPropertyName("effects")]
+    public List<ModuleEffectDto> Effects { get; init; } = [];
+
+    [JsonPropertyName("archived")]
+    public bool Archived { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<RecipeTransformTypeDto>))]
@@ -464,6 +629,12 @@ public sealed class RecipeBlueprintDto
 
 public sealed class StoreData
 {
+    [JsonPropertyName("schemaVersion")]
+    public int SchemaVersion { get; init; } = 3;
+
+    [JsonPropertyName("projectRevision")]
+    public long ProjectRevision { get; init; }
+
     [JsonPropertyName("categories")]
     public List<CategoryDto> Categories { get; init; } = [];
 
@@ -481,6 +652,12 @@ public sealed class StoreData
 
     [JsonPropertyName("recipeBlueprints")]
     public List<RecipeBlueprintDto> RecipeBlueprints { get; init; } = [];
+
+    [JsonPropertyName("moduleDefinitions")]
+    public List<ModuleDefinitionDto> ModuleDefinitions { get; init; } = [];
+
+    [JsonPropertyName("moduleSystems")]
+    public List<ModuleSystemDefinitionDto> ModuleSystems { get; init; } = [];
 }
 
 public sealed class SolveTargets

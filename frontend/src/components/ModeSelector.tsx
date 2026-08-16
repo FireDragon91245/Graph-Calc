@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export type AppMode = "edit" | "config";
-export type ConfigSubMode = "items" | "tags" | "recipes" | "recipeTags" | "recipeGenerator" | "itemGenerator";
+export type ConfigSubMode = "items" | "tags" | "recipes" | "recipeTags" | "modules" | "recipeGenerator" | "itemGenerator";
 
 type ModeSelectorProps = {
   currentMode: AppMode;
@@ -75,6 +75,12 @@ export function ConfigSubmodeSelector({
         onClick={() => onConfigSubModeChange("recipeTags")}
       >
         {t("ui.nav.recipeTags")}
+      </button>
+      <button
+        className={`submode-tab ${configSubMode === "modules" ? "active" : ""}`}
+        onClick={() => onConfigSubModeChange("modules")}
+      >
+        🧩 {t("ui.nav.modules")}
       </button>
       <button
         className={`submode-tab ${configSubMode === "recipeGenerator" ? "active" : ""}`}
