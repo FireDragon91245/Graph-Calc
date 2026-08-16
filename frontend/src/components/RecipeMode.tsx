@@ -1,6 +1,8 @@
 import { useState, useMemo, DragEvent } from "react";
 import { useGraphStore, Recipe, RecipeInput, RecipeOutput, Item, Tag } from "../store/graphStore";
 import { useTranslation } from "react-i18next";
+import type { RecipeModuleSupport } from "../domain/moduleSystem";
+import RecipeModuleSupportEditor from "./modules/RecipeModuleSupportEditor";
 
 export default function RecipeMode() {
   const { t } = useTranslation();
@@ -11,11 +13,14 @@ export default function RecipeMode() {
   const addRecipe = useGraphStore((state) => state.addRecipe);
   const deleteRecipe = useGraphStore((state) => state.deleteRecipe);
   const renameRecipe = useGraphStore((state) => state.renameRecipe);
+  const moduleDefinitions = useGraphStore((state) => state.moduleDefinitions);
+  const moduleSystems = useGraphStore((state) => state.moduleSystems);
 
   const [recipeName, setRecipeName] = useState("");
   const [timeSeconds, setTimeSeconds] = useState(2);
   const [inputs, setInputs] = useState<RecipeInput[]>([]);
   const [outputs, setOutputs] = useState<RecipeOutput[]>([]);
+  const [moduleSupport, setModuleSupport] = useState<RecipeModuleSupport[]>([]);
   const [draggedItem, setDraggedItem] = useState<Item | Tag | null>(null);
   const [draggedIngredient, setDraggedIngredient] = useState<{type: 'input' | 'output', index: number} | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -37,7 +42,8 @@ export default function RecipeMode() {
       name: recipeName.trim(),
       timeSeconds,
       inputs,
-      outputs
+      outputs,
+      moduleSupport
     });
 
     // Reset form
@@ -49,6 +55,7 @@ export default function RecipeMode() {
     setTimeSeconds(2);
     setInputs([]);
     setOutputs([]);
+    setModuleSupport([]);
     setEditingRecipe(null);
   };
 
@@ -57,6 +64,7 @@ export default function RecipeMode() {
     setTimeSeconds(recipe.timeSeconds);
     setInputs([...recipe.inputs]);
     setOutputs([...recipe.outputs]);
+    setModuleSupport([...(recipe.moduleSupport ?? [])]);
     setEditingRecipe(recipe.id);
     setSelectedRecipe(recipe.id);
     // Scroll to top to see the form
@@ -68,6 +76,7 @@ export default function RecipeMode() {
     setTimeSeconds(recipe.timeSeconds);
     setInputs([...recipe.inputs]);
     setOutputs([...recipe.outputs]);
+    setModuleSupport([...(recipe.moduleSupport ?? [])]);
     setEditingRecipe(null); // Don't set editing mode - this is a new recipe
     setSelectedRecipe(null);
     // Scroll to top to see the form
@@ -455,6 +464,13 @@ export default function RecipeMode() {
                 className="config-input"
               />
             </div>
+
+            <RecipeModuleSupportEditor
+              value={moduleSupport}
+              systems={moduleSystems}
+              modules={moduleDefinitions}
+              onChange={setModuleSupport}
+            />
 
             <div className="recipe-io-grid">
               <div

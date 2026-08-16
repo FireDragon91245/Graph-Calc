@@ -77,6 +77,9 @@ public sealed class ProjectDocument
     [BsonIgnoreIfNull]
     public string? ThumbnailId { get; set; }
 
+    [BsonElement("moduleResourceImageIds")]
+    public List<string> ModuleResourceImageIds { get; set; } = [];
+
     [BsonElement("store")]
     public BsonDocument Store { get; set; } = new();
 }

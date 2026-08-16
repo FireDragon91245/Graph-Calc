@@ -1,6 +1,7 @@
 import { apiFetch, getErrorMessage } from "./client";
 import i18n from "../i18n";
 import type { RecipeBlueprint } from "../domain/recipeBlueprint";
+import type { ModuleDefinition, ModuleSystemDefinition, RecipeModuleSupport } from "../domain/moduleSystem";
 
 export interface GraphData {
   nodes: any[];
@@ -50,15 +51,20 @@ export interface Recipe {
   timeSeconds: number;
   inputs: RecipeInput[];
   outputs: RecipeOutput[];
+  moduleSupport?: RecipeModuleSupport[];
 }
 
 export interface StoreData {
+  schemaVersion: number;
+  projectRevision: number;
   categories: Category[];
   items: Item[];
   tags: Tag[];
   recipeTags: RecipeTag[];
   recipes: Recipe[];
   recipeBlueprints: RecipeBlueprint[];
+  moduleDefinitions: ModuleDefinition[];
+  moduleSystems: ModuleSystemDefinition[];
 }
 
 // ── Project types ──────────────────────────────────────────────
@@ -105,6 +111,7 @@ export interface WorkspaceProjectSnapshot {
   store: StoreData;
   graphs: WorkspaceGraphSnapshot[];
   thumbnail: WorkspaceThumbnailSnapshot | null;
+  moduleResources: Array<{ imageId: string; image: WorkspaceThumbnailSnapshot }>;
 }
 
 export interface WorkspaceSnapshot {
@@ -164,12 +171,16 @@ const cloneData = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 export function createEmptyStoreData(): StoreData {
   return {
+    schemaVersion: 7,
+    projectRevision: 0,
     categories: [],
     items: [],
     tags: [],
     recipeTags: [],
     recipes: [],
-    recipeBlueprints: []
+    recipeBlueprints: [],
+    moduleDefinitions: [],
+    moduleSystems: []
   };
 }
 
@@ -217,12 +228,16 @@ function createDefaultLocalWorkspace(): LocalWorkspaceRecord {
 function normalizeStoreData(value: unknown): StoreData {
   const candidate = value as Partial<StoreData> | null | undefined;
   return {
+    schemaVersion: 7,
+    projectRevision: typeof candidate?.projectRevision === "number" ? candidate.projectRevision : 0,
     categories: Array.isArray(candidate?.categories) ? cloneData(candidate.categories) : [],
     items: Array.isArray(candidate?.items) ? cloneData(candidate.items) : [],
     tags: Array.isArray(candidate?.tags) ? cloneData(candidate.tags) : [],
     recipeTags: Array.isArray(candidate?.recipeTags) ? cloneData(candidate.recipeTags) : [],
     recipes: Array.isArray(candidate?.recipes) ? cloneData(candidate.recipes) : [],
-    recipeBlueprints: Array.isArray(candidate?.recipeBlueprints) ? cloneData(candidate.recipeBlueprints) : []
+    recipeBlueprints: Array.isArray(candidate?.recipeBlueprints) ? cloneData(candidate.recipeBlueprints) : [],
+    moduleDefinitions: Array.isArray(candidate?.moduleDefinitions) ? cloneData(candidate.moduleDefinitions) : [],
+    moduleSystems: Array.isArray(candidate?.moduleSystems) ? cloneData(candidate.moduleSystems) : []
   };
 }
 
@@ -359,7 +374,9 @@ function isStoreDataEmpty(store: StoreData): boolean {
     && store.tags.length === 0
     && store.recipeTags.length === 0
     && store.recipes.length === 0
-    && store.recipeBlueprints.length === 0;
+    && store.recipeBlueprints.length === 0
+    && store.moduleDefinitions.length === 0
+    && store.moduleSystems.length === 0;
 }
 
 function isGraphDataEmpty(graph: GraphData): boolean {
@@ -375,12 +392,16 @@ function normalizeSnapshotGraphData(graph: GraphData): GraphData {
 
 function normalizeSnapshotStoreData(store: StoreData): StoreData {
   return {
+    schemaVersion: store.schemaVersion,
+    projectRevision: store.projectRevision,
     categories: cloneData(store.categories).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
     items: cloneData(store.items).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
     tags: cloneData(store.tags).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
     recipeTags: cloneData(store.recipeTags).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
     recipes: cloneData(store.recipes).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
-    recipeBlueprints: cloneData(store.recipeBlueprints).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name))
+    recipeBlueprints: cloneData(store.recipeBlueprints).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
+    moduleDefinitions: cloneData(store.moduleDefinitions).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
+    moduleSystems: cloneData(store.moduleSystems).sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name))
   };
 }
 
@@ -391,6 +412,7 @@ function normalizeWorkspaceSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnaps
       activeGraphName: project.activeGraphName,
       store: normalizeSnapshotStoreData(project.store),
       thumbnail: project.thumbnail ? cloneData(project.thumbnail) : null,
+      moduleResources: cloneData(project.moduleResources ?? []).sort((left, right) => left.imageId.localeCompare(right.imageId)),
       graphs: cloneData(project.graphs)
         .map((graph) => ({
           name: graph.name,
@@ -414,11 +436,16 @@ function workspaceToSnapshot(workspace: LocalWorkspaceRecord): WorkspaceSnapshot
     activeProjectName: activeProject?.name ?? null,
     projects: workspace.projects.map((project) => {
       const activeGraph = project.graphs.find((graph) => graph.id === project.activeGraphId) ?? project.graphs[0] ?? null;
+      const moduleResourceImageIds = Array.from(new Set(project.store.moduleSystems.flatMap((system) => (system.resources ?? []).map((resource) => resource.imageId))));
       return {
         name: project.name,
         activeGraphName: activeGraph?.name ?? null,
         store: normalizeStoreData(project.store),
         thumbnail: getLocalThumbnailSnapshot(project.thumbnailId),
+        moduleResources: moduleResourceImageIds.flatMap((imageId) => {
+          const image = getLocalThumbnailSnapshot(imageId);
+          return image ? [{ imageId, image }] : [];
+        }),
         graphs: project.graphs.map((graph) => ({
           name: graph.name,
           data: normalizeGraphData(graph.data),
@@ -440,6 +467,16 @@ function snapshotToWorkspace(snapshot: WorkspaceSnapshot): LocalWorkspaceRecord 
     return image.id;
   };
   const projects = snapshot.projects.map((project) => {
+    const resourceImageIds = new Map<string, string>();
+    for (const resource of project.moduleResources ?? []) {
+      const imageId = ensureImage(resource.image);
+      if (imageId) resourceImageIds.set(resource.imageId, imageId);
+    }
+    const store = normalizeStoreData(project.store);
+    store.moduleSystems = store.moduleSystems.map((system) => ({
+      ...system,
+      resources: (system.resources ?? []).map((resource) => ({ ...resource, imageId: resourceImageIds.get(resource.imageId) ?? resource.imageId }))
+    }));
     const graphs = (project.graphs.length > 0 ? project.graphs : [{ name: getDefaultLocalGraphName(), data: createEmptyGraphData(), thumbnail: null }])
       .map((graph) => ({
         id: createLocalId("graph"),
@@ -453,7 +490,7 @@ function snapshotToWorkspace(snapshot: WorkspaceSnapshot): LocalWorkspaceRecord 
       id: createLocalId("project"),
       name: project.name,
       activeGraphId: activeGraph?.id ?? null,
-      store: normalizeStoreData(project.store),
+      store,
       graphs,
       thumbnailId: ensureImage(project.thumbnail)
     };
@@ -707,7 +744,7 @@ async function apiLoadStore(projectId: string): Promise<StoreData> {
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.loadStore")));
   }
-  return response.json();
+  return normalizeStoreData(await response.json());
 }
 
 async function apiSaveStore(store: StoreData, projectId: string): Promise<void> {
@@ -892,7 +929,7 @@ async function localSaveGraph(graph: GraphData, projectId: string, graphId: stri
 async function localLoadStore(projectId: string): Promise<StoreData> {
   const workspace = readLocalWorkspace();
   const project = getLocalProjectOrThrow(workspace, projectId);
-  return cloneData(project.store);
+  return normalizeStoreData(project.store);
 }
 
 async function localSaveStore(store: StoreData, projectId: string): Promise<void> {
@@ -960,6 +997,36 @@ async function localDeleteGraphThumbnail(projectId: string, graphId: string): Pr
 
 export function getPersistenceMode(): PersistenceMode {
   return persistenceMode;
+}
+
+export function getModuleResourceImageUrl(projectId: string, imageId: string): string | null {
+  if (!projectId || !imageId) return null;
+  if (persistenceMode === "remote") {
+    return `/api/projects/${encodeURIComponent(projectId)}/module-resources/${encodeURIComponent(imageId)}`;
+  }
+  return getLocalImage(imageId)?.dataUrl ?? null;
+}
+
+export async function uploadModuleResourceImage(projectId: string, file: File): Promise<string> {
+  const validated = await validateThumbnailFile(file);
+  if (persistenceMode === "remote") {
+    return apiPutModuleResourceImage(projectId, file);
+  }
+
+  const store = readLocalImages();
+  const existing = store.images.find((image) => image.sha256 === validated.sha256);
+  if (existing) return existing.id;
+  const image: LocalImageRecord = { id: createLocalId("image"), ...validated };
+  writeLocalImages({ version: 1, images: [...store.images, image] });
+  return image.id;
+}
+
+async function apiPutModuleResourceImage(projectId: string, file: File): Promise<string> {
+  const form = new FormData();
+  form.append("image", file);
+  const response = await apiFetch(`/projects/${encodeURIComponent(projectId)}/module-resources`, { method: "PUT", body: form });
+  if (!response.ok) throw new Error(await getErrorMessage(response, i18n.t("persistenceErrors.saveThumbnail")));
+  return ((await response.json()) as { imageId: string }).imageId;
 }
 
 export function setPersistenceMode(mode: PersistenceMode): void {
@@ -1134,7 +1201,11 @@ function getLocalThumbnailSnapshot(imageId: string | null): WorkspaceThumbnailSn
 
 function isLocalImageReferenced(imageId: string): boolean {
   const workspace = readLocalWorkspace();
-  return workspace.projects.some((project) => project.thumbnailId === imageId || project.graphs.some((graph) => graph.thumbnailId === imageId));
+  return workspace.projects.some((project) =>
+    project.thumbnailId === imageId
+    || project.graphs.some((graph) => graph.thumbnailId === imageId)
+    || project.store.moduleSystems.some((system) => (system.resources ?? []).some((resource) => resource.imageId === imageId))
+  );
 }
 
 function deleteUnreferencedLocalImage(imageId: string | null): void {
@@ -1202,6 +1273,13 @@ export async function getProjectSnapshot(projectId: string): Promise<WorkspacePr
         : getLocalThumbnailSnapshot(graph.thumbnailId)
     }))
   );
+  const moduleResourceImageIds = Array.from(new Set(store.moduleSystems.flatMap((system) => (system.resources ?? []).map((resource) => resource.imageId))));
+  const moduleResources = (await Promise.all(moduleResourceImageIds.map(async (imageId) => {
+    const image = persistenceMode === "remote"
+      ? await fetchRemoteThumbnail(`/projects/${encodeURIComponent(projectId)}/module-resources/${encodeURIComponent(imageId)}`, imageId)
+      : getLocalThumbnailSnapshot(imageId);
+    return image ? { imageId, image } : null;
+  }))).filter((entry): entry is { imageId: string; image: WorkspaceThumbnailSnapshot } => Boolean(entry));
 
   return {
     name: project.name,
@@ -1211,6 +1289,7 @@ export async function getProjectSnapshot(projectId: string): Promise<WorkspacePr
       ?? null,
     store,
     graphs,
+    moduleResources,
     thumbnail: persistenceMode === "remote"
       ? await fetchRemoteThumbnail(`/projects/${encodeURIComponent(projectId)}/thumbnail`, project.thumbnailId)
       : getLocalThumbnailSnapshot(project.thumbnailId)
@@ -1233,12 +1312,18 @@ export async function getRemoteWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
       data: await apiLoadGraph(remoteProject.id, graph.id),
       thumbnail: await fetchRemoteThumbnail(`/projects/${encodeURIComponent(remoteProject.id)}/graphs/${encodeURIComponent(graph.id)}/thumbnail`, graph.thumbnailId)
     })));
+    const moduleResourceImageIds = Array.from(new Set(store.moduleSystems.flatMap((system) => (system.resources ?? []).map((resource) => resource.imageId))));
+    const moduleResources = (await Promise.all(moduleResourceImageIds.map(async (imageId) => {
+      const image = await fetchRemoteThumbnail(`/projects/${encodeURIComponent(remoteProject.id)}/module-resources/${encodeURIComponent(imageId)}`, imageId);
+      return image ? { imageId, image } : null;
+    }))).filter((entry): entry is { imageId: string; image: WorkspaceThumbnailSnapshot } => Boolean(entry));
 
     return {
       name: remoteProject.name,
       activeGraphName: graphsResponse.graphs.find((graph) => graph.id === graphsResponse.activeGraphId)?.name ?? graphs[0]?.name ?? null,
       store,
       graphs,
+      moduleResources,
       thumbnail: await fetchRemoteThumbnail(`/projects/${encodeURIComponent(remoteProject.id)}/thumbnail`, remoteProject.thumbnailId)
     };
   }));
@@ -1263,7 +1348,16 @@ async function importSnapshotToRemote(snapshot: WorkspaceSnapshot): Promise<void
   for (const project of snapshot.projects) {
     const remoteProject = await apiCreateProject(ensureUniqueProjectName(project.name));
     activeProjectIdsByName.set(project.name, remoteProject.id);
-    await apiSaveStore(project.store, remoteProject.id);
+    const resourceImageIds = new Map<string, string>();
+    for (const resource of project.moduleResources ?? []) {
+      resourceImageIds.set(resource.imageId, await apiPutModuleResourceImage(remoteProject.id, dataUrlToFile(resource.image)));
+    }
+    const remappedStore = normalizeStoreData(project.store);
+    remappedStore.moduleSystems = remappedStore.moduleSystems.map((system) => ({
+      ...system,
+      resources: (system.resources ?? []).map((resource) => ({ ...resource, imageId: resourceImageIds.get(resource.imageId) ?? resource.imageId }))
+    }));
+    await apiSaveStore(remappedStore, remoteProject.id);
     if (project.thumbnail) {
       await apiPutThumbnail(`/projects/${encodeURIComponent(remoteProject.id)}/thumbnail`, dataUrlToFile(project.thumbnail));
     }

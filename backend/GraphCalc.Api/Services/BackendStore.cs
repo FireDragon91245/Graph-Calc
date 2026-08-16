@@ -183,8 +183,10 @@ public sealed class BackendStore
     {
         await InitializeAsync(cancellationToken);
         var existingUser = await GetUserByIdAsync(userId, cancellationToken);
-        var thumbnailIds = (await Projects().Find(x => x.UserId == userId).Project(x => x.ThumbnailId).ToListAsync(cancellationToken))
+        var userProjects = await Projects().Find(x => x.UserId == userId).ToListAsync(cancellationToken);
+        var thumbnailIds = userProjects.Select(x => x.ThumbnailId)
             .Concat(await Graphs().Find(x => x.UserId == userId).Project(x => x.ThumbnailId).ToListAsync(cancellationToken))
+            .Concat(userProjects.SelectMany(x => x.ModuleResourceImageIds))
             .Append(existingUser?.ProfileImageId)
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Select(x => x!)
@@ -385,6 +387,7 @@ public sealed class BackendStore
         var copy = DefaultProjectDocument(userId, newProjectId, newName, sortOrder);
         copy.ActiveGraphId = sourceProject.ActiveGraphId ?? DefaultGraphId;
         copy.ThumbnailId = sourceProject.ThumbnailId;
+        copy.ModuleResourceImageIds = [.. sourceProject.ModuleResourceImageIds];
         copy.Store = NormalizeStoreDocument(sourceProject.Store);
         await Projects().InsertOneAsync(copy, cancellationToken: cancellationToken);
         CacheProject(copy);
@@ -434,6 +437,7 @@ public sealed class BackendStore
         }
         var thumbnailIds = (await Graphs().Find(x => x.UserId == userId && x.ProjectId == projectId).Project(x => x.ThumbnailId).ToListAsync(cancellationToken))
             .Append(project.ThumbnailId)
+            .Concat(project.ModuleResourceImageIds)
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Select(x => x!)
             .Distinct(StringComparer.Ordinal)
@@ -562,6 +566,38 @@ public sealed class BackendStore
             await DeleteImageIfUnreferencedAsync(project.ThumbnailId, cancellationToken);
         }
         return true;
+    }
+
+    public async Task<ImageDocument?> GetModuleResourceImageAsync(string userId, string projectId, string imageId, CancellationToken cancellationToken)
+    {
+        var project = await GetProjectAsync(userId, projectId, cancellationToken)
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.projectNotFound");
+        if (!project.ModuleResourceImageIds.Contains(imageId, StringComparer.Ordinal))
+        {
+            return null;
+        }
+        return await Images().Find(x => x.Id == imageId).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<string> AddModuleResourceImageAsync(string userId, string projectId, ValidatedThumbnailImage image, CancellationToken cancellationToken)
+    {
+        _ = await GetProjectAsync(userId, projectId, cancellationToken)
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.projectNotFound");
+        var storedImage = await GetOrCreateImageAsync(image, cancellationToken);
+        var result = await Projects().UpdateOneAsync(
+            x => x.UserId == userId && x.ProjectId == projectId,
+            Builders<ProjectDocument>.Update.AddToSet(x => x.ModuleResourceImageIds, storedImage.Id),
+            cancellationToken: cancellationToken);
+        if (result.MatchedCount == 0)
+        {
+            await DeleteImageIfUnreferencedAsync(storedImage.Id, cancellationToken);
+            throw new ApiException(StatusCodes.Status404NotFound, "backend.errors.projectNotFound");
+        }
+        UpdateCachedProject(userId, projectId, cached =>
+        {
+            if (!cached.ModuleResourceImageIds.Contains(storedImage.Id, StringComparer.Ordinal)) cached.ModuleResourceImageIds.Add(storedImage.Id);
+        }, markDirty: false);
+        return storedImage.Id;
     }
 
     public async Task<ImageDocument?> GetGraphThumbnailAsync(string userId, string projectId, string graphId, CancellationToken cancellationToken)
@@ -1067,7 +1103,8 @@ public sealed class BackendStore
         [
             new CreateIndexModel<ProjectDocument>(Builders<ProjectDocument>.IndexKeys.Ascending(x => x.UserId).Ascending(x => x.ProjectId), new CreateIndexOptions { Unique = true }),
             new CreateIndexModel<ProjectDocument>(Builders<ProjectDocument>.IndexKeys.Ascending(x => x.UserId).Ascending(x => x.SortOrder)),
-            new CreateIndexModel<ProjectDocument>(Builders<ProjectDocument>.IndexKeys.Ascending(x => x.ThumbnailId))
+            new CreateIndexModel<ProjectDocument>(Builders<ProjectDocument>.IndexKeys.Ascending(x => x.ThumbnailId)),
+            new CreateIndexModel<ProjectDocument>(Builders<ProjectDocument>.IndexKeys.Ascending(x => x.ModuleResourceImageIds))
         ], cancellationToken);
         await Graphs().Indexes.CreateManyAsync(
         [
@@ -1407,6 +1444,12 @@ public sealed class BackendStore
             return;
         }
 
+        var referencedByModuleResource = await Projects().Find(Builders<ProjectDocument>.Filter.AnyEq(x => x.ModuleResourceImageIds, imageId)).AnyAsync(cancellationToken);
+        if (referencedByModuleResource)
+        {
+            return;
+        }
+
         var referencedByUser = await Users().Find(x => x.ProfileImageId == imageId).AnyAsync(cancellationToken);
         if (referencedByUser)
         {
@@ -1452,6 +1495,7 @@ public sealed class BackendStore
             SortOrder = sortOrder,
             ActiveGraphId = DefaultGraphId,
             ThumbnailId = null,
+            ModuleResourceImageIds = [],
             Store = NormalizeStoreData(DefaultStoreData())
         };
     }
@@ -1494,12 +1538,16 @@ public sealed class BackendStore
     {
         return ToBsonDocument(new StoreData
         {
+            SchemaVersion = store.SchemaVersion,
+            ProjectRevision = store.ProjectRevision,
             Categories = store.Categories ?? [],
             Items = store.Items ?? [],
             Tags = store.Tags ?? [],
             RecipeTags = store.RecipeTags ?? [],
             Recipes = store.Recipes ?? [],
-            RecipeBlueprints = store.RecipeBlueprints ?? []
+            RecipeBlueprints = store.RecipeBlueprints ?? [],
+            ModuleDefinitions = store.ModuleDefinitions ?? [],
+            ModuleSystems = store.ModuleSystems ?? []
         });
     }
 
@@ -1835,6 +1883,7 @@ public sealed class BackendStore
             SortOrder = project.SortOrder,
             ActiveGraphId = project.ActiveGraphId,
             ThumbnailId = project.ThumbnailId,
+            ModuleResourceImageIds = [.. project.ModuleResourceImageIds],
             Store = (BsonDocument)project.Store.DeepClone()
         };
     }

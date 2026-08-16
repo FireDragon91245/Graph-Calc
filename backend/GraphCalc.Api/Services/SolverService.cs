@@ -35,6 +35,8 @@ internal static class GraphLpSolver
         var warnings = new List<LocalizedMessage>();
         var problemEdgeIds = new List<string>();
         var nameToId = BuildNameToIdMap(storeData);
+        var knownItemIds = storeData?.Items.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
+        bool IsKnownItem(string itemId) => knownItemIds is null || knownItemIds.Contains(itemId);
 
         try
         {
@@ -74,7 +76,36 @@ internal static class GraphLpSolver
             var recipes = new List<RecipeInstance>();
             foreach (var node in recipeNodes)
             {
-                recipes.AddRange(ExtractRecipesFromNode(node, storeData, nameToId));
+                var extracted = ExtractRecipesFromNode(node, storeData, nameToId);
+                recipes.AddRange(extracted);
+                foreach (var diagnostic in extracted.SelectMany(recipe => recipe.Diagnostics))
+                {
+                    warnings.Add(Message("solver.warning.moduleEvaluation", ("node", GetNodeDisplayName(node)), ("message", diagnostic)));
+                }
+            }
+
+            if (knownItemIds is not null)
+            {
+                foreach (var node in inputNodes.Concat(outputNodes.Where(entry => entry.Type != "mixedoutput")))
+                {
+                    foreach (var itemId in GetArrayProperty(node.Data, "items")
+                                 .Select(entry => GetStringProperty(entry, "itemId"))
+                                 .Where(itemId => !string.IsNullOrWhiteSpace(itemId) && !IsKnownItem(itemId))
+                                 .Distinct(StringComparer.Ordinal))
+                    {
+                        warnings.Add(Message("solver.warning.missingProjectItem", ("node", GetNodeDisplayName(node)), ("item", itemId)));
+                    }
+                }
+                foreach (var node in requesterNodes)
+                {
+                    foreach (var itemId in GetArrayProperty(node.Data, "requests")
+                                 .Select(entry => GetStringProperty(entry, "itemId"))
+                                 .Where(itemId => !string.IsNullOrWhiteSpace(itemId) && !IsKnownItem(itemId))
+                                 .Distinct(StringComparer.Ordinal))
+                    {
+                        warnings.Add(Message("solver.warning.missingProjectItem", ("node", GetNodeDisplayName(node)), ("item", itemId)));
+                    }
+                }
             }
 
             if (recipes.Count == 0 && inputNodes.Count == 0)
@@ -183,7 +214,7 @@ internal static class GraphLpSolver
                 foreach (var itemEntry in GetArrayProperty(node.Data, "items"))
                 {
                     var itemId = GetStringProperty(itemEntry, "itemId");
-                    if (!string.IsNullOrWhiteSpace(itemId))
+                    if (!string.IsNullOrWhiteSpace(itemId) && IsKnownItem(itemId))
                     {
                         AddSetValue(portOutputItems, (node.Id, $"output-{GetStringProperty(itemEntry, "id", "output")}"), itemId);
                     }
@@ -195,7 +226,7 @@ internal static class GraphLpSolver
                 foreach (var itemEntry in GetArrayProperty(node.Data, "items"))
                 {
                     var itemId = GetStringProperty(itemEntry, "itemId");
-                    if (!string.IsNullOrWhiteSpace(itemId))
+                    if (!string.IsNullOrWhiteSpace(itemId) && IsKnownItem(itemId))
                     {
                         AddSetValue(portInputItems, (node.Id, $"input-{GetStringProperty(itemEntry, "id", "input")}"), itemId);
                     }
@@ -207,7 +238,7 @@ internal static class GraphLpSolver
                 foreach (var requestEntry in GetArrayProperty(node.Data, "requests"))
                 {
                     var itemId = GetStringProperty(requestEntry, "itemId");
-                    if (!string.IsNullOrWhiteSpace(itemId))
+                    if (!string.IsNullOrWhiteSpace(itemId) && IsKnownItem(itemId))
                     {
                         AddSetValue(portInputItems, (node.Id, $"input-{GetStringProperty(requestEntry, "id", "input")}"), itemId);
                     }
@@ -347,7 +378,7 @@ internal static class GraphLpSolver
                 {
                     var itemId = GetStringProperty(itemEntry, "itemId");
                     var mode = GetStringProperty(itemEntry, "mode", "infinite");
-                    if (string.IsNullOrWhiteSpace(itemId))
+                    if (string.IsNullOrWhiteSpace(itemId) || !IsKnownItem(itemId))
                     {
                         continue;
                     }
@@ -384,7 +415,7 @@ internal static class GraphLpSolver
                 foreach (var requestEntry in GetArrayProperty(node.Data, "requests"))
                 {
                     var itemId = GetStringProperty(requestEntry, "itemId");
-                    if (string.IsNullOrWhiteSpace(itemId) || !TryGetDoubleProperty(requestEntry, "targetPerSecond", out var targetValue))
+                    if (string.IsNullOrWhiteSpace(itemId) || !IsKnownItem(itemId) || !TryGetDoubleProperty(requestEntry, "targetPerSecond", out var targetValue))
                     {
                         continue;
                     }
@@ -462,7 +493,7 @@ internal static class GraphLpSolver
                 foreach (var itemEntry in GetArrayProperty(node.Data, "items"))
                 {
                     var itemId = GetStringProperty(itemEntry, "itemId");
-                    if (string.IsNullOrWhiteSpace(itemId))
+                    if (string.IsNullOrWhiteSpace(itemId) || !IsKnownItem(itemId))
                     {
                         continue;
                     }
@@ -824,7 +855,7 @@ internal static class GraphLpSolver
                 foreach (var output in recipe.Outputs)
                 {
                     var itemId = ResolveItemId(output, nameToId, false);
-                    if (string.IsNullOrWhiteSpace(itemId))
+                    if (string.IsNullOrWhiteSpace(itemId) || !IsKnownItem(itemId))
                     {
                         continue;
                     }
@@ -852,7 +883,7 @@ internal static class GraphLpSolver
                 foreach (var input in recipe.Inputs)
                 {
                     var itemId = ResolveItemId(input, nameToId, true);
-                    if (string.IsNullOrWhiteSpace(itemId))
+                    if (string.IsNullOrWhiteSpace(itemId) || !IsKnownItem(itemId))
                     {
                         continue;
                     }
@@ -868,7 +899,7 @@ internal static class GraphLpSolver
                 foreach (var output in recipe.Outputs)
                 {
                     var itemId = ResolveItemId(output, nameToId, false);
-                    if (string.IsNullOrWhiteSpace(itemId))
+                    if (string.IsNullOrWhiteSpace(itemId) || !IsKnownItem(itemId))
                     {
                         continue;
                     }
@@ -892,7 +923,7 @@ internal static class GraphLpSolver
                 foreach (var itemEntry in GetArrayProperty(node.Data, "items"))
                 {
                     var itemId = GetStringProperty(itemEntry, "itemId");
-                    if (string.IsNullOrWhiteSpace(itemId))
+                    if (string.IsNullOrWhiteSpace(itemId) || !IsKnownItem(itemId))
                     {
                         continue;
                     }
@@ -931,7 +962,7 @@ internal static class GraphLpSolver
                 foreach (var itemEntry in GetArrayProperty(node.Data, "items"))
                 {
                     var itemId = GetStringProperty(itemEntry, "itemId");
-                    if (string.IsNullOrWhiteSpace(itemId))
+                    if (string.IsNullOrWhiteSpace(itemId) || !IsKnownItem(itemId))
                     {
                         continue;
                     }
@@ -998,7 +1029,7 @@ internal static class GraphLpSolver
                 foreach (var requestEntry in GetArrayProperty(node.Data, "requests"))
                 {
                     var itemId = GetStringProperty(requestEntry, "itemId");
-                    if (string.IsNullOrWhiteSpace(itemId))
+                    if (string.IsNullOrWhiteSpace(itemId) || !IsKnownItem(itemId))
                     {
                         continue;
                     }
@@ -1043,7 +1074,7 @@ internal static class GraphLpSolver
                 {
                     var itemId = GetStringProperty(itemEntry, "itemId");
                     var mode = GetStringProperty(itemEntry, "mode", "infinite");
-                    if (string.IsNullOrWhiteSpace(itemId) || mode != "limit" || !TryGetDoubleProperty(itemEntry, "limit", out var limitValue))
+                    if (string.IsNullOrWhiteSpace(itemId) || !IsKnownItem(itemId) || mode != "limit" || !TryGetDoubleProperty(itemEntry, "limit", out var limitValue))
                     {
                         continue;
                     }
@@ -1070,7 +1101,7 @@ internal static class GraphLpSolver
                 foreach (var requestEntry in GetArrayProperty(node.Data, "requests"))
                 {
                     var itemId = GetStringProperty(requestEntry, "itemId");
-                    if (string.IsNullOrWhiteSpace(itemId) || !TryGetDoubleProperty(requestEntry, "targetPerSecond", out var targetValue))
+                    if (string.IsNullOrWhiteSpace(itemId) || !IsKnownItem(itemId) || !TryGetDoubleProperty(requestEntry, "targetPerSecond", out var targetValue))
                     {
                         continue;
                     }
@@ -1260,6 +1291,69 @@ internal static class GraphLpSolver
             return [];
         }
 
+        if (node.Type == "recipe" && storeData is not null)
+        {
+            var recipeId = GetStringProperty(node.Data, "recipeId", node.Id);
+            var storeRecipe = storeData.Recipes.FirstOrDefault(recipe => recipe.Id == recipeId);
+            if (storeRecipe is not null)
+            {
+                var effective = EffectiveRecipeMaterializer.Materialize(storeRecipe, node.Data, storeData);
+                return
+                [
+                    new RecipeInstance(
+                        node.Id,
+                        effective.RecipeId,
+                        effective.Name,
+                        effective.TimeSeconds,
+                        effective.Inputs,
+                        effective.Outputs,
+                        effective.IsValid ? null : 0.0,
+                        null,
+                        effective.Diagnostics)
+                ];
+            }
+
+            return
+            [
+                new RecipeInstance(node.Id, recipeId, recipeId, 1.0, [], [], 0.0, null, [$"Recipe '{recipeId}' no longer exists in the project."])
+            ];
+        }
+
+        if (node.Type == "inputrecipe" && storeData is not null)
+        {
+            var recipeId = GetStringProperty(node.Data, "recipeId", node.Id);
+            var storeRecipe = storeData.Recipes.FirstOrDefault(recipe => recipe.Id == recipeId);
+            if (storeRecipe is not null)
+            {
+                var effective = EffectiveRecipeMaterializer.Materialize(storeRecipe, node.Data, storeData);
+                var multiplier = GetDoubleProperty(node.Data, "multiplier", 1.0);
+                foreach (var output in effective.Outputs)
+                {
+                    var amount = GetAmountPerCycle(output) * multiplier;
+                    output["amount"] = amount;
+                    output["amountPerCycle"] = amount;
+                }
+                return
+                [
+                    new RecipeInstance(
+                        node.Id,
+                        effective.RecipeId,
+                        effective.Name,
+                        effective.TimeSeconds,
+                        [],
+                        effective.Outputs,
+                        effective.IsValid ? 1.0 : 0.0,
+                        null,
+                        effective.Diagnostics)
+                ];
+            }
+
+            return
+            [
+                new RecipeInstance(node.Id, recipeId, recipeId, 1.0, [], [], 0.0, null, [$"Recipe '{recipeId}' no longer exists in the project."])
+            ];
+        }
+
         return node.Type switch
         {
             "recipe" =>
@@ -1272,7 +1366,8 @@ internal static class GraphLpSolver
                     GetArrayProperty(node.Data, "inputs").Select(input => NormalizePort(input, nameToId, true)).ToList(),
                     GetArrayProperty(node.Data, "outputs").Select(output => NormalizePort(output, nameToId, false)).ToList(),
                     null,
-                    null)
+                    null,
+                    [])
             ],
             "recipetag" => ExtractRecipeTag(node, storeData, nameToId, false),
             "inputrecipetag" => ExtractRecipeTag(node, storeData, nameToId, true),
@@ -1286,7 +1381,8 @@ internal static class GraphLpSolver
                     [],
                     GetArrayProperty(node.Data, "outputs").Select(output => NormalizePort(output, nameToId, false)).ToList(),
                     1.0,
-                    null)
+                    null,
+                    [])
             ],
             _ => []
         };
@@ -1296,11 +1392,46 @@ internal static class GraphLpSolver
     {
         if (storeData is not null)
         {
+            var recipeTagId = GetStringProperty(node.Data, "recipeTagId");
+            var recipeTag = storeData.RecipeTags.FirstOrDefault(entry => entry.Id == recipeTagId);
+            if (recipeTag is null)
+            {
+                return
+                [
+                    new RecipeInstance(
+                        node.Id,
+                        string.IsNullOrWhiteSpace(recipeTagId) ? node.Id : recipeTagId,
+                        GetStringProperty(node.Data, "title", isInputTag ? "Input Recipe Tag" : "Recipe Tag"),
+                        1.0,
+                        [],
+                        [],
+                        0.0,
+                        null,
+                        [string.IsNullOrWhiteSpace(recipeTagId)
+                            ? "This node is not linked to a project recipe tag."
+                            : $"Recipe tag '{recipeTagId}' no longer exists in the project."])
+                ];
+            }
+
             var expanded = ExpandRecipeTag(node, storeData, nameToId, isInputTag);
             if (expanded.Count > 0)
             {
                 return expanded;
             }
+
+            return
+            [
+                new RecipeInstance(
+                    node.Id,
+                    recipeTag.Id,
+                    recipeTag.Name,
+                    1.0,
+                    [],
+                    [],
+                    0.0,
+                    null,
+                    [$"Recipe tag '{recipeTag.Name}' has no usable recipe members."])
+            ];
         }
 
         var outputs = GetArrayProperty(node.Data, "outputs")
@@ -1324,7 +1455,8 @@ internal static class GraphLpSolver
                     [],
                     outputs,
                     GetDoubleProperty(node.Data, "multiplier", 1.0),
-                    null)
+                    null,
+                    [])
             ];
         }
 
@@ -1347,7 +1479,8 @@ internal static class GraphLpSolver
                 inputs,
                 outputs,
                 null,
-                null)
+                null,
+                [])
         ];
     }
 
@@ -1375,46 +1508,29 @@ internal static class GraphLpSolver
                 continue;
             }
 
-            var inputs = new List<Dictionary<string, object?>>();
-            if (!isInputTag)
+            var effective = EffectiveRecipeMaterializer.Materialize(storeRecipe, node.Data, storeData);
+            var inputs = isInputTag ? [] : effective.Inputs;
+            var outputs = effective.Outputs;
+            if (multiplier is not null)
             {
-                foreach (var input in storeRecipe.Inputs)
+                foreach (var output in outputs)
                 {
-                    inputs.Add(new Dictionary<string, object?>(StringComparer.Ordinal)
-                    {
-                        ["id"] = input.Id,
-                        ["itemId"] = input.RefId,
-                        ["refId"] = input.RefId,
-                        ["refType"] = input.RefType,
-                        ["amount"] = input.Amount,
-                        ["amountPerCycle"] = input.Amount
-                    });
+                    var amount = GetAmountPerCycle(output) * multiplier.Value;
+                    output["amount"] = amount;
+                    output["amountPerCycle"] = amount;
                 }
-            }
-
-            var outputs = new List<Dictionary<string, object?>>();
-            foreach (var output in storeRecipe.Outputs)
-            {
-                var amount = output.Amount * (multiplier ?? 1.0);
-                outputs.Add(new Dictionary<string, object?>(StringComparer.Ordinal)
-                {
-                    ["id"] = output.Id,
-                    ["itemId"] = output.ItemId,
-                    ["amount"] = amount,
-                    ["amountPerCycle"] = amount,
-                    ["probability"] = output.Probability
-                });
             }
 
             recipes.Add(new RecipeInstance(
                 $"{node.Id}__sub__{memberRecipeId}",
                 memberRecipeId,
-                storeRecipe.Name,
-                storeRecipe.TimeSeconds,
+                effective.Name,
+                effective.TimeSeconds,
                 inputs,
                 outputs,
-                multiplier,
-                node.Id));
+                effective.IsValid ? multiplier : 0.0,
+                node.Id,
+                effective.Diagnostics));
         }
 
         return recipes;
@@ -1482,21 +1598,20 @@ internal static class GraphLpSolver
                     continue;
                 }
 
-                JsonElement tagOutput;
+                string handle;
                 if (fixedMap.TryGetValue(itemId, out var fixedPort))
                 {
-                    tagOutput = fixedPort;
+                    handle = $"output-{GetStringProperty(fixedPort, "id", "output")}";
                 }
                 else if (mixedPorts.Count > 0)
                 {
-                    tagOutput = mixedPorts[0];
+                    handle = $"output-{GetStringProperty(mixedPorts[0], "id", "output")}";
                 }
                 else
                 {
-                    continue;
+                    handle = $"output-{GetStringValue(output, "id", "output")}";
                 }
 
-                var handle = $"output-{GetStringProperty(tagOutput, "id", "output")}";
                 var rate = GetAmountPerCycle(output) * GetProbability(output) / recipe.TimeSeconds;
                 AddListValue(portProd, (visualId, handle), new PortItemContribution(recipe, itemId, rate));
                 AddSetValue(portOutputItems, (visualId, handle), itemId);
@@ -1566,21 +1681,20 @@ internal static class GraphLpSolver
                     continue;
                 }
 
-                JsonElement tagInput;
+                string handle;
                 if (fixedMap.TryGetValue(itemId, out var fixedPort))
                 {
-                    tagInput = fixedPort;
+                    handle = $"input-{GetStringProperty(fixedPort, "id", "input")}";
                 }
                 else if (mixedPorts.Count > 0)
                 {
-                    tagInput = mixedPorts[0];
+                    handle = $"input-{GetStringProperty(mixedPorts[0], "id", "input")}";
                 }
                 else
                 {
-                    continue;
+                    handle = $"input-{GetStringValue(input, "id", "input")}";
                 }
 
-                var handle = $"input-{GetStringProperty(tagInput, "id", "input")}";
                 var rate = GetAmountPerCycle(input) / recipe.TimeSeconds;
                 AddListValue(portCons, (visualId, handle), new PortItemContribution(recipe, itemId, rate));
                 AddSetValue(portInputItems, (visualId, handle), itemId);
@@ -2155,7 +2269,7 @@ internal static class GraphLpSolver
 
     private sealed record TagPortDefinitions(IReadOnlyList<JsonElement> Inputs, IReadOnlyList<JsonElement> Outputs);
 
-    private sealed record RecipeInstance(string NodeId, string RecipeId, string Name, double TimeSeconds, List<Dictionary<string, object?>> Inputs, List<Dictionary<string, object?>> Outputs, double? MaxMachines, string? ParentTagNodeId);
+    private sealed record RecipeInstance(string NodeId, string RecipeId, string Name, double TimeSeconds, List<Dictionary<string, object?>> Inputs, List<Dictionary<string, object?>> Outputs, double? MaxMachines, string? ParentTagNodeId, IReadOnlyList<string> Diagnostics);
 
     private sealed record PortItemContribution(RecipeInstance Recipe, string ItemId, double RatePerMachine);
 

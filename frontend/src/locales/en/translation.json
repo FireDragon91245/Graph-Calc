@@ -226,6 +226,8 @@
     "warning": {
       "emptyGraph": "No recipes or inputs were found in the graph.",
       "createFailed": "The linear solver could not be created.",
+      "moduleEvaluation": "Upgrade configuration on {{node}}: {{message}}",
+      "missingProjectItem": "{{node}} references item {{item}}, which no longer exists in the project. That row was ignored.",
       "edgeMismatch": "{{source}} provides {{sourceItems}}, but {{target}} expects {{targetItems}}. Connected recipes were disabled.",
       "requesterMissingSupply": "Requester demands {{item}} ({{target}}/s), but no supplying edge exists.",
       "cycleFallback": "The circular preference pass failed. The primary cycle solution may require another attempt.",

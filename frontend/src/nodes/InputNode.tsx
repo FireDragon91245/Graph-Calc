@@ -13,6 +13,7 @@ type InputItem = {
 
 type InputNodeData = {
   items: InputItem[];
+  unresolvedItemIds?: string[];
   solveData?: NodeFlowData;
 };
 
@@ -98,6 +99,7 @@ export default function InputNode({ id, data }: NodeProps<InputNodeData>) {
         )}
       </div>
       <div className="node-body io-body">
+        {(data.unresolvedItemIds ?? []).map((itemId) => <div className="node-project-warning" key={itemId}>Item {itemId} was removed from the project. Choose a replacement.</div>)}
         {nodeItems.map((item) => (
           <div key={item.id} className="node-row input-row" style={{ position: "relative" }}>
             <div className="row-controls">

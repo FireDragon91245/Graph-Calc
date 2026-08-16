@@ -118,3 +118,7 @@ The backend is written in c# using ASP.NET using a MongoDB database using Google
 
 ## Frontent
 The Frontent is a React + React-Flow Vite app.
+
+## Lua module systems
+
+Upgrade systems and modules are fully programmable through a sandboxed, high-level Lua API. See [the Lua module API](docs/lua-module-api.md) for primitives, effects, safety limits, and complete Factorio/Satisfactory-style examples.

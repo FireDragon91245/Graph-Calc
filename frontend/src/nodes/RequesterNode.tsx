@@ -12,6 +12,7 @@ type RequesterItem = {
 
 type RequesterNodeData = {
   requests: RequesterItem[];
+  unresolvedItemIds?: string[];
   solveData?: NodeFlowData;
 };
 
@@ -96,6 +97,7 @@ export default function RequesterNode({ id, data }: NodeProps<RequesterNodeData>
         )}
       </div>
       <div className="node-body io-body">
+        {(data.unresolvedItemIds ?? []).map((itemId) => <div className="node-project-warning" key={itemId}>Item {itemId} was removed from the project. Choose a replacement.</div>)}
         {requests.map((req) => (
           <div key={req.id} className="node-row input-row" style={{ position: "relative" }}>
              <Handle

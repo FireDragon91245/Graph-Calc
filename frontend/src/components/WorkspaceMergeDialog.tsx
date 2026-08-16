@@ -40,12 +40,16 @@ type WorkspaceMergeDialogProps = {
 };
 
 const normalizeStore = (store: StoreData): StoreData => ({
+  schemaVersion: store.schemaVersion,
+  projectRevision: store.projectRevision,
   categories: [...store.categories].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
   items: [...store.items].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
   tags: [...store.tags].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
   recipeTags: [...store.recipeTags].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
   recipes: [...store.recipes].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
-  recipeBlueprints: [...store.recipeBlueprints].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name))
+  recipeBlueprints: [...store.recipeBlueprints].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
+  moduleDefinitions: [...store.moduleDefinitions].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name)),
+  moduleSystems: [...store.moduleSystems].sort((left, right) => left.id.localeCompare(right.id) || left.name.localeCompare(right.name))
 });
 
 const normalizeGraph = (graph: GraphData): GraphData => ({
@@ -278,7 +282,8 @@ function buildMergedSnapshot(
 
     const preferredActiveNames = [remoteProject.activeGraphName, localProject.activeGraphName].filter((name): name is string => Boolean(name));
     const activeGraphName = preferredActiveNames.find((name) => mergedGraphs.some((graph) => graph.name === name)) ?? mergedGraphs[0].name;
-    const store = comparison.storeDifferent ? clone((projectStoreChoices[comparison.key] ?? "account") === "local" ? localProject.store : remoteProject.store) : clone(remoteProject.store);
+    const chosenStoreProject = comparison.storeDifferent && (projectStoreChoices[comparison.key] ?? "account") === "local" ? localProject : remoteProject;
+    const store = clone(chosenStoreProject.store);
     const projectName = uniqueName(remoteProject.name, usedProjectNames);
 
     mergedProjects.push({
@@ -286,7 +291,8 @@ function buildMergedSnapshot(
       activeGraphName,
       store,
       graphs: mergedGraphs,
-      thumbnail: clone(remoteProject.thumbnail)
+      thumbnail: clone(remoteProject.thumbnail),
+      moduleResources: clone(chosenStoreProject.moduleResources ?? [])
     });
   }
 

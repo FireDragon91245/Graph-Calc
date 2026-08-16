@@ -12,3 +12,4 @@ obj
 .idea
 *.Dotsettings.user
 artifacts
+backend/graphcalc-production-*.archive.gz
