@@ -594,7 +594,7 @@ public sealed class RecipeBlueprintDto
 public sealed class StoreData
 {
     [JsonPropertyName("schemaVersion")]
-    public int SchemaVersion { get; init; } = 5;
+    public int SchemaVersion { get; init; } = 7;
 
     [JsonPropertyName("projectRevision")]
     public long ProjectRevision { get; init; }

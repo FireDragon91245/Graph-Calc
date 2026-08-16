@@ -505,7 +505,6 @@
   letter-spacing: 0.3px;
 }
 
-.node-module-revision,
 .module-control-suffix {
   color: var(--muted);
   font-size: 10px;

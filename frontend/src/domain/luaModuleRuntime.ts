@@ -1,4 +1,5 @@
 import { lauxlib, lua, lualib, to_jsstring, to_luastring } from "fengari-web/dist/fengari-web.bundle.js";
+import i18n from "../i18n";
 import type { ModuleEffect, ModuleValue, RecipeParameterDefinition } from "./moduleSystem";
 
 const MAX_SCRIPT_LENGTH = 100_000;
@@ -193,11 +194,11 @@ const moduleInspectionCache = new Map<string, LuaRunResult<LuaModuleInspection>>
 
 const errorText = (state: unknown): string => {
   const raw = lua.lua_tostring(state, -1);
-  return raw ? to_jsstring(raw) : "Unknown Lua error.";
+  return raw ? to_jsstring(raw) : i18n.t("ui.modules.runtime.unknownScript");
 };
 
 const pushValue = (state: unknown, value: unknown, depth = 0): void => {
-  if (depth > MAX_VALUE_DEPTH) throw new Error("Lua context is nested too deeply.");
+  if (depth > MAX_VALUE_DEPTH) throw new Error(i18n.t("ui.modules.runtime.contextTooDeep"));
   if (value === null || value === undefined) {
     lua.lua_pushnil(state);
     return;
@@ -235,7 +236,7 @@ const pushValue = (state: unknown, value: unknown, depth = 0): void => {
 };
 
 const readValue = (state: unknown, index: number, budget: { entries: number }, depth = 0): unknown => {
-  if (depth > MAX_VALUE_DEPTH) throw new Error("Lua returned a value nested too deeply.");
+  if (depth > MAX_VALUE_DEPTH) throw new Error(i18n.t("ui.modules.runtime.resultTooDeep"));
   const type = lua.lua_type(state, index);
   if (type === lua.LUA_TNIL) return null;
   if (type === lua.LUA_TBOOLEAN) return Boolean(lua.lua_toboolean(state, index));
@@ -243,14 +244,14 @@ const readValue = (state: unknown, index: number, budget: { entries: number }, d
   if (type === lua.LUA_TSTRING) return to_jsstring(lua.lua_tostring(state, index));
   if (type !== lua.LUA_TTABLE) return undefined;
 
-  if (!lua.lua_checkstack(state, 4)) throw new Error("Lua UI is too deeply nested for the runtime stack.");
+  if (!lua.lua_checkstack(state, 4)) throw new Error(i18n.t("ui.modules.runtime.uiStackTooDeep"));
   const absolute = lua.lua_absindex(state, index);
   const numeric = new Map<number, unknown>();
   const named: Record<string, unknown> = {};
   lua.lua_pushnil(state);
   while (lua.lua_next(state, absolute)) {
     budget.entries += 1;
-    if (budget.entries > MAX_TABLE_ENTRIES) throw new Error("Lua returned too much data.");
+    if (budget.entries > MAX_TABLE_ENTRIES) throw new Error(i18n.t("ui.modules.runtime.tooMuchData"));
     const value = readValue(state, -1, budget, depth + 1);
     const keyType = lua.lua_type(state, -2);
     if (keyType === lua.LUA_TNUMBER) numeric.set(lua.lua_tonumber(state, -2), value);
@@ -272,24 +273,24 @@ const createSandbox = (): unknown => {
     lua.lua_pushnil(state);
     lua.lua_setglobal(state, to_luastring(name));
   }
-  lua.lua_sethook(state, (hookState: unknown) => lauxlib.luaL_error(hookState, to_luastring("Lua instruction limit exceeded.")), lua.LUA_MASKCOUNT, MAX_INSTRUCTIONS);
+  lua.lua_sethook(state, (hookState: unknown) => lauxlib.luaL_error(hookState, to_luastring(i18n.t("ui.modules.runtime.instructionLimit"))), lua.LUA_MASKCOUNT, MAX_INSTRUCTIONS);
   return state;
 };
 
 const runProgram = (source: string, callback?: string, context?: unknown): unknown => {
-  if (!source.trim()) throw new Error("Lua source is required.");
-  if (source.length > MAX_SCRIPT_LENGTH) throw new Error(`Lua source exceeds ${MAX_SCRIPT_LENGTH} characters.`);
+  if (!source.trim()) throw new Error(i18n.t("ui.modules.runtime.codeRequired"));
+  if (source.length > MAX_SCRIPT_LENGTH) throw new Error(i18n.t("ui.modules.runtime.codeTooLong", { count: MAX_SCRIPT_LENGTH }));
   const state = createSandbox();
   try {
     const status = lauxlib.luaL_loadstring(state, to_luastring(`${LUA_MODULE_API}\n${source}`));
     if (status !== lua.LUA_OK) throw new Error(errorText(state));
     if (lua.lua_pcall(state, 0, 1, 0) !== lua.LUA_OK) throw new Error(errorText(state));
-    if (!lua.lua_istable(state, -1)) throw new Error("Lua script must return system { ... } or module { ... }.");
+    if (!lua.lua_istable(state, -1)) throw new Error(i18n.t("ui.modules.runtime.returnRequired"));
 
     if (callback) {
       lua.lua_getfield(state, -1, to_luastring(callback));
       if (lua.lua_isnil(state, -1)) return null;
-      if (!lua.lua_isfunction(state, -1)) throw new Error(`${callback} must be a function.`);
+      if (!lua.lua_isfunction(state, -1)) throw new Error(i18n.t("ui.modules.runtime.callbackFunction", { name: callback }));
       pushValue(state, context ?? {});
       if (lua.lua_pcall(state, 1, 1, 0) !== lua.LUA_OK) throw new Error(errorText(state));
     }
@@ -303,28 +304,29 @@ const finiteNumber = (value: unknown): number | undefined => typeof value === "n
 const textValue = (value: unknown): string | undefined => typeof value === "string" ? value : undefined;
 
 const parsePropertyValue = (value: unknown, budget: { entries: number }, depth = 0): LuaPropertyValue => {
-  if (depth > 12) throw new Error("Module properties are nested too deeply.");
+  if (depth > 12) throw new Error(i18n.t("ui.modules.runtime.propertiesTooDeep"));
   if (value === null || typeof value === "string" || typeof value === "boolean") return value;
   if (typeof value === "number") {
-    if (!Number.isFinite(value)) throw new Error("Module properties cannot contain non-finite numbers.");
+    if (!Number.isFinite(value)) throw new Error(i18n.t("ui.modules.runtime.propertiesFinite"));
     return value;
   }
   if (Array.isArray(value)) {
     budget.entries += value.length;
-    if (budget.entries > 1_000) throw new Error("Module properties contain too much data.");
+    if (budget.entries > 1_000) throw new Error(i18n.t("ui.modules.runtime.propertiesTooLarge"));
     return value.map((entry) => parsePropertyValue(entry, budget, depth + 1));
   }
   if (value && typeof value === "object") {
     const entries = Object.entries(value as Record<string, unknown>);
     budget.entries += entries.length;
-    if (budget.entries > 1_000) throw new Error("Module properties contain too much data.");
+    if (budget.entries > 1_000) throw new Error(i18n.t("ui.modules.runtime.propertiesTooLarge"));
     return Object.fromEntries(entries.map(([key, entry]) => [key, parsePropertyValue(entry, budget, depth + 1)]));
   }
-  throw new Error("Module properties may only contain strings, numbers, booleans, nil, arrays, and tables.");
+  throw new Error(i18n.t("ui.modules.runtime.propertiesTypes"));
 };
 
 export const inspectLuaModule = (source: string): LuaRunResult<LuaModuleInspection> => {
-  const cached = moduleInspectionCache.get(source);
+  const cacheKey = `${i18n.resolvedLanguage ?? i18n.language}:${source}`;
+  const cached = moduleInspectionCache.get(cacheKey);
   if (cached) return cached;
   let result: LuaRunResult<LuaModuleInspection>;
   try {
@@ -334,13 +336,13 @@ export const inspectLuaModule = (source: string): LuaRunResult<LuaModuleInspecti
       ? {}
       : raw && typeof raw === "object" && !Array.isArray(raw)
         ? parsePropertyValue(raw, { entries: 0 }) as Record<string, LuaPropertyValue>
-        : (() => { throw new Error("module.properties must be a table with string keys."); })();
+        : (() => { throw new Error(i18n.t("ui.modules.runtime.propertiesTable")); })();
     result = { value: { properties } };
   } catch (error) {
-    result = { value: { properties: {} }, error: error instanceof Error ? error.message : "Invalid Lua module." };
+    result = { value: { properties: {} }, error: error instanceof Error ? error.message : i18n.t("ui.modules.runtime.invalidModule") };
   }
   if (moduleInspectionCache.size >= 128) moduleInspectionCache.delete(moduleInspectionCache.keys().next().value as string);
-  moduleInspectionCache.set(source, result);
+  moduleInspectionCache.set(cacheKey, result);
   return result;
 };
 
@@ -372,7 +374,8 @@ const parseParameter = (value: unknown): RecipeParameterDefinition | null => {
 };
 
 export const inspectLuaSystem = (source: string): LuaRunResult<LuaSystemInspection> => {
-  const cached = inspectionCache.get(source);
+  const cacheKey = `${i18n.resolvedLanguage ?? i18n.language}:${source}`;
+  const cached = inspectionCache.get(cacheKey);
   if (cached) return cached;
   let result: LuaRunResult<LuaSystemInspection>;
   try {
@@ -383,10 +386,10 @@ export const inspectLuaSystem = (source: string): LuaRunResult<LuaSystemInspecti
       : {};
     result = { value: { parameters, defaults } };
   } catch (error) {
-    result = { value: { parameters: [], defaults: {} }, error: error instanceof Error ? error.message : "Invalid Lua system." };
+    result = { value: { parameters: [], defaults: {} }, error: error instanceof Error ? error.message : i18n.t("ui.modules.runtime.invalidSystem") };
   }
   if (inspectionCache.size >= 128) inspectionCache.delete(inspectionCache.keys().next().value as string);
-  inspectionCache.set(source, result);
+  inspectionCache.set(cacheKey, result);
   return result;
 };
 
@@ -417,19 +420,19 @@ const validBinding = (value: unknown): boolean => typeof value === "string" || B
 const parseUiNode = (value: unknown, budget: { nodes: number } = { nodes: 0 }): LuaUiNode | null => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   budget.nodes += 1;
-  if (budget.nodes > 250) throw new Error("Lua UI exceeds the 250 primitive limit.");
+  if (budget.nodes > 250) throw new Error(i18n.t("ui.modules.runtime.uiTooLarge", { count: 250 }));
   const raw = value as Record<string, unknown>;
   const type = textValue(raw.type);
   const allowed = ["row", "column", "grid", "group", "label", "icon", "spacer", "button", "number", "text_input", "select", "dropdown", "slider", "toggle", "counter", "module_slot", "module_counter", "target_output", "popup"];
-  if (!type || !allowed.includes(type)) throw new Error(`Unsupported UI primitive: ${type ?? "missing type"}.`);
-  if (["number", "text_input", "select", "dropdown", "slider", "toggle", "counter"].includes(type) && !validBinding(raw.bind)) throw new Error(`${type} requires a value or slot binding.`);
-  if (type === "module_slot" && finiteNumber(raw.slot) === undefined) throw new Error("module_slot requires a numeric one-based slot index.");
-  if (type === "module_counter" && (!textValue(raw.module) || finiteNumber(raw.max) === undefined)) throw new Error("module_counter requires module and numeric max.");
-  if (type === "target_output" && (!textValue(raw.bind) || !textValue(raw.drives))) throw new Error("target_output requires bind and drives.");
+  if (!type || !allowed.includes(type)) throw new Error(i18n.t("ui.modules.runtime.unsupportedPrimitive", { type: type ?? i18n.t("ui.modules.runtime.missingType") }));
+  if (["number", "text_input", "select", "dropdown", "slider", "toggle", "counter"].includes(type) && !validBinding(raw.bind)) throw new Error(i18n.t("ui.modules.runtime.bindingRequired", { type }));
+  if (type === "module_slot" && finiteNumber(raw.slot) === undefined) throw new Error(i18n.t("ui.modules.runtime.moduleSlotIndexRequired"));
+  if (type === "module_counter" && (!textValue(raw.module) || finiteNumber(raw.max) === undefined)) throw new Error(i18n.t("ui.modules.runtime.moduleCounterRequired"));
+  if (type === "target_output" && (!textValue(raw.bind) || !textValue(raw.drives))) throw new Error(i18n.t("ui.modules.runtime.targetOutputRequired"));
   const children = Array.isArray(raw.children) ? raw.children.map((child) => parseUiNode(child, budget)).filter((child): child is LuaUiNode => Boolean(child)) : undefined;
   const trigger = type === "popup" ? parseUiNode(raw.trigger, budget) : undefined;
   const content = type === "popup" ? parseUiNode(raw.content, budget) : undefined;
-  if (type === "popup" && (!trigger || !content)) throw new Error("popup requires trigger and content primitives.");
+  if (type === "popup" && (!trigger || !content)) throw new Error(i18n.t("ui.modules.runtime.popupRequired"));
   return { ...raw, type: type as LuaUiNode["type"], children, trigger: trigger ?? undefined, content: content ?? undefined };
 };
 
@@ -437,7 +440,7 @@ export const renderLuaSystem = (source: string, context: unknown): LuaRunResult<
   try {
     return { value: parseUiNode(runProgram(source, "node", context)) };
   } catch (error) {
-    return { value: null, error: error instanceof Error ? error.message : "Lua node UI failed." };
+    return { value: null, error: error instanceof Error ? error.message : i18n.t("ui.modules.runtime.nodeUiFailed") };
   }
 };
 
@@ -472,8 +475,8 @@ const constrainFromUiShortcuts = (root: LuaUiNode | null, slots: Array<string | 
   const visit = (node: LuaUiNode) => {
     if (node.type === "module_slot") {
       const slot = Math.floor(finiteNumber(node.slot) ?? 0);
-      if (slot < 1 || slot > 64) throw new Error("module_slot index must be between 1 and 64.");
-      if (slotPolicies.has(slot)) throw new Error(`module_slot ${slot} is declared more than once.`);
+      if (slot < 1 || slot > 64) throw new Error(i18n.t("ui.modules.runtime.moduleSlotRange"));
+      if (slotPolicies.has(slot)) throw new Error(i18n.t("ui.modules.runtime.moduleSlotDuplicate", { slot }));
       const allowed = Array.isArray(node.modules)
         ? new Set(node.modules.filter((value): value is string => typeof value === "string" && value.length > 0))
         : null;
@@ -492,16 +495,16 @@ const constrainFromUiShortcuts = (root: LuaUiNode | null, slots: Array<string | 
 };
 
 const parseDeclaredSlotPolicies = (value: unknown): Map<number, Set<string> | null> => {
-  if (!Array.isArray(value)) throw new Error("slots(ctx) must return an array of module_bay.slot policies.");
+  if (!Array.isArray(value)) throw new Error(i18n.t("ui.modules.runtime.slotsArray"));
   const policies = new Map<number, Set<string> | null>();
   for (const raw of value) {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("Each slots(ctx) entry must be a module_bay.slot policy.");
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error(i18n.t("ui.modules.runtime.slotEntry"));
     const entry = raw as Record<string, unknown>;
     const slot = Math.floor(finiteNumber(entry.slot) ?? 0);
-    if (slot < 1 || slot > 64) throw new Error("Slot policy indices must be between 1 and 64.");
-    if (policies.has(slot)) throw new Error(`Slot policy ${slot} is declared more than once.`);
+    if (slot < 1 || slot > 64) throw new Error(i18n.t("ui.modules.runtime.slotRange"));
+    if (policies.has(slot)) throw new Error(i18n.t("ui.modules.runtime.slotDuplicate", { slot }));
     if (entry.modules !== undefined && (!Array.isArray(entry.modules) || entry.modules.some((moduleId) => typeof moduleId !== "string"))) {
-      throw new Error("Slot policy modules must be an array of module IDs.");
+      throw new Error(i18n.t("ui.modules.runtime.slotModulesArray"));
     }
     policies.set(slot, Array.isArray(entry.modules) ? new Set(entry.modules as string[]) : null);
   }
@@ -516,7 +519,7 @@ export const constrainLuaModuleSlots = (source: string, context: unknown, slots:
     if (rendered.error) return { value: [], error: rendered.error };
     return { value: constrainFromUiShortcuts(rendered.value, slots) };
   } catch (error) {
-    return { value: [], error: error instanceof Error ? error.message : "Lua slot policy failed." };
+    return { value: [], error: error instanceof Error ? error.message : i18n.t("ui.modules.runtime.slotPolicyFailed") };
   }
 };
 
@@ -550,12 +553,12 @@ export const runLuaEffects = (source: string, context: unknown): LuaRunResult<Mo
   try {
     const raw = runProgram(source, "apply", context);
     if (raw === null) return { value: [] };
-    if (!Array.isArray(raw)) throw new Error("apply(ctx) must return an array of fx.* effects.");
+    if (!Array.isArray(raw)) throw new Error(i18n.t("ui.modules.runtime.effectsArray"));
     const effects = raw.map(parseEffect).filter((effect): effect is ModuleEffect => Boolean(effect));
-    if (effects.length !== raw.length) throw new Error("apply(ctx) returned an invalid effect.");
+    if (effects.length !== raw.length) throw new Error(i18n.t("ui.modules.runtime.invalidEffect"));
     return { value: effects };
   } catch (error) {
-    return { value: [], error: error instanceof Error ? error.message : "Lua effects failed." };
+    return { value: [], error: error instanceof Error ? error.message : i18n.t("ui.modules.runtime.effectsFailed") };
   }
 };
 

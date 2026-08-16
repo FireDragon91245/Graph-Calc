@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { inspectLuaModule, renderLuaSystem, resolveLuaRecipeParameters } from "../../domain/luaModuleRuntime";
 import { type EffectiveRecipe, type ModuleDefinition, type ModuleSystemDefinition, type NodeModuleState, type RecipeModuleSupport } from "../../domain/moduleSystem";
 import { useGraphStore } from "../../store/graphStore";
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export default function NodeModulePanel({ supports, systems, modules, value, diagnostics = [], effectiveRecipe, evaluateState, onChange }: Props) {
+  const { t } = useTranslation();
   const activeProjectId = useGraphStore((state) => state.activeProjectId);
   const orderedSupports = useMemo(
     () => [...supports].filter((support) => support.enabled).sort((left, right) => (left.order ?? 0) - (right.order ?? 0)),
@@ -33,7 +35,7 @@ export default function NodeModulePanel({ supports, systems, modules, value, dia
     <div className="node-module-panel nodrag nowheel">
       {orderedSupports.map((support) => {
         const system = systems.find((entry) => entry.id === support.systemId && !entry.archived);
-        if (!system) return <div className="module-error" key={support.systemId}>Missing system: {support.systemId}</div>;
+        if (!system) return <div className="module-error" key={support.systemId}>{t("ui.modules.errors.missingSystem", { id: support.systemId })}</div>;
         const systemState = value.systems[system.id] ?? { slots: [], values: {} };
         const allowedModules = modules.filter((entry) => entry.systemId === system.id && !entry.archived && !(support.disabledModuleIds ?? []).includes(entry.id));
         const rendered = renderLuaSystem(system.lua, {
@@ -58,7 +60,7 @@ export default function NodeModulePanel({ supports, systems, modules, value, dia
 
         return (
           <div className="node-module-system" key={system.id}>
-            <div className="node-module-title"><span>{system.name}</span><span className="node-module-revision">Lua · v{system.revision}</span></div>
+            <div className="node-module-title"><span>{system.name}</span></div>
             {rendered.error ? <div className="module-error">{rendered.error}</div> : null}
             {rendered.value ? (
               <LuaPrimitiveRenderer

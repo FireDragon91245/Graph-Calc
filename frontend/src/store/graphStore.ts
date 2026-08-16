@@ -117,7 +117,7 @@ let storeSaveInFlight: Promise<void> | null = null;
 let pendingStoreSave: { data: StoreData; projectId: string } | null = null;
 
 const buildStoreData = (state: Pick<GraphStore, "categories" | "items" | "tags" | "recipeTags" | "recipes" | "recipeBlueprints" | "moduleDefinitions" | "moduleSystems" | "projectRevision">): StoreData => ({
-  schemaVersion: 6,
+  schemaVersion: 7,
   projectRevision: state.projectRevision,
   categories: state.categories,
   items: state.items,

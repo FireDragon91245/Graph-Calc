@@ -171,7 +171,7 @@ const cloneData = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 export function createEmptyStoreData(): StoreData {
   return {
-    schemaVersion: 6,
+    schemaVersion: 7,
     projectRevision: 0,
     categories: [],
     items: [],
@@ -228,7 +228,7 @@ function createDefaultLocalWorkspace(): LocalWorkspaceRecord {
 function normalizeStoreData(value: unknown): StoreData {
   const candidate = value as Partial<StoreData> | null | undefined;
   return {
-    schemaVersion: 6,
+    schemaVersion: 7,
     projectRevision: typeof candidate?.projectRevision === "number" ? candidate.projectRevision : 0,
     categories: Array.isArray(candidate?.categories) ? cloneData(candidate.categories) : [],
     items: Array.isArray(candidate?.items) ? cloneData(candidate.items) : [],

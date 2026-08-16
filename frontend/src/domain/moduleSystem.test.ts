@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import i18n from "../i18n";
 import type { Recipe } from "../store/graphStore";
 import { constrainLuaModuleSlots, inspectLuaModule, renderLuaSystem, validateLuaModule } from "./luaModuleRuntime";
 import { FACTORIO_SYSTEM_LUA, POWER_SHARD_SYSTEM_LUA, PRODUCTIVITY_MODULE_LUA, SLOOP_SYSTEM_LUA, SPEED_MODULE_LUA } from "./luaModuleTemplates";
@@ -26,6 +27,14 @@ const project = {
 };
 
 describe("Lua module systems", () => {
+  it("localizes runtime errors and does not reuse errors from the previous language", async () => {
+    await i18n.changeLanguage("en");
+    expect(validateLuaModule("")).toBe("Code is required.");
+    await i18n.changeLanguage("de");
+    expect(validateLuaModule("")).toBe("Code ist erforderlich.");
+    await i18n.changeLanguage("en");
+  });
+
   it("fills and clears existing empty slots for counted modules", () => {
     expect(setModuleSlotCount([null, null], "sloop", 1)).toEqual(["sloop", null]);
     expect(setModuleSlotCount(["sloop", null], "sloop", 2)).toEqual(["sloop", "sloop"]);

@@ -344,12 +344,12 @@ end
 
     private static (Script Script, DynValue Definition) Load(string source)
     {
-        if (string.IsNullOrWhiteSpace(source)) throw new InvalidOperationException("Lua source is required.");
-        if (source.Length > MaxScriptLength) throw new InvalidOperationException($"Lua source exceeds {MaxScriptLength} characters.");
+        if (string.IsNullOrWhiteSpace(source)) throw new InvalidOperationException("Code is required.");
+        if (source.Length > MaxScriptLength) throw new InvalidOperationException($"Code exceeds {MaxScriptLength} characters.");
         var script = new Script(CoreModules.Preset_HardSandbox);
         var chunk = script.LoadString($"{Api}\n{source}", null, "module-system.lua");
         var definition = RunLimited(script, chunk);
-        if (definition.Type != DataType.Table) throw new InvalidOperationException("Lua script must return system { ... } or module { ... }.");
+        if (definition.Type != DataType.Table) throw new InvalidOperationException("Code must return system { ... } or module { ... }.");
         return (script, definition);
     }
 
@@ -362,9 +362,9 @@ end
         {
             result = resume == 0 ? coroutine.Resume(arguments) : coroutine.Resume();
             if (coroutine.State == CoroutineState.Dead) return result;
-            if (coroutine.State is not (CoroutineState.Suspended or CoroutineState.ForceSuspended)) throw new InvalidOperationException("Lua coroutine entered an invalid state.");
+            if (coroutine.State is not (CoroutineState.Suspended or CoroutineState.ForceSuspended)) throw new InvalidOperationException("The script entered an invalid state.");
         }
-        throw new InvalidOperationException("Lua instruction limit exceeded.");
+        throw new InvalidOperationException("Script instruction limit exceeded.");
     }
 
     private static DynValue ToDynValue(Script script, object? value)
@@ -400,7 +400,7 @@ end
             foreach (var (key, entry) in readOnly) table.Set(key, ToDynValue(script, entry));
             return DynValue.NewTable(table);
         }
-        throw new InvalidOperationException($"Unsupported Lua context value: {value.GetType().Name}.");
+        throw new InvalidOperationException($"Unsupported script context value: {value.GetType().Name}.");
     }
 
     private static ModuleEffectDto ParseEffect(DynValue value, int index)
@@ -479,9 +479,9 @@ end
 
     private static void ReadSlotPolicies(Table table, SortedDictionary<int, HashSet<string>?> slotPolicies, Dictionary<string, int> moduleCapacities, ref int nodeCount, int depth)
     {
-        if (depth > 24) throw new InvalidOperationException("Lua UI is nested too deeply.");
+        if (depth > 24) throw new InvalidOperationException("System UI is nested too deeply.");
         nodeCount += 1;
-        if (nodeCount > 250) throw new InvalidOperationException("Lua UI exceeds the 250 primitive limit.");
+        if (nodeCount > 250) throw new InvalidOperationException("System UI exceeds the 250 primitive limit.");
         var type = OptionalString(table, "type");
         var allowed = new[] { "row", "column", "grid", "group", "label", "icon", "spacer", "button", "number", "text_input", "select", "dropdown", "slider", "toggle", "counter", "module_slot", "module_counter", "target_output", "popup" };
         if (type is null || !allowed.Contains(type, StringComparer.Ordinal)) throw new InvalidOperationException($"Unsupported UI primitive: {type ?? "missing type"}.");

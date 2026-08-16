@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { getModuleResourceImageUrl } from "../../api/persistence";
 import { inspectLuaModule, type LuaUiNode, type LuaPropertyValue } from "../../domain/luaModuleRuntime";
 import { resolveModuleSystemResource } from "../../domain/moduleResources";
@@ -65,6 +66,7 @@ type ModuleSlotPickerProps = {
 };
 
 function ModuleSlotPicker({ entry, moduleId, modules, resources, projectId, invalid, onSelect }: ModuleSlotPickerProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ left: 0, top: 0, maxHeight: 320 });
   const anchorRef = useRef<HTMLButtonElement>(null);
@@ -112,7 +114,7 @@ function ModuleSlotPicker({ entry, moduleId, modules, resources, projectId, inva
   }, [open]);
 
   const fallback = selected?.name.split(/[^a-zA-Z0-9]+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || text(entry.empty_text, "+");
-  const label = selected?.name ?? text(entry.label, "Empty module slot");
+  const label = selected?.name ?? text(entry.label, t("ui.modules.renderer.emptyModuleSlot"));
   return (
     <>
       <button
@@ -132,14 +134,14 @@ function ModuleSlotPicker({ entry, moduleId, modules, resources, projectId, inva
           ref={popupRef}
           className="lua-module-picker nodrag nowheel"
           role="listbox"
-          aria-label={text(entry.picker_label, "Select module")}
+          aria-label={text(entry.picker_label, t("ui.modules.renderer.selectModule"))}
           style={{ left: position.left, top: position.top, maxHeight: position.maxHeight, gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
           onPointerDown={(event) => event.stopPropagation()}
           onWheel={(event) => event.stopPropagation()}
         >
-          <button className="lua-module-option is-empty" type="button" role="option" aria-selected={!moduleId} title={text(entry.clear_text, "Empty slot")} onClick={() => { onSelect(null); setOpen(false); }}>
+          <button className="lua-module-option is-empty" type="button" role="option" aria-selected={!moduleId} title={text(entry.clear_text, t("ui.modules.renderer.emptySlot"))} onClick={() => { onSelect(null); setOpen(false); }}>
             <span className="lua-module-option-art">×</span>
-            {showLabels ? <span>{text(entry.clear_text, "Empty")}</span> : null}
+            {showLabels ? <span>{text(entry.clear_text, t("ui.modules.renderer.empty"))}</span> : null}
           </button>
           {modules.map((candidate) => {
             const candidateFallback = candidate.name.split(/[^a-zA-Z0-9]+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "◇";
@@ -150,7 +152,7 @@ function ModuleSlotPicker({ entry, moduleId, modules, resources, projectId, inva
               </button>
             );
           })}
-          {modules.length === 0 ? <span className="lua-module-picker-empty">No modules are enabled for this recipe.</span> : null}
+          {modules.length === 0 ? <span className="lua-module-picker-empty">{t("ui.modules.renderer.noModules")}</span> : null}
         </div>,
         document.body
       ) : null}
@@ -165,6 +167,7 @@ type PopupProps = {
 };
 
 function PrimitivePopup({ entry, path, renderNode }: PopupProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ left: 0, top: 0, maxHeight: 360 });
   const anchorRef = useRef<HTMLSpanElement>(null);
@@ -222,7 +225,7 @@ function PrimitivePopup({ entry, path, renderNode }: PopupProps) {
           ref={popupRef}
           className={`lua-ui-popup nodrag nowheel${safeTone(entry.tone)}`}
           role="dialog"
-          aria-label={text(entry.label, "Popup")}
+          aria-label={text(entry.label, t("ui.modules.renderer.popup"))}
           style={{ left: position.left, top: position.top, maxHeight: position.maxHeight }}
           onPointerDown={(event) => event.stopPropagation()}
           onWheel={(event) => event.stopPropagation()}
@@ -236,6 +239,7 @@ function PrimitivePopup({ entry, path, renderNode }: PopupProps) {
 }
 
 export default function LuaPrimitiveRenderer(props: Props) {
+  const { t } = useTranslation();
   const { node, systemId, systemState, allowedModules, resources = [], projectId, fullState, effectiveRecipe, evaluateState, onChange } = props;
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -349,7 +353,7 @@ export default function LuaPrimitiveRenderer(props: Props) {
         if (definition.type === "set" && ["number", "boolean", "string"].includes(typeof definition.value)) writeBinding(definition.bind, definition.value as number | boolean | string);
         if (definition.type === "increment") writeBinding(definition.bind, clamp(number(readBinding(definition.bind), 0) + number(definition.amount, 1), number(definition.min, Number.NEGATIVE_INFINITY), number(definition.max, Number.POSITIVE_INFINITY)));
         onAction?.();
-      }}>{entry.children?.length ? entry.children.map((child, index) => render(child, `${path}.${index}`, onAction)) : text(entry.text, "Button")}</button>;
+      }}>{entry.children?.length ? entry.children.map((child, index) => render(child, `${path}.${index}`, onAction)) : text(entry.text, t("ui.modules.renderer.button"))}</button>;
     }
 
     if (entry.type === "toggle") {
@@ -386,7 +390,7 @@ export default function LuaPrimitiveRenderer(props: Props) {
       const current = storedTarget > 0 ? storedTarget : rate;
       return (
         <label key={key} className="lua-ui-input lua-target-output">
-          <span>{text(entry.label, "Target output rate")}</span>
+          <span>{text(entry.label, t("ui.modules.renderer.targetOutputRate"))}</span>
           <span className="lua-ui-input-line">
             <input type="number" step={number(entry.step, 0.01)} value={drafts[key] ?? formatNodeNumber(current)} disabled={!evaluateState || !drives || !output} onChange={(event) => {
               setDrafts((previous) => ({ ...previous, [key]: event.target.value }));
@@ -397,7 +401,7 @@ export default function LuaPrimitiveRenderer(props: Props) {
               if (solution.possible) {
                 onChange({ ...solution.state.systems[systemId], values: { ...(solution.state.systems[systemId]?.values ?? {}), [bind]: target } });
                 setErrors((previous) => ({ ...previous, [key]: "" }));
-              } else setErrors((previous) => ({ ...previous, [key]: `Not reachable. Nearest: ${formatNodeNumber(solution.achievedRate ?? 0)}${text(entry.suffix, "/s")}.` }));
+              } else setErrors((previous) => ({ ...previous, [key]: t("ui.modules.renderer.unreachable", { rate: formatNodeNumber(solution.achievedRate ?? 0), suffix: text(entry.suffix, "/s") }) }));
             }} onBlur={() => setDrafts((previous) => { const next = { ...previous }; delete next[key]; return next; })} />
             <span>{text(entry.suffix, "/s")}</span>
           </span>

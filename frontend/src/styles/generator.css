@@ -434,21 +434,6 @@
 .module-resource-card > button:hover { color: #fca5a5; }
 .module-resource-empty { padding: 8px; color: var(--muted); font-size: 11px; }
 
-.lua-api-reference {
-  grid-column: 1 / -1;
-}
-
-.lua-api-reference p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.55;
-}
-
-.lua-api-reference code {
-  color: #c4b5fd;
-}
-
 .module-builder-card {
   display: flex;
   flex-direction: column;
@@ -470,18 +455,11 @@
   min-width: 0;
 }
 
-.module-preset-row,
 .module-editor-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 7px;
-}
-
-.module-preset-row .btn-secondary {
-  flex: 1 1 150px;
-  min-width: 0;
-  white-space: normal;
 }
 
 .module-code-editor {

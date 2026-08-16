@@ -1,4 +1,5 @@
 import type { Item, Recipe, RecipeInput, RecipeOutput, Tag } from "../store/graphStore";
+import i18n from "../i18n";
 import { constrainLuaModuleSlots, inspectLuaModule, inspectLuaSystem, renderLuaSystem, resolveLuaRecipeParameters, runLuaEffects, type LuaPropertyValue } from "./luaModuleRuntime";
 
 export type ModuleEffectTarget =
@@ -206,7 +207,7 @@ export function materializeEffectiveRecipe(
   const applyEffect = (effect: ModuleEffect, namespace: string) => {
     const value = finite(effect.value ?? 1, 1);
     if (!Number.isFinite(value)) {
-      diagnostics.push({ severity: "error", code: "invalid-effect-value", message: `Effect ${effect.id} produced an invalid number.` });
+      diagnostics.push({ severity: "error", code: "invalid-effect-value", message: i18n.t("ui.modules.diagnostics.invalidEffectValue", { id: effect.id }) });
       return;
     }
 
@@ -290,7 +291,7 @@ export function materializeEffectiveRecipe(
   for (const support of supports) {
     const system = project.moduleSystems.find((entry) => entry.id === support.systemId && !entry.archived);
     if (!system) {
-      diagnostics.push({ severity: "error", code: "missing-system", message: `Upgrade system ${support.systemId} does not exist.` });
+      diagnostics.push({ severity: "error", code: "missing-system", message: i18n.t("ui.modules.diagnostics.missingSystem", { id: support.systemId }) });
       continue;
     }
     const systemState = state.systems[system.id] ?? createDefaultSystemState(system);
@@ -302,7 +303,7 @@ export function materializeEffectiveRecipe(
     for (const moduleDefinition of enabledModules) {
       const inspection = inspectLuaModule(moduleDefinition.lua);
       moduleProperties.set(moduleDefinition.id, inspection.value.properties);
-      if (inspection.error) diagnostics.push({ severity: "error", code: "module-lua-properties-error", message: `${moduleDefinition.name}: ${inspection.error}` });
+      if (inspection.error) diagnostics.push({ severity: "error", code: "module-lua-properties-error", message: i18n.t("ui.modules.diagnostics.detail", { name: moduleDefinition.name, message: inspection.error }) });
     }
     const luaModules = enabledModules.map((entry) => ({
       id: entry.id,
@@ -327,15 +328,15 @@ export function materializeEffectiveRecipe(
       }
     });
     const uiResult = renderLuaSystem(system.lua, buildLuaContext());
-    if (uiResult.error) diagnostics.push({ severity: "error", code: "system-lua-ui-error", message: `${system.name}: ${uiResult.error}` });
+    if (uiResult.error) diagnostics.push({ severity: "error", code: "system-lua-ui-error", message: i18n.t("ui.modules.diagnostics.detail", { name: system.name, message: uiResult.error }) });
     const slotResult = constrainLuaModuleSlots(system.lua, buildLuaContext(), systemState.slots ?? []);
-    if (slotResult.error) diagnostics.push({ severity: "error", code: "system-lua-slot-error", message: `${system.name}: ${slotResult.error}` });
+    if (slotResult.error) diagnostics.push({ severity: "error", code: "system-lua-slot-error", message: i18n.t("ui.modules.diagnostics.detail", { name: system.name, message: slotResult.error }) });
     systemState.slots = slotResult.value;
     const counts = new Map<string, number>();
     for (const moduleId of systemState.slots ?? []) {
       if (!moduleId) continue;
       if (!isModuleEnabledForSupport(moduleId, support)) {
-        diagnostics.push({ severity: "error", code: "module-disabled", message: `Module ${moduleId} is disabled for this recipe.` });
+        diagnostics.push({ severity: "error", code: "module-disabled", message: i18n.t("ui.modules.diagnostics.moduleDisabled", { id: moduleId }) });
         continue;
       }
       counts.set(moduleId, (counts.get(moduleId) ?? 0) + 1);
@@ -343,42 +344,42 @@ export function materializeEffectiveRecipe(
     for (const [moduleId, count] of counts) {
       const moduleDefinition = project.moduleDefinitions.find((entry) => entry.id === moduleId && !entry.archived);
       if (!moduleDefinition) {
-        diagnostics.push({ severity: "error", code: "missing-module", message: `Module ${moduleId} does not exist.` });
+        diagnostics.push({ severity: "error", code: "missing-module", message: i18n.t("ui.modules.diagnostics.missingModule", { id: moduleId }) });
         continue;
       }
       if (moduleDefinition.systemId !== system.id) {
-        diagnostics.push({ severity: "error", code: "wrong-system-module", message: `Module ${moduleId} does not belong to ${system.name}.` });
+        diagnostics.push({ severity: "error", code: "wrong-system-module", message: i18n.t("ui.modules.diagnostics.wrongSystem", { id: moduleId, system: system.name }) });
         continue;
       }
       const result = runLuaEffects(moduleDefinition.lua, buildLuaContext(count, moduleProperties.get(moduleId) ?? {}));
-      if (result.error) diagnostics.push({ severity: "error", code: "module-lua-error", message: `${moduleDefinition.name}: ${result.error}` });
+      if (result.error) diagnostics.push({ severity: "error", code: "module-lua-error", message: i18n.t("ui.modules.diagnostics.detail", { name: moduleDefinition.name, message: result.error }) });
       for (const effect of result.value) applyEffect(effect, `module:${system.id}:${moduleId}`);
     }
     const systemResult = runLuaEffects(system.lua, buildLuaContext());
-    if (systemResult.error) diagnostics.push({ severity: "error", code: "system-lua-error", message: `${system.name}: ${systemResult.error}` });
+    if (systemResult.error) diagnostics.push({ severity: "error", code: "system-lua-error", message: i18n.t("ui.modules.diagnostics.detail", { name: system.name, message: systemResult.error }) });
     for (const effect of systemResult.value) applyEffect(effect, `system:${system.id}`);
   }
 
   if (!Number.isFinite(timeSeconds) || timeSeconds <= 0) {
-    diagnostics.push({ severity: "error", code: "invalid-cycle-time", message: "Effective cycle time must be greater than zero." });
+    diagnostics.push({ severity: "error", code: "invalid-cycle-time", message: i18n.t("ui.modules.diagnostics.invalidCycleTime") });
     timeSeconds = Math.max(0.000001, finite(recipe.timeSeconds, 1));
   }
   for (const input of inputs) {
-    if (!Number.isFinite(input.amount) || input.amount < 0) diagnostics.push({ severity: "error", code: "invalid-input", message: `Input ${input.id} has an invalid amount.` });
+    if (!Number.isFinite(input.amount) || input.amount < 0) diagnostics.push({ severity: "error", code: "invalid-input", message: i18n.t("ui.modules.diagnostics.invalidInput", { id: input.id }) });
   }
   for (const output of outputs) {
     if (!Number.isFinite(output.amount) || output.amount < 0 || !Number.isFinite(output.probability) || output.probability < 0 || output.probability > 1) {
-      diagnostics.push({ severity: "error", code: "invalid-output", message: `Output ${output.id} has an invalid amount or probability.` });
+      diagnostics.push({ severity: "error", code: "invalid-output", message: i18n.t("ui.modules.diagnostics.invalidOutput", { id: output.id }) });
     }
   }
   const knownItems = new Set(project.items.map((item) => item.id));
   const knownTags = new Set(project.tags.map((tag) => tag.id));
   for (const input of inputs) {
     const exists = input.refType === "tag" ? knownTags.has(input.refId) : knownItems.has(input.refId);
-    if (!exists) diagnostics.push({ severity: "error", code: "missing-input-reference", message: `Input ${input.id} references missing ${input.refType} ${input.refId}.` });
+    if (!exists) diagnostics.push({ severity: "error", code: "missing-input-reference", message: i18n.t("ui.modules.diagnostics.missingInputReference", { id: input.id, type: input.refType, ref: input.refId }) });
   }
   for (const output of outputs) {
-    if (!knownItems.has(output.itemId)) diagnostics.push({ severity: "error", code: "missing-output-reference", message: `Output ${output.id} references missing item ${output.itemId}.` });
+    if (!knownItems.has(output.itemId)) diagnostics.push({ severity: "error", code: "missing-output-reference", message: i18n.t("ui.modules.diagnostics.missingOutputReference", { id: output.id, item: output.itemId }) });
   }
 
   const result = { recipeId: recipe.id, title: recipe.name, timeSeconds, inputs, outputs, moduleState: state, diagnostics };

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { inspectLuaSystem, resolveLuaRecipeParameters } from "../../domain/luaModuleRuntime";
 import type { ModuleDefinition, ModuleSystemDefinition, ModuleValue, RecipeModuleSupport } from "../../domain/moduleSystem";
 
@@ -9,8 +10,9 @@ type Props = {
 };
 
 export default function RecipeModuleSupportEditor({ value, systems, modules, onChange }: Props) {
+  const { t } = useTranslation();
   const activeSystems = systems.filter((system) => !system.archived);
-  if (activeSystems.length === 0) return <div className="module-support-empty">Create a Lua upgrade system in Configuration → Modules first.</div>;
+  if (activeSystems.length === 0) return <div className="module-support-empty">{t("ui.modules.recipe.empty")}</div>;
 
   const update = (systemId: string, patch: Partial<RecipeModuleSupport>) => {
     const existing = value.find((entry) => entry.systemId === systemId);
@@ -22,7 +24,7 @@ export default function RecipeModuleSupportEditor({ value, systems, modules, onC
 
   return (
     <div className="recipe-module-support">
-      <div className="recipe-module-support-title">Lua module systems</div>
+      <div className="recipe-module-support-title">{t("ui.modules.title")}</div>
       {activeSystems.map((system) => {
         const support = value.find((entry) => entry.systemId === system.id);
         const enabled = support?.enabled ?? false;
@@ -39,7 +41,7 @@ export default function RecipeModuleSupportEditor({ value, systems, modules, onC
           <div className={`recipe-module-support-system ${enabled ? "enabled" : ""}`} key={system.id}>
             <label className="module-support-heading">
               <input type="checkbox" checked={enabled} onChange={(event) => enable(event.target.checked)} />
-              <span>{system.name}</span><small>Lua · v{system.revision}</small>
+              <span>{system.name}</span>
             </label>
             {enabled ? (
               <div className="module-support-options lua-recipe-parameters">
@@ -79,13 +81,13 @@ export default function RecipeModuleSupportEditor({ value, systems, modules, onC
                 })}
                 {systemModules.length ? (
                   <div className="module-support-allowed">
-                    <span className="module-support-allowed-title">Modules enabled for this recipe</span>
+                    <span className="module-support-allowed-title">{t("ui.modules.recipe.enabledTitle")}</span>
                     <div className="module-support-module-list">{systemModules.map((module) => <label key={module.id}><input type="checkbox" checked={!disabled.has(module.id)} onChange={(event) => {
                         const next = new Set(disabled);
                         event.target.checked ? next.delete(module.id) : next.add(module.id);
                         update(system.id, { disabledModuleIds: [...next] });
                       }} /><span>{module.name}</span></label>)}</div>
-                    <small>Every child module is enabled unless explicitly turned off here.</small>
+                    <small>{t("ui.modules.recipe.enabledHelp")}</small>
                   </div>
                 ) : null}
               </div>
